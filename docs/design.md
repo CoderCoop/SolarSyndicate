@@ -8,12 +8,19 @@ A working vessel in a lived-in, near-future solar system. The ship is a machine 
 real constraints; the crew are people with real needs; the economy is run by guilds
 with real agendas. The game rewards planning, tinkering, and care.
 
-**There is no avatar.** You are not a character aboard the ship — you are a
-**management representative of your guild**, working an operations desk somewhere
-back in the system. You choose the guild you represent, you hire and assign the
-crew, you authorize the money, and you set the policy the ship runs on. The people
-aboard are not you: they are your responsibility. (§4.6 covers why this framing
-solves more problems than it creates.)
+**There is no avatar, and no name.** You are not a character aboard the ship, and
+not a character anywhere else either — you are **the guild itself**, as experienced
+from an operations desk. You choose which guild you embody, you hire and assign the
+crew, you authorize the money, and you set the policy the ship runs on. Nobody
+addresses you by name because there is no one to address: dispatches are filed to
+*Operations, Ceres Local 12*, and the crew speak of you in the third person and the
+institutional voice — "the Guild wants us on the Vesta run," "the Local approved
+the overtime." The people aboard are not you: they are your responsibility.
+
+This is a deliberate inversion of the usual space-game fantasy, and it's the
+game's thesis. The crew are individuals with names, ages, ambitions and graves;
+the player is an institution. Everything that makes the game feel different from
+its neighbours falls out of that asymmetry. (§4.6 and §6.3 cover how.)
 
 Five pillars — when two ideas conflict, the higher pillar wins:
 
@@ -293,17 +300,23 @@ one unique power: **they decide what happens when you aren't reachable.** A caut
 captain diverts to a safe port and eats the penalty; a bold one runs the burn and
 makes the deadline; a bad one freezes. Captains have judgment, not just numbers.
 
-This creates the game's central relationship: **your standing with your own
-captain.** Countermanding their recommendations, overriding safety calls, pushing
-crews past guild rest rules, or refusing hazard pay all erode trust. High trust buys
-you a captain who executes intent faithfully and flags problems early; low trust
-gets you literal compliance, quiet resentment, requests for transfer — and
-eventually a resignation letter from the person who knows your ship best. A captain
-who dies is a crew-succession problem (promote the first officer? hire outside? the
-crew have opinions), not a meta-game problem.
+This creates the game's central relationship — and because you're nameless, it is
+**institutional trust, not friendship**: the captain's regard is for *the Guild*,
+not for a person they've never met. Countermanding recommendations, overriding
+safety calls, pushing crews past guild rest rules, or refusing hazard pay all erode
+it. High trust buys a captain who executes intent faithfully and flags problems
+early; low trust gets literal compliance, quiet resentment, requests for transfer —
+and eventually a resignation from the person who knows your ship best. That the
+relationship is with an institution rather than a friend is exactly what makes the
+guild contrast land: a Helios captain's cynicism about "the Combine" and a
+Wrightworks captain's solidarity with "the Local" are the same mechanic wearing
+different clothes. A captain who dies is a crew-succession problem (promote the
+first officer? hire outside? the crew have opinions), not a meta-game problem.
 
 **Light-lag is real, and it's the best mechanic this framing unlocks.** Orders and
-reports travel at *c*. Round-trip delay from your desk (real values):
+reports travel at *c*, between **your headquarters and the ship** — so the numbers
+below are for a starting Earth HQ, and relocating the desk (§6.3) rewrites the whole
+table:
 
 | Ship at | One-way | Round trip | Real time at 24× |
 |---|---|---|---|
@@ -319,7 +332,7 @@ supervised; the Belt gets a real conversational lag; the outer system is
 cannot do anything else. The distance progression of the game is simultaneously a
 progression in **how much control you give up** — which is a far more interesting
 difficulty curve than bigger numbers, and it makes hiring a great captain the actual
-unlock for deep-space work. Real conjunctions (Sun between Earth and ship) produce
+unlock for deep-space work. Real conjunctions (Sun between HQ and ship) produce
 scheduled comms blackouts lasting game-weeks: pre-authorize, or go dark and hope.
 
 **It fixes the offline problem honestly.** Everything §7.3–7.4 needs was awkward
@@ -443,6 +456,61 @@ you). It's a mid-game story beat, not a menu toggle — and it's the one time th
   guild play.
 - **No player-driven inflation risk in v1** (single player), but keep all balance
   values in data files — the economy will need live tuning.
+
+### 6.3 The desk: headquarters & relocation
+
+Your HQ is a real place in the world, not a menu background. It starts wherever your
+guild posts you (§10.1) — most likely Earth orbit or Luna — and **later in the game
+you can move it**, which is the deepest strategic decision available to a player who
+never touches a control surface. Because you are the guild's embodiment rather than
+a person, relocation isn't you moving house: it's **the guild opening a new local**,
+with all the institutional weight that implies.
+
+**What HQ determines:**
+
+1. **Light-lag to everything** (§4.6) — the headline effect. Comms delay is measured
+   from your desk, so relocating rewrites your entire control topology.
+2. **Your hiring hall** — who walks through the door. An Earth hall is deep,
+   credentialed, and expensive; a Ceres hall is full of Belters with real vacuum
+   hours and no paperwork; a Ganymede hall is small, weird, and fiercely loyal.
+   This is how HQ shapes your crew's *culture* over the long run.
+3. **Your contract board** — local work, local prices, local politics.
+4. **Refit and resupply** — where your ship can actually get major work done cheaply,
+   and how far it has to deadhead to reach you.
+5. **Guild standing effects** — a frontier local is prestigious in Wrightworks and
+   Meridian, suspicious in Helios, and the natural home of The Drift.
+
+**The trade is genuinely non-obvious, which is why it's good.** Moving outward buys
+supervision of the frontier at the cost of the core — but it also **increases your
+variance**, because outer bodies separate further at opposition. One-way light time,
+computed from real orbital radii:
+
+| HQ at | ↔ Earth | ↔ Mars | ↔ Ceres | ↔ Jupiter | ↔ Saturn |
+|---|---|---|---|---|---|
+| **Earth** | — | 4–21 min | 15–31 | 35–52 | 71–88 |
+| **Mars** | 4–21 min | — | 10–36 | 31–56 | 67–92 |
+| **Ceres** | 15–31 min | 10–36 | — | 20–66 | 57–103 |
+| **Jupiter** | 35–52 min | 31–56 | 20–66 | — | 36–**123** |
+
+Note the Jupiter row: it gives the best Ceres access in the game (20 min at
+conjunction) and the *worst* Saturn number anywhere (123 min at opposition, worse
+than Earth's 88). An outer HQ trades steady mediocrity for spectacular windows and
+brutal droughts — you start planning contracts around when your own headquarters is
+well-placed, which is an astrogation-flavored strategic layer for the player rather
+than the crew. Mars is the safe all-rounder; Ceres is the Belt-operations play;
+Jupiter is a commitment.
+
+**Cost and pacing.** Relocation is a major capital action: it needs rank, a
+substantial budget draw, and game-weeks of transition during which your hiring hall
+and contract board are degraded. Crucially it also has a **human cost** — some of
+your shore-side people and your ship's crew have lives anchored to the old port
+(§4.5 ambitions and families), and a move will lose you some of them. It should feel
+like founding something, not like changing a setting.
+
+**Later:** multiple locals. Once relocation exists, running two or three HQs is the
+natural fleet-era expression of a guild that has grown (see §11.4) — a network with
+different lag profiles, halls, and boards, which is exactly the shape a shared
+universe wants (§8.4).
 
 ---
 
@@ -640,10 +708,14 @@ slowly, with the training wheels on.
 
 **1. Choose your guild.** Four cards, each stating its identity, what it gives you,
 and what it asks of you (§6.1) — no wrong answers, four different games. This choice
-sets starting hull, budget, home port, contract board, hiring hall, and the cultural
-expectations your crew will hold you to. It is presented as what it is: taking a
-post. *"Wrightworks Guild, Ceres Local 12, is prepared to assign you an operations
-desk and one very tired hauler."*
+sets starting hull, budget, **HQ location** (§6.3), contract board, hiring hall, and
+the cultural expectations your crew will hold you to. It is presented as what it is:
+a guild opening a desk. *"Wrightworks Guild, Luna Local 12: one operations desk, one
+very tired hauler, and no one to fly her."*
+
+This is the entire character-creation flow. There is no name to enter and no
+portrait to pick — the guild card *is* the character sheet, which is the point
+(§1). The first thing the game asks you for is not who you are but who you'll hire.
 
 **2. Crew the ship.** Your hull is docked, sound, and empty. You have a budget that
 won't cover the crew you want, and a hiring hall full of dossiers — this is the
@@ -665,7 +737,8 @@ tutorial, and it teaches by making you *shop*:
   gradually taking supervision away.
 
 No avatar creation, no name-your-hero screen. You get a guild, a desk, a ship, and
-a payroll. The people are the characters.
+a payroll. The people are the characters — and the first thing you learn about
+yourself is what kind of employer you are.
 
 ### 10.2 Build order (each milestone is playable)
 
@@ -683,8 +756,10 @@ a payroll. The people are the characters.
   aging + permadeath + first life events (ambitions, departures, funerals),
   the captain-autonomy and trust system, light-lag, mission archetypes 1–4,
   standing orders + notifications.
-- **M4 — Ship of Theseus.** Part market, swapping, mods/tinkering, hull upgrade
-  path, engine tiers through NEP, salvage missions.
+- **M4 — Ship of Theseus, and the long game.** Part market, swapping, mods/
+  tinkering, hull upgrade path, engine tiers through NEP, salvage missions —
+  plus **HQ relocation** (§6.3), which needs M3's light-lag and hiring halls in
+  place and gives the late game a strategic axis that isn't a bigger engine.
 - **M5 — Polish & ship.** Fair-play audit, dispatch-inbox return screen, session
   zero (§10.1) with all four guild openings, push notifications, save migrations,
   perf pass.
@@ -703,18 +778,25 @@ a payroll. The people are the characters.
    version: state is live, only *decisions* are delayed. Proposal: soft by default,
    with stale-telemetry markers on the outer-system screens (a "last heard: 47 min
    ago" timestamp) — full hard mode as an optional realism setting. → M3.
-4. **When does the desk get a second ship?** Rank progression naturally points at
-   a small fleet, and the framing supports it with no fiction strain — but it
-   multiplies UI and balance work. Proposal: single ship through v1, fleet as the
-   headline v1.x feature (it's also the strongest argument for cloud save). → post-v1.
-5. **Do you have a name?** Proposal: you're addressed by guild title and surname in
-   dispatches ("Rep. Okafor"), pick the surname at session zero, nothing more —
-   enough for the captain to write to a person, not enough to be a character. → M5.
+4. **When does the desk get a second ship, and a second local?** Rank progression
+   points naturally at both a small fleet and a network of HQs (§6.3), and the
+   framing supports them with no fiction strain — but each multiplies UI and balance
+   work. Proposal: single ship + single (relocatable) HQ through v1; fleet and
+   multi-local together as the headline v1.x feature, since they share a "portfolio"
+   UI and are the strongest argument for cloud save. → post-v1.
+5. **How far can HQ go?** Is relocating to Jupiter or Saturn a real option, or does
+   the game cap you at the Belt to keep lag legible? Proposal: allow it, gate it
+   behind high rank, and let the 123-minute Saturn opposition be a lesson players
+   teach themselves. → M4.
 6. **Notifications backend timing:** local notifications only (no server) for v1,
    or stand up the minimal push relay at launch? → M5.
 7. **Art direction** for the cross-section: clean diagram/blueprint style (cheap,
    legible, ages well) vs. illustrated interiors (warm, expensive)? Blueprint-with-
    warm-accents proposed. → M1, since it shapes the room components.
+
+**Decided (was open):** crew permadeath with full lifecycles (§4.5); no POV
+character and no captain avatar (§4.6); **the player is nameless — an embodiment of
+the guild, never addressed as a person** (§1).
 
 ## 12. Top Risks
 
