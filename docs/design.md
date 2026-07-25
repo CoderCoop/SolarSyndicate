@@ -33,9 +33,11 @@ Five pillars — when two ideas conflict, the higher pillar wins:
 3. **Time flows whether you watch or not.** The simulation is anchored to real UTC
    time. Crews sleep, ships coast, contracts expire. The game must be *fair* about
    this (see §7.4) but never freezes the world.
-4. **You work for someone.** The guild isn't flavor — it gates contracts, parts,
-   crew, and ports, and it's the seat you occupy. Your guild shapes the ship's
-   culture, the work you pursue, and what counts as a good decision.
+4. **You work for someone — until you *are* someone.** The guild isn't flavor: it
+   gates contracts, parts, crew, and ports, and it's the seat you occupy. Its
+   policies constrain you early and become yours to write late (§6.4). The long arc
+   of the game is from serving an institution to deciding what that institution
+   does to people.
 5. **You manage, you don't pilot.** Your instruments are hiring, assignment,
    policy, money, and orders sent across a light-delay. You never fly the ship.
    The crew do that — well or badly, depending on who you hired and what you asked
@@ -61,12 +63,16 @@ Then three nested loops at different time scales:
 - **Hours–days (a mission):** accept contract → approve a transfer plan (window,
   delta-v, consumables) → departure burn → mid-flight events + idle progress →
   arrival → resolve → get paid → resupply.
-- **Weeks–months (a desk):** build guild standing and personal rank → unlock
+- **Weeks–months (a desk):** build guild standing and rank → unlock
   hulls/parts/ports/contracts → recruit, train, and *keep* specialists → push into
   longer, deeper, riskier work (inner system → Belt → outer planets) — while your
   crew age through their own careers (§4.5): novices become masters, masters mentor
   and retire or die, and keeping skill alive across generations becomes the long
   game.
+- **The whole campaign (an institution):** accumulate the rank, capital, and
+  reputation to relocate your headquarters (§6.3) and then to **change guild policy
+  itself** (§6.4) — wages, rest rules, safety mandates, apprenticeships. The rules
+  you spent the early game working around become the rules you write.
 
 The session loop is deliberately "check in on your ship" shaped — a good 5-minute
 session on a phone should feel complete. Long transfers make the idle layer the
@@ -512,6 +518,62 @@ natural fleet-era expression of a guild that has grown (see §11.4) — a networ
 different lag profiles, halls, and boards, which is exactly the shape a shared
 universe wants (§8.4).
 
+### 6.4 Guild politics: influence & policy
+
+The last progression axis, and the one that closes the game's loop. Early on, guild
+policy is the **constraint** you work inside — Wrightworks' mandatory rest costs you
+throughput, Helios' delivery penalties squeeze your margins, Meridian's data-sharing
+mandate caps your income. As rank, resources, and reputation accumulate, those
+policies become **something you author**. You start by serving the institution and
+end up deciding what it does to people.
+
+That is the ethical spine of the game, and it should be presented without a thumb on
+the scale: you can make Helios more humane or make Wrightworks more ruthless, and
+the game's job is to show you the consequences honestly, not to grade you.
+
+**Political capital** is a third currency alongside budget and standing, and it's
+earned by things money can't buy: contracts delivered without incident, obligations
+honored when they cost you, crew retained for years, dangerous work done well,
+initiatives funded, other locals backed when they asked. Crucially, **treating crew
+well is a political asset** — the thing that costs you money in the short run is the
+thing that buys you power in the long run. Capital is spent at **guild assemblies**,
+periodic sessions (a game-quarter ≈ 3.75 real days at 24× — an excellent recurring
+event cadence to accumulate toward) where motions are debated and voted. Motions
+arise from world state and from rival locals, not only from you: you sponsor, vote,
+block, trade support, and build blocs with NPC representatives who have their own
+consistent agendas.
+
+**What policy actually controls** — deliberately, the numbers the player already
+watches, so influence is legible rather than abstract:
+
+| Policy | Immediate effect | Long-run effect |
+|---|---|---|
+| Wage floor | your operating costs | hiring-hall quality and crew retention, guild-wide |
+| Mandatory rest | throughput vs. error rates | veteran lifespans; who's willing to sign on |
+| Hazard pay & death benefits | cost per dangerous contract | crew willingness to take deep-space and salvage work |
+| Safety margin mandates | the §7.4 departure thresholds — *for everyone* | accident and fatality rates across the guild |
+| Apprenticeship program | a real budget line, no immediate return | the hall's skill floor rises over game-years — for you *and* your rivals |
+| Salvage rights / data sharing / exclusivity | contract income and access | inter-guild friction and standing |
+| Insurance pool | premiums | how much a disaster actually costs you |
+
+Two of those deserve emphasis. The **safety mandates** are the §7.4 rules that have
+been quietly protecting you all game — late game, you can vote to loosen them, for
+every ship in the guild, and read the accident statistics afterward. And the
+**apprenticeship program** is a pure collective good: expensive, slow, benefits
+competitors as much as you, and compounds for decades. Whether players fund it is
+the most interesting question this system asks.
+
+**Schism.** Push policy far enough from a guild's identity and you get internal
+conflict: traditionalists organize, motions get blocked, and a sustained campaign can
+end in a split — a faction leaves with locals, ships, and crew. Being on either side
+of a schism is a late-game story beat, and a second, more interesting answer to
+"what if I want to be something else" than defection (§6.1).
+
+**The Drift is the deliberate exception.** It has no bylaws and no assemblies —
+that's its entire proposition. Influence there is personal: protection, favors owed,
+who vouches for whom, and the slow accumulation of being the name people trust.
+Same currency, no institution to spend it in.
+
 ---
 
 ## 7. Time & Offline Simulation
@@ -669,6 +731,13 @@ Phased, each phase shippable:
    of four guilds, so "all Wrightworks reps" is a real, ready-made faction with
    shared standing, shared contract pools, and collective outcomes — social
    structure for free, without any player-to-player systems.
+   **And guild politics (§6.4) is the killer feature of this phase:** assemblies
+   become *real* votes among real players on wage floors, safety mandates, and
+   apprenticeship funding — genuine collective decisions with consequences everyone
+   lives with, implemented as async server-side tallies. Enormous shared-world feel
+   for almost no infrastructure, and the game's central question ("what does this
+   institution do to people?") becomes something a player community answers
+   together. This is the strongest argument for building v2 at all.
 4. **v3 — true MMO (optional).** Server-authoritative sim of shared space; the
    client's `Command`/determinism discipline becomes the wire protocol. Natural
    shape: colleagues and rivals at adjacent desks competing for the same contracts,
@@ -760,7 +829,14 @@ yourself is what kind of employer you are.
   tinkering, hull upgrade path, engine tiers through NEP, salvage missions —
   plus **HQ relocation** (§6.3), which needs M3's light-lag and hiring halls in
   place and gives the late game a strategic axis that isn't a bigger engine.
-- **M5 — Polish & ship.** Fair-play audit, dispatch-inbox return screen, session
+- **M5 — The institution.** Guild politics (§6.4) at v1 scope: political capital,
+  quarterly assemblies, ~8–10 policy motions with real mechanical effects, NPC
+  representatives with consistent agendas. *Not* in v1: blocs and vote-trading,
+  schism, multi-local politics — those are post-v1 depth on a system that only needs
+  to exist, not to be deep, for the arc to land. **This is the designated cut line**
+  (§12.1): if v1 is running long, M5 ships as a single annual assembly with four
+  motions, and the full system becomes the v1.x headline.
+- **M6 — Polish & ship.** Fair-play audit, dispatch-inbox return screen, session
   zero (§10.1) with all four guild openings, push notifications, save migrations,
   perf pass.
 
@@ -788,9 +864,14 @@ yourself is what kind of employer you are.
    the game cap you at the Belt to keep lag legible? Proposal: allow it, gate it
    behind high rank, and let the 123-minute Saturn opposition be a lesson players
    teach themselves. → M4.
-6. **Notifications backend timing:** local notifications only (no server) for v1,
-   or stand up the minimal push relay at launch? → M5.
-7. **Art direction** for the cross-section: clean diagram/blueprint style (cheap,
+6. **How long is the arc to political influence?** The §6.4 endgame has to be
+   reachable by a real player, not theoretical. At 24×, a year of guild service is
+   ~15 real days — so "first meaningful vote" wants to land somewhere around
+   30–60 real days of play. If that's too far, capital accrues faster and motions
+   start smaller. → measure in M5, tune against real playtest retention.
+7. **Notifications backend timing:** local notifications only (no server) for v1,
+   or stand up the minimal push relay at launch? → M6.
+8. **Art direction** for the cross-section: clean diagram/blueprint style (cheap,
    legible, ages well) vs. illustrated interiors (warm, expensive)? Blueprint-with-
    warm-accents proposed. → M1, since it shapes the room components.
 
@@ -800,9 +881,35 @@ the guild, never addressed as a person** (§1).
 
 ## 12. Top Risks
 
-1. **Scope.** A crew sim, a physics sim, an economy sim, and an idle game — each a
-   genre. Mitigation: the pillar hierarchy, the milestone order (each cuttable-to),
-   and ruthless v1 anti-goals.
+### 12.1 Scope — now the dominant risk
+
+The design has grown four major systems since the first draft (lifecycles and
+permadeath, the guild-rep framing with light-lag, HQ relocation, guild politics).
+Each is individually well-motivated and they reinforce each other unusually well —
+but stated plainly: **this is now a large game, and scope is the thing most likely
+to kill it.** The mitigations have to be real, not rhetorical:
+
+- **The milestone order is a priority order, not a plan.** M0–M3 is a complete,
+  shippable game: a living ship, real travel, a world with guilds, mortal crew.
+  Everything after that is the long tail. If we ship M0–M3 and nothing else, we
+  have a good game.
+- **Designated cut lines, decided in advance** (so they're not fought over under
+  deadline pressure): M5 guild politics degrades to a single annual assembly with
+  four motions; M4 HQ relocation degrades to a one-time mid-game move with a fixed
+  destination list; multi-ship and multi-local are already out.
+- **Every milestone ends with a fun check**, and a milestone that fails its check
+  gets fixed or cut before the next one starts. Adding systems on top of an
+  unproven core is how this design dies.
+- The pillar hierarchy (§1) and the v1 anti-goals settle conflicts without a
+  meeting.
+
+### 12.2 Other risks
+
+1. **Genre stacking.** A crew sim, a physics sim, an economy sim, a political sim,
+   and an idle game — each is a genre with its own depth expectations. Mitigation:
+   each system must earn its place by feeding the others (they currently do:
+   crew quality → ship performance → contract outcomes → capital → policy → crew
+   quality); anything that doesn't close a loop gets cut.
 2. **Realism vs. fun** (the §5.2 delta-v tension). Mitigation: honest numbers but
    *curated choices* — the game surfaces 2–3 good transfer options, not a porkchop
    plot; depth for those who look, clarity for those who don't.
@@ -817,3 +924,7 @@ the guild, never addressed as a person** (§1).
 5. **Determinism discipline erosion** (one `Math.random()` in the sim breaks
    catch-up and the MMO path silently). Mitigation: lint rule banning
    `Math.random`/`Date.now` in `packages/sim` + the state-hash property tests.
+6. **Politics that doesn't feel like anything.** §6.4 fails if motions read as a
+   menu of stat modifiers. Mitigation: every policy must visibly change *people* —
+   the hiring hall's faces, a captain's dispatch tone, an accident report — not
+   just a number. If a motion can't be shown through a person, it isn't a motion.
