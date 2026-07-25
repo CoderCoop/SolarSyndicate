@@ -4,22 +4,35 @@
 
 ## 1. Vision & Design Pillars
 
-You captain a working vessel in a lived-in, near-future solar system. The ship is a
-machine with real constraints; the crew are people with real needs; the economy is run
-by factions with real agendas. The game rewards planning, tinkering, and care.
+A working vessel in a lived-in, near-future solar system. The ship is a machine with
+real constraints; the crew are people with real needs; the economy is run by guilds
+with real agendas. The game rewards planning, tinkering, and care.
 
-Four pillars — when two ideas conflict, the higher pillar wins:
+**There is no avatar.** You are not a character aboard the ship — you are a
+**management representative of your guild**, working an operations desk somewhere
+back in the system. You choose the guild you represent, you hire and assign the
+crew, you authorize the money, and you set the policy the ship runs on. The people
+aboard are not you: they are your responsibility. (§4.6 covers why this framing
+solves more problems than it creates.)
+
+Five pillars — when two ideas conflict, the higher pillar wins:
 
 1. **The ship is the protagonist.** Everything the player touches routes through the
    cross-section view. Systems are legible: you can trace why the O2 margin is thin.
 2. **Plausible physics, honest numbers.** Real-world values +25–50% for near-future
-   tech. Delta-v, closed-loop life support, heat rejection, g-forces. We simplify
-   (2D coplanar orbits, no n-body) but we don't fake (no free thrust, no magic fuel).
+   tech. Delta-v, closed-loop life support, heat rejection, g-forces, light-lag. We
+   simplify (2D coplanar orbits, no n-body) but we don't fake (no free thrust, no
+   magic fuel, no instant comms).
 3. **Time flows whether you watch or not.** The simulation is anchored to real UTC
-   time. Crews sleep, ships coast, contracts expire. The game must be *kind* about
+   time. Crews sleep, ships coast, contracts expire. The game must be *fair* about
    this (see §7.4) but never freezes the world.
-4. **You work for someone.** Factions aren't flavor — they gate contracts, parts,
-   crew, and ports. Your alignment shapes your ship's culture and your options.
+4. **You work for someone.** The guild isn't flavor — it gates contracts, parts,
+   crew, and ports, and it's the seat you occupy. Your guild shapes the ship's
+   culture, the work you pursue, and what counts as a good decision.
+5. **You manage, you don't pilot.** Your instruments are hiring, assignment,
+   policy, money, and orders sent across a light-delay. You never fly the ship.
+   The crew do that — well or badly, depending on who you hired and what you asked
+   of them.
 
 **Anti-goals (v1):** combat as a core loop (leave hooks, don't build it), planetary
 landings/surface gameplay, 3D rendering, procedural galaxy (it's *our* solar system —
@@ -29,23 +42,35 @@ hand-crafted places), multiplayer (architect for it, don't build it).
 
 ## 2. Core Gameplay Loop
 
-Three nested loops at different time scales:
+**Session zero (once):** choose your guild → receive your desk, your operating
+budget, and a tired starter hull → **crew up at the hiring hall** → take the first
+contract. Crewing the ship *is* the tutorial (§10.1).
 
-- **Minutes (a play session):** check ship status → resolve events (breakdown, crew
-  issue, hail) → adjust assignments/routing/power → queue work orders → close app.
-- **Hours–days (a mission):** accept contract → plan transfer (window, delta-v,
-  consumables) → depart → mid-flight events + idle progress → arrive → resolve →
-  get paid → resupply.
-- **Weeks–months (a career):** earn faction standing → unlock hulls/parts/ports →
-  recruit and train specialists → take on longer, deeper, riskier missions (inner
-  system → Belt → outer planets) — while your crew age through their own careers
-  (§4.5): novices become masters, masters mentor and retire or die, and keeping
-  skill alive across generations becomes the long game.
+Then three nested loops at different time scales:
+
+- **Minutes (a play session):** read the ship's status report → answer pending
+  authorizations (breakdown, crew dispute, hail, expense) → adjust watch bill /
+  routing / power policy → queue work orders → close app.
+- **Hours–days (a mission):** accept contract → approve a transfer plan (window,
+  delta-v, consumables) → departure burn → mid-flight events + idle progress →
+  arrival → resolve → get paid → resupply.
+- **Weeks–months (a desk):** build guild standing and personal rank → unlock
+  hulls/parts/ports/contracts → recruit, train, and *keep* specialists → push into
+  longer, deeper, riskier work (inner system → Belt → outer planets) — while your
+  crew age through their own careers (§4.5): novices become masters, masters mentor
+  and retire or die, and keeping skill alive across generations becomes the long
+  game.
 
 The session loop is deliberately "check in on your ship" shaped — a good 5-minute
 session on a phone should feel complete. Long transfers make the idle layer the
 default state, punctuated by scheduled moments that want your attention (burns,
-arrivals, events).
+arrivals, events). Because you're remote, "check in" is diegetically exact: you're
+reading dispatches and sending orders, not standing on a bridge.
+
+**No game over.** There's no avatar to kill and no run to lose. Ships can be
+crippled, crews can die, contracts can be lost, and you can be demoted or drummed
+out of a guild — but the campaign continues, because the desk continues. This suits
+an always-on real-time sim: a permanent world needs a permanent seat.
 
 ---
 
@@ -121,7 +146,7 @@ condition (0–100%), wear rate, spares requirement, and their functional stats
 - **Tinkering:** a mechanic above a skill threshold can apply **mods** to a part
   (overtune: +output, +wear; efficiency trim: −consumption, −peak; reinforce: +mass,
   +reliability). Mods are where "25–50% over real-world" lives — baseline parts are
-  ~real-world spec, faction-tier and modded parts push toward +50%.
+  ~real-world spec, guild-tier and modded parts push toward +50%.
 - **Swapping:** parts swap at port (dock fees, market availability) or in flight if
   you carry the spare and the room allows hot-swap (risky, EVA sometimes required).
 - **Mass matters:** every part and cargo ton changes your delta-v budget via the
@@ -136,7 +161,7 @@ Real values +25–50%; each tier changes *how travel feels*, not just numbers:
 | Chemical (LOX/CH4) | Raptor-class | ~380 s | up to 1.5 g | Departure/capture burns, docking. High g events — crew endurance matters. Hopeless for deep space alone. |
 | Nuclear thermal | NERVA+50% | ~1200 s | 0.05–0.3 g | Early-game workhorse. Hohmann-class transfers: Mars in ~5–7 months. |
 | Nuclear-electric / plasma | VASIMR-class scaled up | ~5000 s | 0.5–3 milli-g | Mid-game. Continuous-burn spiral trajectories, Mars in ~2–3 months, radiator-hungry. |
-| Fusion torch (late) | speculative, the one licensed exaggeration | ~10⁴–10⁵ s | ~0.01 g | Endgame. Brachistochrone: Mars ~3 weeks, Jupiter ~2 months. Faction-locked. |
+| Fusion torch (late) | speculative, the one licensed exaggeration | ~10⁴–10⁵ s | ~0.01 g | Endgame. Brachistochrone: Mars ~3 weeks, Jupiter ~2 months. Guild-locked. |
 
 G-force realism lands in two places: high-thrust burn events (crew must be secured;
 endurance stat checks; un-stowed cargo is a hazard) and sustained micro-g health
@@ -153,7 +178,7 @@ drive, continuous thrust *is* your gravity, which the vertical deck layout refle
   Perception, Resolve (stress/social).
 - **Skills** (0–100, grow with use + training): Piloting, Astrogation, Mechanics,
   Electronics, Medicine, Life Support (botany/ECLSS), EVA, Negotiation, Leadership.
-- **Traits** (flavorful modifiers, some faction-cultural): *Spacer-born* (+micro-g
+- **Traits** (flavorful modifiers, some guild-cultural): *Spacer-born* (+micro-g
   tolerance, −high-g tolerance), *Union Steward* (+morale nearby, demands rest
   compliance), *Tinkerer* (mods cheaper, occasionally "improves" things unasked)…
 - **Needs** (the real-time layer): sleep (shift cycle), hunger, health, radiation
@@ -165,6 +190,10 @@ Every station derives a small set of multipliers from assigned crew (skill 60% /
 relevant stat 30% / condition-morale 10%). Examples of the mapping we hold ourselves
 to — **crew quality must be legible in the numbers the player already watches**:
 
+- **Captain** (Leadership/Resolve): quality of autonomous decisions when you're
+  unreachable (§4.6), crew morale floor, dispute resolution, work-order throughput
+  across the whole ship, and how faithfully your intent survives contact with
+  reality.
 - **Pilot** at helm: −5…15% delta-v cost on maneuvers (finer burns), tighter
   arrival windows, docking incident rate.
 - **Astrogator**: unlocks better transfer solutions (see §5.2), +scan resolution.
@@ -174,23 +203,36 @@ to — **crew quality must be legible in the numbers the player already watches*
 - **Life Support tech**: loop closure % (directly extends range), hydroponics yield.
 - **Negotiator** (at port): contract pay ±10%, market spreads, fee waivers.
 
+Because you're remote, these multipliers are the *only* way crew quality reaches
+you — you never fly a better line yourself. Hiring is the skill ceiling of the game.
+
 ### 4.3 Shifts & schedule
 
 The ship runs a 24 h clock with a 3-shift watch bill (or 2-shift if understaffed —
-morale and error rates suffer). The player sets the watch bill, not individual
-minute-to-minute actions; crew autonomously sleep, eat, work their station, and
-execute the work-order queue. This is what makes offline time work: the schedule
-*is* the AI. Skill growth: learning-by-doing (slow, capped by challenge level) +
-training work orders (uses another crew member's Leadership/skill, or courseware).
+morale and error rates suffer). You approve the watch bill and the work-order
+priorities; you never issue minute-to-minute orders (you couldn't — see §4.6). Crew
+autonomously sleep, eat, work their station, and execute the queue, with the captain
+reshuffling as circumstances demand. This is what makes offline time work: the
+schedule *is* the AI. Skill growth: learning-by-doing (slow, capped by challenge
+level) + training work orders (uses another crew member's Leadership/skill, or
+courseware).
 
 ### 4.4 Hiring
 
-Crew are hired at ports from a faction-flavored pool (union hiring halls — better
-vetted, wage floor, rest rules; independent boards — cheaper, riskier, occasional
-gem). Wages are a recurring cost — the economic pump that keeps missions mattering.
-Hiring pools aren't generated on demand — they're drawn from the persistent person
-registry (§4.5): the mechanic you passed over at Ceres last month may have shipped
-out on someone else's boat by the time you come back around.
+Hiring is your primary instrument — the thing you do that nobody aboard can do for
+you. Crew are hired at ports from guild-flavored pools (your own guild's hiring hall
+— vetted, wage floor, rest rules, cultural fit; rival halls and independent boards —
+cheaper, riskier, occasional gem, and standing consequences for poaching). Wages are
+a recurring cost, the economic pump that keeps missions mattering. Hiring pools
+aren't generated on demand — they're drawn from the persistent person registry
+(§4.5): the mechanic you passed over at Ceres last month may have shipped out on
+someone else's boat by the time you come back around.
+
+Because you're remote, hiring at a distant port is *itself* a delegated act: you
+review dossiers (incomplete, occasionally flattering) and your captain interviews.
+A high-trust captain tells you when a dossier is lying. Firing is equally remote and
+equally consequential — a berth left empty until the next port is a hole in the
+watch bill for the whole transfer.
 
 ### 4.5 Lifecycle, aging & permadeath
 
@@ -239,6 +281,59 @@ a morale/culture shock scaled by tenure and ties, possible obligations (Guild de
 benefit to a widow), and a permanent entry on the memorial wall. Losing a master is
 meant to *hurt* — that's what makes keeping them alive the game.
 
+### 4.6 The chair you're not in: command, autonomy & light-lag
+
+You are not aboard. This is the design's biggest structural asset, and it earns its
+keep three ways.
+
+**The ship has a captain, and they are an NPC.** Your first and most consequential
+hire (§10.1). The captain is a crew member like any other — stats, skills, age,
+mortality — with Leadership and Resolve as their defining attributes, and they hold
+one unique power: **they decide what happens when you aren't reachable.** A cautious
+captain diverts to a safe port and eats the penalty; a bold one runs the burn and
+makes the deadline; a bad one freezes. Captains have judgment, not just numbers.
+
+This creates the game's central relationship: **your standing with your own
+captain.** Countermanding their recommendations, overriding safety calls, pushing
+crews past guild rest rules, or refusing hazard pay all erode trust. High trust buys
+you a captain who executes intent faithfully and flags problems early; low trust
+gets you literal compliance, quiet resentment, requests for transfer — and
+eventually a resignation letter from the person who knows your ship best. A captain
+who dies is a crew-succession problem (promote the first officer? hire outside? the
+crew have opinions), not a meta-game problem.
+
+**Light-lag is real, and it's the best mechanic this framing unlocks.** Orders and
+reports travel at *c*. Round-trip delay from your desk (real values):
+
+| Ship at | One-way | Round trip | Real time at 24× |
+|---|---|---|---|
+| Luna | ~1.3 s | ~3 s | instant |
+| Mars | 4–21 min | 9–42 min | 0.4–1.7 min |
+| Ceres | 15–31 min | 29–63 min | 1.2–2.6 min |
+| Jupiter | 35–52 min | 70–103 min | 2.9–4.3 min |
+| Saturn | 71–87 min | 141–175 min | 5.9–7.3 min |
+
+Consequences that fall straight out: near-Earth ops are tightly managed and feel
+supervised; the Belt gets a real conversational lag; the outer system is
+*genuinely autonomous*, where you set policy and trust your captain because you
+cannot do anything else. The distance progression of the game is simultaneously a
+progression in **how much control you give up** — which is a far more interesting
+difficulty curve than bigger numbers, and it makes hiring a great captain the actual
+unlock for deep-space work. Real conjunctions (Sun between Earth and ship) produce
+scheduled comms blackouts lasting game-weeks: pre-authorize, or go dark and hope.
+
+**It fixes the offline problem honestly.** Everything §7.3–7.4 needs was awkward
+with an avatar aboard ("why didn't I just handle it?") and is natural here: you're
+not there because *you're never there*. Standing policies are standing orders. A
+timed-out decision isn't the game cheating — it's a ship 40 light-minutes away
+doing its job. Push notifications are dispatches. The session-open digest is your
+inbox.
+
+**And it opens two doors we want later:** managing more than one ship (the desk
+scales; the fiction doesn't strain), and a shared universe where many players are
+representatives of the same few guilds (§8.4) — colleagues and rivals at adjacent
+desks, competing for the same contracts, hulls, and people.
+
 ---
 
 ## 5. Travel, Missions, Physics
@@ -271,50 +366,62 @@ That single tension is the travel game.
 
 ### 5.3 Missions
 
-Generated from faction need + world state, not fully random. v1 archetypes:
+Generated from guild need + world state, not fully random. v1 archetypes:
 
 1. **Cargo contract** (bulk, timed): the bread and butter. Tonnage × distance ×
-   deadline pressure. Bulk-hauler faction specialty.
+   deadline pressure. Helios specialty.
 2. **Speculative trade** (no contract): buy low here, sell high there; prices drift
    with local supply/demand and news events.
 3. **Survey/exploration**: take a science package to a coordinate/rock, spend time
-   scanning, return data. Long, quiet, life-support-limited. Science faction.
+   scanning, return data. Long, quiet, life-support-limited. Meridian Institute specialty.
 4. **Salvage**: reach a derelict/debris field, EVA + mechanics gameplay, recover
    parts (the source of weird/cheap/modded parts). Salvage guild.
 5. **Passenger/medical run**: people are demanding cargo (life support load, comfort,
    g-limits on burns).
-6. **Grey-market run** (smuggler faction): high pay, cargo you don't inspect,
+6. **Grey-market run** (The Drift): high pay, cargo you don't inspect,
    inspection events at port, standing consequences if caught.
 
 Missions compose (carry cargo out, salvage on the return leg). Events punctuate
 transit: part failures, flare warnings (get crew into the water-tank shadow),
-distress calls (morality + faction standing), stowaways, crew drama. Events are
+distress calls (morality + guild standing), stowaways, crew drama. Events are
 scheduled by the simulation (§7.3) — some auto-resolve by policy, some queue as
 push-notification decisions.
 
 ---
 
-## 6. Factions & Economy
+## 6. Guilds & Economy
 
 ### 6.1 The Union System
 
-Ships don't fly free — they fly *affiliated*. Affiliation is v1's faction mechanic:
-one primary affiliation (changeable, with cost) + standing scores (−100…+100) with
-all factions. Affiliation grants: contract board access, wage/part discounts, port
-berths, crew pool flavor — and imposes obligations (union rest rules, corporate
-exclusivity, institute data-sharing) that create real texture in day-to-day play.
+Ships don't fly free — they fly *affiliated*. And you don't float free either: **the
+guild is the seat you occupy**, chosen at the start of the game (§10.1) and the
+single most defining choice you make. It sets your starting hull, budget, contract
+board, hiring hall, home port, tutorial, and the culture your crew expect. Guild
+choice is the game's "class selection," and the four play genuinely differently.
 
-| Faction | Identity | Specialty | Culture / obligations |
-|---|---|---|---|
-| **Helios Combine** | mega-corporate bulk logistics | huge cargo contracts, cheap fuel at company ports | schedule discipline; penalties for late delivery; crew morale drag ("company town") |
-| **Wrightworks Guild** | engineers' & salvagers' labor union | salvage rights, part discounts, best mechanics in the hiring hall | wage floors + mandatory rest (genuinely good for crew, costs money); solidarity calls |
-| **Meridian Institute** | scientific consortium | survey contracts, sensor tech, astrogation training | data must be shared; low pay, high tech access |
-| **The Drift** | independents & smugglers | grey market, no questions, best margins | no safety net; standing is personal and fragile; other factions' ports get suspicious |
+| Guild | Identity | Specialty | Culture / obligations | Plays like |
+|---|---|---|---|---|
+| **Helios Combine** | mega-corporate bulk logistics | huge cargo contracts, cheap fuel at company ports | schedule discipline; late-delivery penalties; crew morale drag ("company town") | Logistics optimization. Big margins, tight deadlines, replaceable people — and the temptation that comes with treating them that way |
+| **Wrightworks Guild** | engineers' & salvagers' labor union | salvage rights, part discounts, best mechanics in the hall | wage floors + mandatory rest (genuinely good for crew, costs money); solidarity calls you're expected to answer | Tinkerer mode. Poorer, slower, the best-maintained ship in the system, and crew who stay for decades |
+| **Meridian Institute** | scientific consortium | survey contracts, sensor tech, astrogation training | data must be shared; low pay, high tech access | The long game. Bad money, unmatched tech and training, missions that go further out than anyone else's |
+| **The Drift** | independents & smugglers | grey market, no questions, best margins | no safety net, no insurance, no death benefit; standing is personal and fragile | High risk. Best pay, worst consequences, and the only guild where your crew might be running from something |
 
-Standing moves on contract outcomes, event choices, and cross-faction friction
-(running Helios freight lowers Drift trust, etc.). Faction flavor should reach the
-ship: a Guild crew expects the rest rules honored; an Institute crew gets restless
-without a science bay.
+Standing (−100…+100) is tracked with *all* guilds and moves on contract outcomes,
+event choices, and cross-guild friction. Guild culture must reach the ship: a
+Wrightworks crew expects rest rules honored and notices when they aren't; an
+Institute crew gets restless without a science bay; Drift crew don't ask questions
+but don't take loyalty for granted either.
+
+**Rank within your guild** is your personal progression axis (the replacement for
+character levels): reliable delivery, honored obligations, and cultivated crews earn
+promotion — bigger budgets, better hulls, priority berths, a voice in guild politics,
+and eventually a second ship. Failures and betrayals earn demotion, audits, and
+oversight.
+
+**Defection** is possible and expensive: switching guilds costs rank, standing,
+contract access, and crew (some follow you, some refuse on principle, some report
+you). It's a mid-game story beat, not a menu toggle — and it's the one time the
+"class selection" can be re-rolled.
 
 ### 6.2 Economy
 
@@ -322,10 +429,18 @@ without a science bay.
   drifting via production/consumption rates + news shocks (mine accident on Vesta →
   metals spike). Deterministic from seed + time (§7.3) so it can later be
   server-published for a shared universe.
+- **Whose money?** The guild's. You operate a **budget**, not a wallet: revenue flows
+  to the guild, you draw against an operating allowance, and capital purchases (hulls,
+  major parts) need authorization your rank has to carry. Running lean earns rank and
+  latitude; overspending earns an audit. This makes the economy accountable rather
+  than acquisitive, which is the whole difference between a manager and a merchant —
+  and it gives the guild a lever to express its values (Helios questions every hour
+  of overtime; Wrightworks questions every hour of *unpaid* overtime).
 - **Money sinks** (what makes income meaningful): wages, propellant, spares,
-  port/berth fees, part purchases, insurance, faction dues.
-- **Progression**: money buys parts; *standing* gates which parts/hulls/ports are
-  even purchasable. Both are needed — pure cash grind can't shortcut faction play.
+  port/berth fees, part purchases, insurance, guild dues, hazard pay, death benefits.
+- **Progression**: budget buys parts; *standing and rank* gate which parts/hulls/
+  ports are even purchasable. Both are needed — pure cash grind can't shortcut
+  guild play.
 - **No player-driven inflation risk in v1** (single player), but keep all balance
   values in data files — the economy will need live tuning.
 
@@ -372,12 +487,18 @@ offline catch-up reproducible, bugs replayable, and cloud sync verifiable (§8.4
 
 ### 7.3 What happens while you're away
 
-The watch bill and **standing policies** run the ship: crew work/eat/sleep, execute
-queued work orders, follow policy toggles the player sets in advance (ration
-thresholds, "wake me for" rules, auto-accept berth fees, event auto-resolutions).
-Events that *require* the captain queue a decision and fire a push notification;
-if unanswered past their window they resolve by the standing policy's conservative
-default.
+The watch bill, your **standing orders**, and your **captain's judgment** run the
+ship — in that order of precedence. Crew work/eat/sleep and execute queued work
+orders; standing orders are the policy toggles you set in advance (ration
+thresholds, escalation rules, spending limits, auto-accept berth fees, default
+event resolutions); anything your orders don't cover falls to the captain, whose
+Leadership and temperament decide how well it goes (§4.6).
+
+Events that need *your* authorization queue a decision and fire a push notification.
+The decision window is bounded by physics: the captain can only wait as long as
+operational reality allows, and every exchange costs a light-lag round trip. Past
+that, they act — on your standing orders if they cover it, on their own judgment if
+they don't. This is the offline system and the command system being the same system.
 
 ### 7.4 The fair-play rules (non-negotiable)
 
@@ -386,14 +507,14 @@ you're away" — it's **"no death without foreshadowing and a decision."** Perma
 consequences must always trace back to a choice the player actually made:
 
 - **Every acute emergency opens a decision window** (push notification + in-game
-  timer scaled to severity). Unanswered, it resolves by the player's standing
-  policies, whose conservative defaults reach **safe mode**: minimal power, coast,
-  crew secured on rations. If margins were sane at departure, safe mode always
-  suffices — costing money, time, morale, standing, the mission. Death while
-  unattended can only occur when the player pre-committed to thin margins
-  (overrides, rationing, deferred maintenance) — and the game says so at commit
-  time, in red, with names: *"If a scrubber fails past Vesta, Osei and Reyes
-  don't come home."*
+  timer scaled to severity and light-lag). Unanswered, it resolves by your standing
+  orders and your captain, whose conservative defaults reach **safe mode**: minimal
+  power, coast, crew secured on rations. If margins were sane at departure, safe
+  mode always suffices — costing money, time, morale, standing, the mission. Death
+  while unattended can only occur when *you* pre-committed to thin margins
+  (overrides, rationing, deferred maintenance, a captain you knew was green) — and
+  the game says so at commit time, in red, with names: *"If a scrubber fails past
+  Vesta, Osei and Reyes don't come home."*
 - **Chronic deaths are telegraphed in game-years.** Age, dose, and illness decline
   visibly; the medic gives prognoses; there is always time for a final voyage, a
   retirement, a goodbye. No one dies of old age as an offline surprise line-item.
@@ -403,9 +524,12 @@ consequences must always trace back to a choice the player actually made:
 - **The ship survives.** Crew are mortal; the campaign is not. Hull loss is not in
   v1 (a dead-crew ship gets recovered/towed at ruinous cost). Bounded decay still
   applies to everything non-living: condition, morale, standing have floors.
-- **Return is a story.** Re-entry screen is a captain's log digest — including,
-  when it must be, an honest account of a death and the policy chain that led
-  there. Grief the player can read is fair; a red number is not.
+- **Return is a story.** The session-open screen is your inbox: the captain's
+  dispatches since you last read in, written in their voice — including, when it
+  must be, an honest account of a death and the chain of orders that led there.
+  Grief the player can read is fair; a red number is not. (A captain who trusts you
+  writes candidly; one who doesn't files a clean, defensive report — the digest
+  itself carries the relationship.)
 
 ---
 
@@ -418,7 +542,7 @@ consequences must always trace back to a choice the player actually made:
   - `packages/sim` — the entire game simulation. **Zero DOM/browser dependencies.**
     Pure functions + event queue. Runs in browser, Node (tests), or a future server
     unchanged. This package boundary *is* the MMO insurance policy.
-  - `packages/data` — content definitions (parts, hulls, factions, missions, crew
+  - `packages/data` — content definitions (parts, hulls, guilds, missions, crew
     tables) as JSON validated by zod schemas. Balance lives here, not in code.
   - `apps/web` — the PWA: Vite + React + TypeScript.
 - **Rendering:** the cross-section is layered 2D — start with **SVG/DOM** components
@@ -469,13 +593,20 @@ Phased, each phase shippable:
    snapshot + command log; conflict resolution = last-writer-wins per save slot
    (single player, low stakes). Enables cross-device play.
 3. **v2 — shared *world*, single-player ships.** Server publishes the economy:
-   price indices, news events, faction states — same deterministic generators, now
+   price indices, news events, guild states — same deterministic generators, now
    seeded server-side and shared by everyone. Players feel a common universe
    (prices, news, leaderboards, maybe visible ship traffic) with zero real-time
    multiplayer infrastructure. High shared-feel per engineering dollar.
+   **The guild-rep framing pays off here:** every player is a representative of one
+   of four guilds, so "all Wrightworks reps" is a real, ready-made faction with
+   shared standing, shared contract pools, and collective outcomes — social
+   structure for free, without any player-to-player systems.
 4. **v3 — true MMO (optional).** Server-authoritative sim of shared space; the
-   client's `Command`/determinism discipline becomes the wire protocol. Decide
-   *then* whether the game wants it; nothing in v1 forecloses it.
+   client's `Command`/determinism discipline becomes the wire protocol. Natural
+   shape: colleagues and rivals at adjacent desks competing for the same contracts,
+   berths, hulls, and *people* — a shared person registry means the mechanic you
+   didn't hire gets hired by someone else, for real. Decide *then* whether the game
+   wants it; nothing in v1 forecloses it.
 
 The v1 discipline that buys all of this: **deterministic sim, command-sourced
 mutations, UTC-anchored time, UUID entity ids, sim/UI separation.** All cheap now,
@@ -491,7 +622,7 @@ foregrounded (1 Hz cosmetic tick, rAF only during gestures/animations).
 
 ## 9. Content & Data-Driven Design
 
-Every part, hull, room, trait, faction, commodity, mission template, and event is a
+Every part, hull, room, trait, guild, commodity, mission template, and event is a
 JSON record with a zod schema — no gameplay numbers in TypeScript. Consequences:
 balance patches are data patches; a future server can ship data updates without app
 releases; modding stays possible; and designers (us, later maybe players) tune in
@@ -500,7 +631,43 @@ deterministic generator instantiates them from world state.
 
 ---
 
-## 10. Build Order (each milestone is playable)
+## 10. Onboarding & Build Order
+
+### 10.1 Session zero: the guild, then the crew
+
+The opening is not a cutscene — it's the game's two core verbs performed once,
+slowly, with the training wheels on.
+
+**1. Choose your guild.** Four cards, each stating its identity, what it gives you,
+and what it asks of you (§6.1) — no wrong answers, four different games. This choice
+sets starting hull, budget, home port, contract board, hiring hall, and the cultural
+expectations your crew will hold you to. It is presented as what it is: taking a
+post. *"Wrightworks Guild, Ceres Local 12, is prepared to assign you an operations
+desk and one very tired hauler."*
+
+**2. Crew the ship.** Your hull is docked, sound, and empty. You have a budget that
+won't cover the crew you want, and a hiring hall full of dossiers — this is the
+tutorial, and it teaches by making you *shop*:
+
+- **Hire your captain first.** Three or four candidates with visibly different
+  temperaments (the cautious veteran with a dose history and a bad knee; the sharp,
+  green, cheap one; the expensive one nobody has a bad word about; the one whose
+  last berth ended badly and whose dossier is vague about why). This single choice
+  teaches stats, skills, traits, wages, and — because §4.6 makes it matter —
+  establishes from minute one that you are hiring judgment, not statistics.
+- **Then fill the watch bill.** You need a pilot, a mechanic, and life support
+  covered; you can afford roughly two of the three properly. The gaps you accept
+  here become the first act's problems, which is exactly what a good tutorial
+  should do. Your captain comments on your picks (their first read on you).
+- **Then set standing orders** on a short first contract — a Luna run, where
+  light-lag is ~3 seconds and you can micromanage freely. Distance, and the loss of
+  control that comes with it, arrives in act two: the game teaches delegation by
+  gradually taking supervision away.
+
+No avatar creation, no name-your-hero screen. You get a guild, a desk, a ship, and
+a payroll. The people are the characters.
+
+### 10.2 Build order (each milestone is playable)
 
 - **M0 — Walking skeleton (the tracer bullet).** Sim package with event queue +
   UTC anchoring + one resource (power); ship view rendering 3 rooms from state;
@@ -511,15 +678,16 @@ deterministic generator instantiates them from world state.
   is keeping the ship healthy engaging on its own?*
 - **M2 — Going somewhere.** System map, windows + Lambert transfers, delta-v/
   consumables budgeting, one cargo mission loop, arrival/departure burns, money.
-- **M3 — A world with opinions.** All four factions, standing, contract boards,
+- **M3 — A world with opinions.** All four guilds, standing + rank, contract boards,
   price drift + speculative trade, hiring halls backed by the person registry,
   aging + permadeath + first life events (ambitions, departures, funerals),
-  mission archetypes 1–4, events with policies + notifications.
+  the captain-autonomy and trust system, light-lag, mission archetypes 1–4,
+  standing orders + notifications.
 - **M4 — Ship of Theseus.** Part market, swapping, mods/tinkering, hull upgrade
   path, engine tiers through NEP, salvage missions.
-- **M5 — Polish & ship.** Kindness-rules audit, captain's-log return screen,
-  onboarding (start docked at LEO with a debt and a two-person crew), push
-  notifications, save migrations, perf pass.
+- **M5 — Polish & ship.** Fair-play audit, dispatch-inbox return screen, session
+  zero (§10.1) with all four guild openings, push notifications, save migrations,
+  perf pass.
 
 ---
 
@@ -529,15 +697,22 @@ deterministic generator instantiates them from world state.
 2. **Realism ceiling:** is the late-game fusion torch acceptable as the one
    speculative exaggeration, or do we hold the +25–50% line strictly (and accept
    multi-real-week outer-system runs forever)? → M4.
-3. **Captain mortality & legacy.** Crew permadeath is decided (§4.5) — but is the
-   captain a person too? If the captain ages and dies, we get a legacy/succession
-   system (a groomed first officer inherits the ship, debts, and standing — the
-   campaign outlives the character, generational play all the way down). If not,
-   the captain is an abstract immortal viewpoint. Proposal: captain is mortal,
-   succession is the endgame loop. → M3.
-4. **Notifications backend timing:** local notifications only (no server) for v1,
+3. **How literal is light-lag in the UI?** Hard version: telemetry is *stale* —
+   the ship view shows the ship as it was N minutes ago, and orders visibly take
+   time to land. Gorgeous, thematic, and potentially baffling on a phone. Soft
+   version: state is live, only *decisions* are delayed. Proposal: soft by default,
+   with stale-telemetry markers on the outer-system screens (a "last heard: 47 min
+   ago" timestamp) — full hard mode as an optional realism setting. → M3.
+4. **When does the desk get a second ship?** Rank progression naturally points at
+   a small fleet, and the framing supports it with no fiction strain — but it
+   multiplies UI and balance work. Proposal: single ship through v1, fleet as the
+   headline v1.x feature (it's also the strongest argument for cloud save). → post-v1.
+5. **Do you have a name?** Proposal: you're addressed by guild title and surname in
+   dispatches ("Rep. Okafor"), pick the surname at session zero, nothing more —
+   enough for the captain to write to a person, not enough to be a character. → M5.
+6. **Notifications backend timing:** local notifications only (no server) for v1,
    or stand up the minimal push relay at launch? → M5.
-5. **Art direction** for the cross-section: clean diagram/blueprint style (cheap,
+7. **Art direction** for the cross-section: clean diagram/blueprint style (cheap,
    legible, ages well) vs. illustrated interiors (warm, expensive)? Blueprint-with-
    warm-accents proposed. → M1, since it shapes the room components.
 
