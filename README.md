@@ -6,6 +6,9 @@ an operations desk. You choose the guild, hire the crew, authorise the money, an
 set the policy the ship runs on. The people aboard are not you; they are your
 responsibility.
 
+**[Play the current build →](https://codercoop.github.io/SolarSyndicate/)** — installable
+from the browser menu on a phone; it runs entirely offline once loaded.
+
 The full design lives in [`docs/design.md`](docs/design.md). Read that first — the
 code deliberately references its section numbers (§7.2, §8.2, and so on) so that
 any given decision can be traced back to the reason for it.
@@ -66,6 +69,11 @@ Two things worth trying:
 | `pnpm lint` | ESLint, including the determinism guard |
 | `pnpm check` | typecheck + lint + test |
 | `pnpm verify` | Build, then drive the real PWA in Chromium end to end |
+
+Every push to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`.
+The build uses relative asset paths so the same artifact runs from a project
+subpath, the domain root, or straight off disk — and `pnpm verify` serves it
+from a subpath so that stays true.
 
 ## Layout
 

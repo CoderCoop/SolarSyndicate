@@ -33,9 +33,21 @@ if (!existsSync(DIST)) {
   process.exit(1)
 }
 
+/**
+ * Serve under a subpath rather than at the root, mirroring a GitHub Pages
+ * project site. Deploying to /SolarSyndicate/ while only ever testing at / is
+ * how you ship a build whose assets 404 on the live site.
+ */
+const MOUNT = '/SolarSyndicate/'
+
 const server = createServer(async (req, res) => {
   const url = (req.url ?? '/').split('?')[0]
-  let file = join(DIST, url === '/' ? 'index.html' : url.slice(1))
+  if (!url.startsWith(MOUNT)) {
+    res.writeHead(404).end('not found -- the app is mounted at ' + MOUNT)
+    return
+  }
+  const rel = url.slice(MOUNT.length)
+  let file = join(DIST, rel === '' ? 'index.html' : rel)
   if (!existsSync(file)) file = join(DIST, 'index.html')
   try {
     const body = await readFile(file)
@@ -47,7 +59,7 @@ const server = createServer(async (req, res) => {
 })
 
 await new Promise((r) => server.listen(0, r))
-const base = `http://127.0.0.1:${server.address().port}`
+const base = `http://127.0.0.1:${server.address().port}${MOUNT}`
 
 const checks = []
 const check = (name, ok, detail = '') => {
@@ -238,6 +250,20 @@ for (const icon of manifest.icons ?? []) {
   const res = await fetch(new URL(icon.src, base))
   check(`icon ${icon.sizes} is served`, res.ok && res.headers.get('content-type') === 'image/png')
 }
+
+const assetHrefs = await page.$$eval('script[src], link[href]', (els) =>
+  els.map((e) => e.getAttribute('src') ?? e.getAttribute('href')).filter(Boolean),
+)
+check(
+  'assets are referenced relatively, so the build runs from any subpath',
+  assetHrefs.every((h) => !h.startsWith('/')),
+  assetHrefs.join(' '),
+)
+check(
+  'the manifest start_url is not the domain root',
+  manifest.start_url !== '/',
+  `start_url=${manifest.start_url}`,
+)
 
 const swRegistered = await page.evaluate(async () => {
   const reg = await navigator.serviceWorker?.getRegistration()

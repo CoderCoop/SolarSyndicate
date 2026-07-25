@@ -6,6 +6,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 const src = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
 export default defineConfig({
+  /**
+   * Relative asset paths, so the same build runs from the domain root, from a
+   * GitHub Pages project subpath (/SolarSyndicate/), or straight off disk.
+   * A hard-coded base would tie the artifact to one deployment; this game is a
+   * single page with no client-side routing, so there is nothing to gain by
+   * pinning it.
+   */
+  base: './',
   resolve: {
     // Build straight from workspace source: one build step, and the sim's
     // types stay live while iterating.
@@ -34,7 +42,11 @@ export default defineConfig({
         background_color: '#0b1015',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        // Relative to the manifest, for the same reason as `base` above: an
+        // absolute '/' would send installed copies to the domain root, which
+        // on a project Pages site is somebody else's page.
+        start_url: '.',
+        scope: '.',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
