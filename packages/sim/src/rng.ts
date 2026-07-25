@@ -94,3 +94,19 @@ export class Rng {
 export function randomAt(seed: number, stream: string, counter: number): number {
   return new Rng(seed, stream, counter).next()
 }
+
+/**
+ * Draw from a named stream, advancing that stream's persisted counter.
+ *
+ * Typed structurally rather than against SimState so that this module stays
+ * free of state imports -- randomness is a primitive, not a game system.
+ */
+export function draw(
+  state: { seed: number; rngCounters: Record<string, number> },
+  stream: string,
+): number {
+  const rng = new Rng(state.seed, stream, state.rngCounters[stream] ?? 0)
+  const value = rng.next()
+  state.rngCounters[stream] = rng.counter
+  return value
+}

@@ -20,36 +20,89 @@ export interface ShipViewportProps {
   openRoomId: string | undefined
   onSelectRoom: (roomId: string | undefined) => void
   onTogglePart: (partId: string, enabled: boolean) => void
+  onOrderWork: (partId: string, kind: 'service' | 'repair') => void
 }
+
+type Part = RoomView['parts'][number]
 
 function powerLabel(kw: number): string {
   if (Math.abs(kw) < 0.05) return '—'
   return `${kw > 0 ? '+' : ''}${kw.toFixed(1)} kW`
 }
 
+function conditionTone(condition: number): string {
+  if (condition >= 60) return 'good'
+  if (condition >= 35) return 'worn'
+  if (condition >= 15) return 'poor'
+  return 'critical'
+}
+
 function PartRow({
   part,
   onToggle,
+  onOrderWork,
 }: {
-  part: RoomView['parts'][number]
+  part: Part
   onToggle: (partId: string, enabled: boolean) => void
+  onOrderWork: (partId: string, kind: 'service' | 'repair') => void
 }) {
-  const state = part.shed ? 'shed' : part.enabled ? 'on' : 'off'
+  const state = part.broken ? 'broken' : part.shed ? 'shed' : part.enabled ? 'on' : 'off'
 
   return (
     <li className={`part part--${state}`}>
       <div className="part__main">
         <div className="part__head">
           <span className="part__name">{part.name}</span>
-          <span className={`part__power ${part.powerKw > 0 ? 'is-source' : 'is-load'}`}>
-            {powerLabel(part.powerKw)}
+          <span className={`part__power ${part.effectiveKw > 0 ? 'is-source' : 'is-load'}`}>
+            {powerLabel(part.effectiveKw)}
           </span>
         </div>
+
+        {/* Condition is the number that decides whether this part is a problem
+            this week or next month, so it gets a bar rather than a footnote. */}
+        <div className={`condition condition--${conditionTone(part.condition)}`}>
+          <div className="condition__track">
+            <div className="condition__fill" style={{ width: `${Math.max(0, part.condition)}%` }} />
+          </div>
+          <span className="condition__value">
+            {Math.round(part.condition)}% {part.conditionLabel}
+          </span>
+        </div>
+
         <p className="part__blurb">{part.blurb}</p>
+
         <div className="part__tags">
           <span className={`tag tag--${part.priority}`}>{part.priority}</span>
+          {part.broken && <span className="tag tag--broken">failed</span>}
           {part.shed && <span className="tag tag--shed">shed on brownout</span>}
           {!part.switchable && <span className="tag tag--locked">not switchable</span>}
+          {part.effectiveKw !== part.powerKw && part.powerKw > 0 && (
+            <span className="tag" title="Rated output before wear">
+              rated {part.powerKw.toFixed(1)} kW
+            </span>
+          )}
+        </div>
+
+        <div className="part__actions">
+          {part.hasWorkOrder ? (
+            <span className="part__ordered">Work ordered</span>
+          ) : part.broken ? (
+            <button
+              type="button"
+              className="button button--primary button--small"
+              onClick={() => onOrderWork(part.id, 'repair')}
+            >
+              Order repair
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="button button--small"
+              onClick={() => onOrderWork(part.id, 'service')}
+            >
+              Order service
+            </button>
+          )}
         </div>
       </div>
 
@@ -59,7 +112,7 @@ function PartRow({
         role="switch"
         aria-checked={part.enabled}
         aria-label={`${part.name}: ${part.enabled ? 'online' : 'offline'}`}
-        disabled={!part.switchable}
+        disabled={!part.switchable || part.broken}
         onClick={() => onToggle(part.id, !part.enabled)}
       >
         <span className="switch__track">
@@ -78,6 +131,7 @@ export function ShipViewport({
   openRoomId,
   onSelectRoom,
   onTogglePart,
+  onOrderWork,
 }: ShipViewportProps) {
   return (
     <section className="ship" aria-label="Ship cross-section">
@@ -106,12 +160,19 @@ export function ShipViewport({
                 >
                   <span className="deck__index">{room.deck}</span>
                   <span className="deck__labels">
-                    <span className="deck__name">{room.short}</span>
+                    <span className="deck__name">
+                      {room.short}
+                      {room.needsAttention && (
+                        <span className="deck__alert" aria-label="needs attention" />
+                      )}
+                    </span>
                     {room.name.toLowerCase() !== room.short.toLowerCase() && (
                       <span className="deck__full">{room.name}</span>
                     )}
                   </span>
-                  <span className={`deck__power ${room.netKw > 0 ? 'is-source' : room.netKw < 0 ? 'is-load' : ''}`}>
+                  <span
+                    className={`deck__power ${room.netKw > 0 ? 'is-source' : room.netKw < 0 ? 'is-load' : ''}`}
+                  >
                     {powerLabel(room.netKw)}
                   </span>
                 </button>
@@ -124,7 +185,12 @@ export function ShipViewport({
                     ) : (
                       <ul className="parts">
                         {room.parts.map((part) => (
-                          <PartRow key={part.id} part={part} onToggle={onTogglePart} />
+                          <PartRow
+                            key={part.id}
+                            part={part}
+                            onToggle={onTogglePart}
+                            onOrderWork={onOrderWork}
+                          />
                         ))}
                       </ul>
                     )}

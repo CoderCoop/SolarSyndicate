@@ -9,16 +9,34 @@
  * Catch-up is not a separate code path. Opening the app after a week away runs
  * exactly the same loop as a second of live play -- it just pops more events.
  */
-import { content, getHull, getPart, STARTER_HULL_ID } from '@solsyn/data'
+import { content, getCrewDef, getHull, getPart, STARTER_HULL_ID } from '@solsyn/data'
+import { activityAt, co2Ppm, crewEffectiveness, nextShiftBoundary, updateActivities } from './crew.js'
 import { pushLog } from './log.js'
-import { powerBalance, resolvePower, restoreShedLoads } from './power.js'
+import {
+  lifeBalance,
+  powerBalance,
+  partPowerKw,
+  resolveNetworks,
+  resourceBoundMessage,
+  restoreShedLoads,
+} from './networks.js'
 import { peekDue, pop, schedule } from './queue.js'
 import { fillFraction, levelAt, makeReservoir, settle } from './resources.js'
 import { DAY, formatDuration, gameTimeFromUtc, type GameTime } from './time.js'
+import { applyThreshold, conditionLabel, resolveWear } from './wear.js'
 import {
+  cancelWorkOrder,
+  completeWorkOrder,
+  createWorkOrder,
+  resolveWorkOrders,
+} from './workorders.js'
+import {
+  RESOURCE_KEYS,
   SIM_STATE_VERSION,
   type Command,
+  type CrewState,
   type PartState,
+  type ResourceKey,
   type SimEvent,
   type SimState,
   type TimedCommand,
@@ -47,7 +65,22 @@ export function createWorld(seed: number, utcMs: number): SimState {
       roomId: def.roomId,
       enabled: def.startsEnabled,
       shed: false,
+      broken: false,
+      // A thirty-one-year-old hauler with a "characterful" maintenance log
+      // does not start at 100%.
+      condition: makeReservoir(startingCondition(def.id), 0, 100, t0),
     }))
+
+  const crew: CrewState[] = content.crew.map((def) => ({
+    id: def.id,
+    defId: def.id,
+    watch: def.watch,
+    activity: activityAt(def.watch, t0),
+    fatigue: makeReservoir(18, 0, 100, t0),
+    // Health floors above zero in M1: the crew can be worn down but not lost.
+    // Mortality arrives with the lifecycle system in M3 (§4.5).
+    health: makeReservoir(92, 10, 100, t0),
+  }))
 
   const state: SimState = {
     version: SIM_STATE_VERSION,
@@ -60,68 +93,149 @@ export function createWorld(seed: number, utcMs: number): SimState {
       hullId: hull.id,
       rooms,
       parts,
-      battery: makeReservoir(hull.batteryStartKwh, 0, hull.batteryCapacityKwh, t0),
+      resources: {
+        battery: makeReservoir(hull.batteryStartKwh, 0, hull.batteryCapacityKwh, t0),
+        heat: makeReservoir(21, 21, 55, t0),
+        o2: makeReservoir(hull.o2CapacityKg * 0.82, 0, hull.o2CapacityKg, t0),
+        co2: makeReservoir(0.34, 0, 6, t0),
+        water: makeReservoir(hull.waterCapacityKg * 0.88, 0, hull.waterCapacityKg, t0),
+        food: makeReservoir(hull.foodCapacityKg * 0.74, 0, hull.foodCapacityKg, t0),
+        propellant: makeReservoir(hull.propellantCapacityKg * 0.41, 0, hull.propellantCapacityKg, t0),
+        spares: makeReservoir(21, 0, hull.sparesCapacity, t0),
+      },
+      docked: true,
       netPowerKw: 0,
+      netHeatKw: 0,
       onBattery: false,
       brownout: false,
+      thermalTrip: false,
     },
+    crew,
+    workOrders: [],
     queue: [],
     nextSeq: 1,
     rngCounters: {},
     log: [],
   }
 
-  pushLog(state, t0, 'info', `${hull.name} (${hull.className}) is on the Local's books. Reactor online.`)
-  resolvePower(state, t0)
-  scheduleAt(state, Math.floor(t0 / DAY) * DAY + DAY, 'DAY_ROLL')
+  pushLog(state, t0, 'info', `${hull.name} (${hull.className}) is on the Local's books. Reactor online, four hands aboard.`)
+  resolveAll(state, t0)
+  scheduleAt(state, DAY, 'DAY_ROLL')
+  scheduleAt(state, nextShiftBoundary(t0), 'SHIFT_CHANGE')
   return state
 }
 
+/** Opening condition per part. Data would own this once hulls have histories. */
+function startingCondition(partId: string): number {
+  const worn: Record<string, number> = {
+    'life.scrubber.co2': 61,
+    'life.water.recycler': 68,
+    'thermal.loop.radiators': 74,
+    'reactor.fission.beacon4': 79,
+    'power.battery.bank': 71,
+  }
+  return worn[partId] ?? 88
+}
+
 /** Schedule an event, taking its sequence number from the state. */
-function scheduleAt(state: SimState, at: GameTime, kind: SimEvent['kind']): void {
-  schedule(state.queue, { seq: state.nextSeq++, at, kind })
+function scheduleAt(state: SimState, at: GameTime, kind: SimEvent['kind'], ref?: string): void {
+  schedule(state.queue, { seq: state.nextSeq++, at, kind, ...(ref ? { ref } : {}) })
+}
+
+/**
+ * Re-resolve everything that depends on everything else.
+ *
+ * Wear first (it sets part rates), then networks (which read part condition),
+ * then work orders (which read the environment the crew are working in). One
+ * ordering, one place, so a new system can only be wired in correctly.
+ */
+function resolveAll(state: SimState, at: GameTime): void {
+  resolveWear(state, at)
+  resolveNetworks(state, at)
+  resolveWorkOrders(state, at)
 }
 
 function applyEvent(state: SimState, event: SimEvent): void {
   switch (event.kind) {
-    case 'BATTERY_BOUND': {
-      const battery = state.ship.battery
-      settle(battery, event.at)
-      const atMax = battery.value >= battery.max - 1e-9
-      if (atMax) {
-        pushLog(state, event.at, 'info', 'Batteries at full charge; surplus generation is being dumped.')
-      } else {
-        pushLog(state, event.at, 'warn', 'Battery bank exhausted.')
-      }
-      resolvePower(state, event.at)
+    case 'RESOURCE_BOUND': {
+      const key = event.ref as ResourceKey | undefined
+      if (!key) break
+      const reservoir = state.ship.resources[key]
+      settle(reservoir, event.at)
+      const atMax = reservoir.value >= reservoir.max - 1e-9
+      const message = resourceBoundMessage(key, atMax)
+      if (message) pushLog(state, event.at, message.level, message.text)
+      resolveAll(state, event.at)
+      break
+    }
+
+    case 'PART_THRESHOLD': {
+      if (!event.ref) break
+      applyThreshold(state, event.ref, event.at)
+      // Re-resolve either way: a survived threshold still changed output.
+      resolveAll(state, event.at)
+      break
+    }
+
+    case 'WORK_ORDER_DONE': {
+      if (!event.ref) break
+      completeWorkOrder(state, event.ref, event.at)
+      resolveAll(state, event.at)
+      break
+    }
+
+    case 'SHIFT_CHANGE': {
+      updateActivities(state, event.at)
+      resolveAll(state, event.at)
+      scheduleAt(state, nextShiftBoundary(event.at + 1), 'SHIFT_CHANGE')
       break
     }
 
     case 'DAY_ROLL': {
-      // Read-only: deliberately does NOT settle. Anchors move only where the
-      // rate changes, which is what keeps stepwise and jumped advances
-      // bit-identical (see the catch-up equivalence test).
-      const battery = state.ship.battery
-      const balance = powerBalance(state)
-      const level = levelAt(battery, event.at)
-      const pct = Math.round(fillFraction(battery, event.at) * 100)
-      if (state.ship.brownout) {
-        pushLog(state, event.at, 'warn', `Watch change. Still in brownout; battery ${pct}%.`)
-      } else if (balance.netKw < 0) {
-        const bound = battery.rate < 0 ? (level - battery.min) / -battery.rate : Infinity
-        pushLog(
-          state,
-          event.at,
-          'warn',
-          `Watch change. Running on battery at ${balance.netKw.toFixed(1)} kW; ${pct}% remaining, ${formatDuration(bound)} to empty.`,
-        )
-      } else {
-        pushLog(state, event.at, 'info', `Watch change. Power nominal, battery ${pct}%.`)
-      }
+      writeDailyDispatch(state, event.at)
       scheduleAt(state, event.at + DAY, 'DAY_ROLL')
       break
     }
   }
+}
+
+/**
+ * The daily situation report. Read-only: it deliberately does not settle
+ * anything, because reservoir anchors move only where rates change -- which is
+ * what keeps stepwise and jumped advances bit-identical.
+ */
+function writeDailyDispatch(state: SimState, at: GameTime): void {
+  const res = state.ship.resources
+  const battery = Math.round(fillFraction(res.battery, at) * 100)
+  const ppm = Math.round(co2Ppm(state, at))
+  const temp = levelAt(res.heat, at)
+
+  const worries: string[] = []
+  if (state.ship.brownout) worries.push('still in brownout')
+  if (ppm > 5000) worries.push(`CO2 at ${ppm} ppm`)
+  if (temp > 28) worries.push(`cabin at ${temp.toFixed(1)}C`)
+
+  const broken = state.ship.parts.filter((p) => p.broken)
+  if (broken.length > 0) {
+    worries.push(`${broken.length} system${broken.length === 1 ? '' : 's'} down`)
+  }
+
+  const balance = powerBalance(state, at)
+  if (balance.netKw < 0 && !state.ship.brownout) {
+    const level = levelAt(res.battery, at)
+    const toEmpty = res.battery.rate < 0 ? (level - res.battery.min) / -res.battery.rate : Infinity
+    worries.push(`on battery, ${formatDuration(toEmpty)} to empty`)
+  }
+
+  if (worries.length === 0) {
+    pushLog(state, at, 'info', `Watch change. All systems nominal, battery ${battery}%.`)
+  } else {
+    pushLog(state, at, 'warn', `Watch change. ${capitalize(worries.join('; '))}.`)
+  }
+}
+
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0]!.toUpperCase() + s.slice(1)
 }
 
 /** Advance in place. Internal: callers see the cloning wrappers below. */
@@ -139,7 +253,9 @@ function advanceToMut(state: SimState, t: GameTime): void {
     state.now = due.at
     applyEvent(state, due)
     if (++processed > MAX_EVENTS_PER_ADVANCE) {
-      throw new Error(`Event storm: ${processed} events while advancing to ${t}. Likely a handler scheduling at its own timestamp.`)
+      throw new Error(
+        `Event storm: ${processed} events while advancing to ${t}. Likely a handler scheduling at its own timestamp.`,
+      )
     }
   }
 
@@ -179,6 +295,7 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
       if (!part) return
       const def = getPart(part.defId)
       if (!def.switchable) return
+      if (part.broken) return
       if (part.enabled === command.enabled) return
 
       part.enabled = command.enabled
@@ -186,12 +303,37 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
       // decision back from the load-shedding logic.
       part.shed = false
       pushLog(state, at, 'info', `${def.name} switched ${command.enabled ? 'on' : 'off'}.`)
-      resolvePower(state, at)
+      resolveAll(state, at)
       break
     }
 
     case 'RESET_BROWNOUT': {
-      if (restoreShedLoads(state, at) > 0) resolvePower(state, at)
+      if (restoreShedLoads(state, at) > 0) resolveAll(state, at)
+      break
+    }
+
+    case 'QUEUE_WORK_ORDER': {
+      if (createWorkOrder(state, command.partId, command.orderKind, at)) resolveAll(state, at)
+      break
+    }
+
+    case 'CANCEL_WORK_ORDER': {
+      if (cancelWorkOrder(state, command.workOrderId, at)) resolveAll(state, at)
+      break
+    }
+
+    case 'SET_CREW_WATCH': {
+      const crew = state.crew.find((c) => c.id === command.crewId)
+      if (!crew || crew.watch === command.watch) return
+      crew.watch = command.watch
+      crew.activity = activityAt(command.watch, at)
+      pushLog(
+        state,
+        at,
+        'info',
+        `${getCrewDef(crew.defId).name} reassigned to ${command.watch} watch.`,
+      )
+      resolveAll(state, at)
       break
     }
   }
@@ -215,8 +357,8 @@ export interface PowerView {
 }
 
 export function powerView(state: SimState): PowerView {
-  const battery = state.ship.battery
-  const balance = powerBalance(state)
+  const battery = state.ship.resources.battery
+  const balance = powerBalance(state, state.now)
   const level = levelAt(battery, state.now)
 
   let secondsToBound = Infinity
@@ -242,6 +384,155 @@ export function powerView(state: SimState): PowerView {
   }
 }
 
+export type LifeStatus = 'nominal' | 'watch' | 'critical'
+
+export interface LifeSupportView {
+  co2Ppm: number
+  co2Status: LifeStatus
+  temperatureC: number
+  tempStatus: LifeStatus
+  heatInKw: number
+  heatRejectKw: number
+  heatMarginKw: number
+  o2Kg: number
+  o2Days: number
+  waterKg: number
+  waterDays: number
+  foodKg: number
+  foodDays: number
+  recycleFraction: number
+  spares: number
+  propellantKg: number
+  docked: boolean
+}
+
+/** Days until a store runs out at the current rate; Infinity if it is not falling. */
+function daysRemaining(value: number, ratePerSecond: number): number {
+  if (ratePerSecond >= 0) return Infinity
+  return value / -ratePerSecond / DAY
+}
+
+export function lifeSupportView(state: SimState): LifeSupportView {
+  const res = state.ship.resources
+  const t = state.now
+  const life = lifeBalance(state, t)
+  const ppm = co2Ppm(state, t)
+  const temp = levelAt(res.heat, t)
+
+  return {
+    co2Ppm: ppm,
+    co2Status: ppm > 10000 ? 'critical' : ppm > 5000 ? 'watch' : 'nominal',
+    temperatureC: temp,
+    tempStatus: temp > 35 ? 'critical' : temp > 28 ? 'watch' : 'nominal',
+    heatInKw: life.heatInKw,
+    heatRejectKw: life.heatRejectKw,
+    heatMarginKw: life.heatRejectKw - life.heatInKw,
+    o2Kg: levelAt(res.o2, t),
+    o2Days: daysRemaining(levelAt(res.o2, t), res.o2.rate),
+    waterKg: levelAt(res.water, t),
+    waterDays: daysRemaining(levelAt(res.water, t), res.water.rate),
+    foodKg: levelAt(res.food, t),
+    foodDays: daysRemaining(levelAt(res.food, t), res.food.rate),
+    recycleFraction: life.recycleFraction,
+    spares: levelAt(res.spares, t),
+    propellantKg: levelAt(res.propellant, t),
+    docked: state.ship.docked,
+  }
+}
+
+export interface CrewView {
+  id: string
+  name: string
+  role: string
+  age: number
+  watch: string
+  activity: string
+  fatigue: number
+  health: number
+  effectiveness: number
+  mechanics: number
+  blurb: string
+  workOrderId?: string
+  /** What they are doing, in words. */
+  doing: string
+}
+
+export function crewViews(state: SimState): CrewView[] {
+  const t = state.now
+  return state.crew.map((crew) => {
+    const def = getCrewDef(crew.defId)
+    const order = crew.workOrderId
+      ? state.workOrders.find((w) => w.id === crew.workOrderId)
+      : undefined
+    const part = order ? state.ship.parts.find((p) => p.id === order.partId) : undefined
+
+    let doing: string
+    if (crew.activity === 'sleep') doing = 'Asleep'
+    else if (crew.activity === 'off') doing = 'Off watch'
+    else if (order && part) {
+      doing = `${order.kind === 'repair' ? 'Repairing' : 'Servicing'} ${getPart(part.defId).name}`
+    } else doing = 'On watch'
+
+    return {
+      id: crew.id,
+      name: def.name,
+      role: def.role,
+      age: def.age,
+      watch: crew.watch,
+      activity: crew.activity,
+      fatigue: levelAt(crew.fatigue, t),
+      health: levelAt(crew.health, t),
+      effectiveness: crewEffectiveness(state, crew, t),
+      mechanics: def.skills.mechanics,
+      blurb: def.blurb,
+      ...(crew.workOrderId ? { workOrderId: crew.workOrderId } : {}),
+      doing,
+    }
+  })
+}
+
+export interface WorkOrderView {
+  id: string
+  kind: string
+  partId: string
+  partName: string
+  required: number
+  completed: number
+  fraction: number
+  status: string
+  spares: number
+  assignedName?: string
+  /** Game seconds until done at the current rate; Infinity if stalled. */
+  secondsRemaining: number
+}
+
+export function workOrderViews(state: SimState): WorkOrderView[] {
+  const t = state.now
+  return state.workOrders
+    .filter((w) => w.status !== 'done')
+    .map((order) => {
+      const part = state.ship.parts.find((p) => p.id === order.partId)
+      const completed = levelAt(order.progress, t)
+      const assigned = order.assignedCrewId
+        ? state.crew.find((c) => c.id === order.assignedCrewId)
+        : undefined
+      return {
+        id: order.id,
+        kind: order.kind,
+        partId: order.partId,
+        partName: part ? getPart(part.defId).name : order.partId,
+        required: order.required,
+        completed,
+        fraction: order.required > 0 ? completed / order.required : 0,
+        status: order.status,
+        spares: order.spares,
+        ...(assigned ? { assignedName: getCrewDef(assigned.defId).name } : {}),
+        secondsRemaining:
+          order.progress.rate > 0 ? (order.required - completed) / order.progress.rate : Infinity,
+      }
+    })
+}
+
 export interface RoomView {
   id: string
   name: string
@@ -252,42 +543,73 @@ export interface RoomView {
     id: string
     name: string
     blurb: string
+    /** Rated power from the catalogue. */
     powerKw: number
+    /** What it is actually contributing now, after condition and derate. */
+    effectiveKw: number
     enabled: boolean
     shed: boolean
+    broken: boolean
     switchable: boolean
     priority: string
+    condition: number
+    conditionLabel: string
+    hasWorkOrder: boolean
   }[]
   netKw: number
+  /** Any part in this room broken or below 25%? Drives the deck warning dot. */
+  needsAttention: boolean
 }
 
 export function roomViews(state: SimState): RoomView[] {
-  const byDeck = [...state.ship.rooms].map((room) => {
-    const def = content.rooms.find((r) => r.id === room.defId)!
-    const parts = state.ship.parts
-      .filter((p) => p.roomId === room.id)
-      .map((p) => {
-        const pd = getPart(p.defId)
-        return {
-          id: p.id,
-          name: pd.name,
-          blurb: pd.blurb,
-          powerKw: pd.powerKw,
-          enabled: p.enabled,
-          shed: p.shed,
-          switchable: pd.switchable,
-          priority: pd.priority,
-        }
-      })
-    return {
-      id: room.id,
-      name: def.name,
-      short: def.short,
-      blurb: def.blurb,
-      deck: def.deck,
-      parts,
-      netKw: parts.reduce((sum, p) => sum + (p.enabled ? p.powerKw : 0), 0),
-    }
-  })
-  return byDeck.sort((a, b) => a.deck - b.deck)
+  const t = state.now
+  const openOrders = new Set(
+    state.workOrders.filter((w) => w.status !== 'done').map((w) => w.partId),
+  )
+
+  return [...state.ship.rooms]
+    .map((room) => {
+      const def = content.rooms.find((r) => r.id === room.defId)!
+      const parts = state.ship.parts
+        .filter((p) => p.roomId === room.id)
+        .map((p) => {
+          const pd = getPart(p.defId)
+          const condition = levelAt(p.condition, t)
+          return {
+            id: p.id,
+            name: pd.name,
+            blurb: pd.blurb,
+            powerKw: pd.powerKw,
+            effectiveKw: partPowerKw(state, p, t),
+            enabled: p.enabled,
+            shed: p.shed,
+            broken: p.broken,
+            switchable: pd.switchable,
+            priority: pd.priority,
+            condition,
+            conditionLabel: conditionLabel(condition),
+            hasWorkOrder: openOrders.has(p.id),
+          }
+        })
+      return {
+        id: room.id,
+        name: def.name,
+        short: def.short,
+        blurb: def.blurb,
+        deck: def.deck,
+        parts,
+        // Effective, not rated: the per-room figures have to add up to the
+        // number in the status bar or the player cannot trace a deficit.
+        netKw: parts.reduce((sum, p) => sum + p.effectiveKw, 0),
+        needsAttention: parts.some((p) => p.broken || p.condition < 25),
+      }
+    })
+    .sort((a, b) => a.deck - b.deck)
+}
+
+/** Everything a resource gauge needs, for the five networks of §3.2. */
+export function resourceLevels(state: SimState): Record<ResourceKey, number> {
+  const out = {} as Record<ResourceKey, number>
+  for (const key of RESOURCE_KEYS) out[key] = levelAt(state.ship.resources[key], state.now)
+  return out
 }

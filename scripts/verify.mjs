@@ -1,11 +1,11 @@
 /**
- * End-to-end verification of the M0 walking skeleton.
+ * End-to-end verification of the built game.
  *
- * The unit tests prove the sim; this proves the tracer bullet actually goes
- * through all the layers -- PWA shell, React, the sim, IndexedDB persistence,
- * and back after a reload.
+ * The unit tests prove the sim; this proves it actually goes through all the
+ * layers -- PWA shell, React, the sim, IndexedDB persistence, and back after a
+ * reload -- and that the ship keeps running while the app is closed.
  *
- *   node scripts/verify-m0.mjs [--headed] [--shots <dir>]
+ *   node scripts/verify.mjs [--headed] [--shots <dir>]
  */
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
@@ -134,25 +134,97 @@ await page.waitForSelector('.deck.is-open .parts')
 await page.click('.deck.is-open .part .switch')
 await page.waitForTimeout(300)
 
+// Relative, not a magic number: with M1 the reactor is worn, so the exact
+// figure moves with condition. What must hold is the sign.
 const netAfter = await page.textContent('.status__net')
-check('engine preheat drives the ship into deficit', netAfter?.trim() === '-4.5 kW', netAfter ?? '')
+const deficitKw = Number.parseFloat(netAfter ?? '')
+check('engine preheat drives the ship into deficit', deficitKw < 0, netAfter ?? '')
 
 const margin = await page.textContent('.status__row--fine span:last-child')
 check('the deficit is given a deadline', /to empty$/.test(margin?.trim() ?? ''), margin?.trim() ?? '')
 
+// M1 moved the dispatches to their own tab.
+await page.click('.tabs__btn:has-text("Log")')
+await page.waitForSelector('.log__list')
 const logged = await page.$$eval('.log__text', (els) => els.map((e) => e.textContent))
 check(
   'the order appears in the dispatch log',
   logged.some((t) => t?.includes('NTR Preheat switched on')),
+  logged[0] ?? '',
 )
+await page.click('.tabs__btn:has-text("Ship")')
+await page.waitForSelector('.ship')
 
 await page.screenshot({ path: join(SHOTS, '03-deficit.png'), fullPage: true })
+
+// --- M1: condition, work orders, crew ---------------------------------------
+console.log('\n  -- M1: the living ship --')
+
+await page.click('.deck:nth-child(3) .deck__head') // Life Support
+await page.waitForSelector('.deck.is-open .parts')
+
+const conditions = await page.$$eval('.deck.is-open .condition__value', (els) =>
+  els.map((e) => e.textContent),
+)
+check('parts show condition, not just on/off (§3.3)', conditions.length === 4, conditions.join(' | '))
+check(
+  'condition is a percentage with a plain-language label',
+  conditions.every((c) => /^\d+% (good|serviceable|worn|poor|critical)$/.test(c ?? '')),
+  conditions[0] ?? '',
+)
+
+await page.click('.deck.is-open .part:has-text("CO2 Scrubber") .button')
+await page.waitForTimeout(300)
+check('ordering work marks the part', await page.isVisible('.part__ordered'))
+
+await page.click('.tabs__btn:has-text("Crew")')
+await page.waitForSelector('.roster')
+
+const names = await page.$$eval('.crew__name', (els) => els.map((e) => e.textContent))
+check('four crew on the roster (§4.1)', names.length === 4, names.join(', '))
+
+const doings = await page.$$eval('.crew__doing', (els) => els.map((e) => e.textContent))
+check(
+  'the watch bill puts some crew asleep and some on watch (§4.3)',
+  doings.includes('Asleep') && doings.some((d) => d?.startsWith('Servicing') || d === 'On watch'),
+  doings.join(' | '),
+)
+
+check('the work order appears with an owner and a duration', await page.isVisible('.orders'))
+const eta = await page.textContent('.order__eta')
+check('the job has an honest completion estimate', /to go$/.test(eta?.trim() ?? ''), eta?.trim() ?? '')
+const hand = await page.textContent('.order__hand')
+check('a named crew member has the job', /has it$/.test(hand?.trim() ?? ''), hand?.trim() ?? '')
+
+await page.screenshot({ path: join(SHOTS, '06-crew.png'), fullPage: true })
+
+await page.click('.tabs__btn:has-text("Life")')
+await page.waitForSelector('.gauges')
+const gaugeLabels = await page.$$eval('.gauge-row__label', (els) => els.map((e) => e.textContent))
+check(
+  'all five networks plus stores are shown (§3.2)',
+  ['Cabin CO2', 'Cabin temperature', 'Oxygen', 'Water', 'Food', 'Propellant', 'Spares'].every((l) =>
+    gaugeLabels.includes(l),
+  ),
+  gaugeLabels.join(', '),
+)
+const closure = await page.textContent('.gauge-row:has-text("Water") .gauge-row__detail')
+check('water reports loop closure', /loop closure/.test(closure ?? ''), closure?.trim() ?? '')
+
+await page.screenshot({ path: join(SHOTS, '07-life-support.png'), fullPage: true })
+
+await page.click('.tabs__btn:has-text("Ship")')
+await page.waitForSelector('.ship')
 
 // --- persistence: the world survives a reload -------------------------------
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForSelector('.ship', { timeout: 10_000 })
 const netReloaded = await page.textContent('.status__net')
-check('state survives a reload (IndexedDB, §8.3)', netReloaded?.trim() === '-4.5 kW', netReloaded ?? '')
+check(
+  'state survives a reload (IndexedDB, §8.3)',
+  Math.abs(Number.parseFloat(netReloaded ?? '') - deficitKw) < 0.2,
+  `${netReloaded} vs ${netAfter}`,
+)
 
 // --- the PWA is installable -------------------------------------------------
 const manifestHref = await page.getAttribute('link[rel="manifest"]', 'href')
@@ -198,7 +270,7 @@ await p1.click('.deck:nth-child(7) .deck__head')
 await p1.waitForSelector('.deck.is-open .parts')
 await p1.click('.deck.is-open .part .switch')
 await p1.waitForTimeout(200)
-check('deficit set before leaving', (await p1.textContent('.status__net'))?.trim() === '-4.5 kW')
+check('deficit set before leaving', Number.parseFloat((await p1.textContent('.status__net')) ?? '') < 0)
 await p1.close()
 
 // Six real hours away = six game days at 24x (§7.1).
@@ -227,8 +299,12 @@ if (reportVisible) {
 const clockAfter = await p2.textContent('.status__clock')
 check('the ship kept running while closed', /^D[5-7] /.test(clockAfter ?? ''), clockAfter ?? '')
 
-const brownout = await p2.isVisible('.status__brownout')
-check('the ship shed loads on its own authority', brownout)
+const alarms = await p2.$$eval('.status__alarms li', (els) => els.map((e) => e.textContent))
+check(
+  'the ship shed loads on its own authority',
+  alarms.some((a) => a?.includes('Brownout')),
+  alarms.join(' | '),
+)
 
 const netAfterAway = await p2.textContent('.status__net')
 check(
@@ -244,7 +320,8 @@ await p2.click('.recover .button')
 await p2.waitForTimeout(200)
 check(
   'restoring shed loads puts the ship straight back into deficit',
-  (await p2.textContent('.status__net'))?.trim() === '-4.5 kW',
+  Number.parseFloat((await p2.textContent('.status__net')) ?? '') < 0,
+  (await p2.textContent('.status__net')) ?? '',
 )
 
 check('no errors during catch-up', awayErrors.length === 0, awayErrors.slice(0, 2).join(' | '))

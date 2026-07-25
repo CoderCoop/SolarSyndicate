@@ -5,10 +5,11 @@
  * It must survive structuredClone and JSON round-trips unchanged, because it is
  * both the save format and (eventually) the wire format.
  */
+import type { Watch } from '@solsyn/data'
 import type { GameTime } from './time.js'
 
 /** Bump when the shape changes; add a migration in persistence. §8.3 */
-export const SIM_STATE_VERSION = 1
+export const SIM_STATE_VERSION = 2
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -26,6 +27,26 @@ export interface Reservoir {
   max: number
 }
 
+/**
+ * The five resource networks of §3.2, plus the two stores they draw on.
+ *
+ * Units: battery kWh, heat degrees C (cabin temperature), o2/co2/water/food/
+ * propellant kg, spares whole units.
+ */
+export const RESOURCE_KEYS = [
+  'battery',
+  'heat',
+  'o2',
+  'co2',
+  'water',
+  'food',
+  'propellant',
+  'spares',
+] as const
+export type ResourceKey = (typeof RESOURCE_KEYS)[number]
+
+export type Resources = Record<ResourceKey, Reservoir>
+
 export interface PartState {
   id: string
   defId: string
@@ -33,6 +54,12 @@ export interface PartState {
   enabled: boolean
   /** Set when load-shedding switched this off, so the UI can explain why. */
   shed: boolean
+  /** Failed outright: produces nothing until repaired. §3.3 */
+  broken: boolean
+  /** 0-100. Degrades output before it fails outright. */
+  condition: Reservoir
+  /** Next condition threshold we have scheduled an event for, or undefined. */
+  nextThreshold?: number
 }
 
 export interface RoomState {
@@ -46,23 +73,74 @@ export interface ShipState {
   hullId: string
   rooms: RoomState[]
   parts: PartState[]
-  /** Battery buffer in kWh. §3.2 */
-  battery: Reservoir
-  /** Cached net power in kW at `battery.since`, for display without recompute. */
+  resources: Resources
+  /**
+   * Alongside at the Local. Station services keep the consumable stores
+   * topped up, which is why M1's tension is failures rather than supply.
+   * M2 casts off and this becomes false.
+   */
+  docked: boolean
+  /** Cached for display; recomputed whenever the network resolves. */
   netPowerKw: number
-  /** True while demand exceeds supply and the battery is carrying the deficit. */
+  netHeatKw: number
   onBattery: boolean
-  /** True once the battery has emptied and loads have been shed. */
   brownout: boolean
+  /** Reactor derated because the thermal loop cannot reject its waste heat. */
+  thermalTrip: boolean
 }
 
-export type EventKind = 'BATTERY_BOUND' | 'DAY_ROLL'
+/** What a crew member is doing right now. Driven by the watch bill (§4.3). */
+export type CrewActivity = 'watch' | 'off' | 'sleep'
+
+export interface CrewState {
+  id: string
+  defId: string
+  watch: Watch
+  activity: CrewActivity
+  /** 0-100, rises awake and falls asleep. */
+  fatigue: Reservoir
+  /** 0-100. M1 damages health through CO2 and heat; it never kills (§7.4). */
+  health: Reservoir
+  /** Work order this crew member is currently progressing, if any. */
+  workOrderId?: string
+}
+
+export type WorkOrderKind = 'service' | 'repair'
+export type WorkOrderStatus = 'queued' | 'active' | 'blocked' | 'done'
+
+/**
+ * A job for the crew. Design doc §3.3: maintenance is the mechanic's core
+ * gameplay, and the queue is how a remote manager expresses intent (§4.6) --
+ * you order the work, the crew do it over hours or days.
+ */
+export interface WorkOrder {
+  id: string
+  kind: WorkOrderKind
+  partId: string
+  /** Labour-hours required. */
+  required: number
+  /** Labour-hours completed, as a reservoir so progress is derived, not ticked. */
+  progress: Reservoir
+  spares: number
+  status: WorkOrderStatus
+  assignedCrewId?: string
+  createdAt: GameTime
+}
+
+export type EventKind =
+  | 'RESOURCE_BOUND'
+  | 'DAY_ROLL'
+  | 'SHIFT_CHANGE'
+  | 'PART_THRESHOLD'
+  | 'WORK_ORDER_DONE'
 
 export interface SimEvent {
   /** Monotonic, assigned on schedule. Ties in `at` break by `seq`. */
   seq: number
   at: GameTime
   kind: EventKind
+  /** Subject of the event: a resource key, part id, or work order id. */
+  ref?: string
 }
 
 export type LogLevel = 'info' | 'warn' | 'alert'
@@ -90,6 +168,8 @@ export interface SimState {
    */
   epochUtcMs: number
   ship: ShipState
+  crew: CrewState[]
+  workOrders: WorkOrder[]
   /** Pending events, sorted ascending by (at, seq). */
   queue: SimEvent[]
   nextSeq: number
@@ -107,6 +187,9 @@ export interface SimState {
 export type Command =
   | { kind: 'SET_PART_ENABLED'; partId: string; enabled: boolean }
   | { kind: 'RESET_BROWNOUT' }
+  | { kind: 'QUEUE_WORK_ORDER'; partId: string; orderKind: WorkOrderKind }
+  | { kind: 'CANCEL_WORK_ORDER'; workOrderId: string }
+  | { kind: 'SET_CREW_WATCH'; crewId: string; watch: Watch }
 
 /** A command with the game time it was issued at. */
 export interface TimedCommand {

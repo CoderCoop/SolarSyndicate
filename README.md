@@ -10,27 +10,35 @@ The full design lives in [`docs/design.md`](docs/design.md). Read that first —
 code deliberately references its section numbers (§7.2, §8.2, and so on) so that
 any given decision can be traced back to the reason for it.
 
-## Status: M0 — walking skeleton
+## Status: M1 — the living ship
 
-M0 is a *tracer bullet*: the thinnest possible slice that passes through every
-architectural layer, built before any content exists so that the expensive
-assumptions get tested while they are still cheap to change.
+M0 was the *tracer bullet*: the thinnest slice through every architectural
+layer, built before any content so the expensive assumptions got tested while
+they were still cheap to change. M1 makes the ship a system worth tending.
 
 What works end to end:
 
 - **Event-driven simulation** anchored to UTC — one real hour is one game day.
-- **One resource network of five** (power): reactor and solar generation, a
-  battery buffer, and priority-based load shedding on brownout.
+- **All five resource networks** (§3.2), resolved together because they are
+  genuinely coupled: power, heat, atmosphere, water and stores. Every watt the
+  ship consumes becomes heat it has to reject; the electrolysis unit spends
+  water to make oxygen; the crew are a load on all of them.
+- **Wear, degradation and failure.** Parts lose condition while they run,
+  lose output before they fail, warn at thresholds, and then fail for real
+  against a seeded roll.
+- **Work orders.** You do not turn the wrench — you order the work, and the
+  crew take real hours to do it at a pace set by who is on watch.
+- **Four crew on a watch bill**, with sleep cycles, fatigue, health, and
+  metabolism that tracks what each of them is actually doing.
+- **Automatic self-protection**: load shedding on brownout, and a thermal trip
+  that derates the reactor rather than cooking the ship (§7.4).
 - **Offline catch-up** — close the app for a week and the ship keeps running.
-  Advancing a month costs milliseconds because the sim is event-driven and
-  levels are derived, not accumulated.
-- **The ship cross-section**, rendered from sim state as a vertical deck stack.
-- **Save and resume** via IndexedDB (snapshot + command log), with schema
-  migrations wired in from the first version.
-- **Installable PWA**, offline-capable, portrait, ~67 KB gzipped.
+- **Save and resume** via IndexedDB (snapshot + command log), with a real
+  v1 → v2 migration.
+- **Installable PWA**, offline-capable, portrait, ~78 KB gzipped.
 
-Not in M0: crew, travel, missions, guilds, economy, the other four resource
-networks. Those are M1–M5 (see §10.2 of the design doc).
+Not in M1: travel, missions, guilds, economy, crew ageing and mortality. Those
+are M2–M5 (see §10.2 of the design doc).
 
 ## Quick start
 
@@ -39,8 +47,13 @@ pnpm install
 pnpm dev          # http://localhost:5173
 ```
 
-Turn on **NTR Preheat** in the Engines deck to put the ship into deficit, then
-leave it alone for a couple of hours and come back.
+Two things worth trying:
+
+- Open the **Life Support** deck and order a service on the CO2 scrubber. Note
+  who picks it up — at ship midnight your best engineer is asleep, so the
+  captain does it slowly. Move Okonkwo to A watch and order it again.
+- Turn on **NTR Preheat** in the Engines deck, close the app, and come back a
+  couple of hours later.
 
 ## Commands
 
@@ -94,18 +107,23 @@ server-authoritative sim possible later without rewriting the game.
 
 ## Testing
 
-`pnpm test` runs 47 tests. The ones that matter most are in
+`pnpm test` runs 70 tests. The ones that matter most are in
 `packages/sim/test/catchup.test.ts`, which assert the claims above rather than
 the behaviour of any particular feature — including that a decade of unattended
 simulation completes in well under a second, and that a snapshot round-trip
 through JSON changes nothing.
 
 `pnpm verify` is the layer above: it builds the PWA, serves it, and drives it in
-Chromium at a phone viewport — checking that the ship renders from sim state,
-that life-critical systems cannot be switched off, that state survives a reload,
-and (using clock emulation to jump six real hours) that the ship sheds its own
-loads while the desk is empty and has a story to tell on return.
+Chromium at a phone viewport — 37 checks covering that the ship renders from sim
+state, that life-critical systems cannot be switched off, that parts report
+condition, that ordering work assigns a named crew member with an honest
+estimate, that state survives a reload, and (using clock emulation to jump six
+real hours) that the ship sheds its own loads while the desk is empty and has a
+story to tell on return.
 
-Both found real bugs during M0: an infinite event-scheduling loop caused by
+Both layers have earned their keep. M0: an infinite event-scheduling loop from
 floating-point residue at a reservoir boundary, and a time-anchoring flaw that
-put a newly created world on day 3642.
+put a newly created world on day 3642. M1: per-room power figures that no longer
+summed to the ship total (breaking "you can trace it"), and a heat model with no
+passive hull radiation, which let a crippled ship climb without limit instead of
+settling at an unpleasant equilibrium.
