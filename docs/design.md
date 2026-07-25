@@ -36,9 +36,11 @@ Three nested loops at different time scales:
 - **Hours–days (a mission):** accept contract → plan transfer (window, delta-v,
   consumables) → depart → mid-flight events + idle progress → arrive → resolve →
   get paid → resupply.
-- **Weeks (a career):** earn faction standing → unlock hulls/parts/ports → recruit and
-  train specialists → take on longer, deeper, riskier missions (inner system → Belt →
-  outer planets).
+- **Weeks–months (a career):** earn faction standing → unlock hulls/parts/ports →
+  recruit and train specialists → take on longer, deeper, riskier missions (inner
+  system → Belt → outer planets) — while your crew age through their own careers
+  (§4.5): novices become masters, masters mentor and retire or die, and keeping
+  skill alive across generations becomes the long game.
 
 The session loop is deliberately "check in on your ship" shaped — a good 5-minute
 session on a phone should feel complete. Long transfers make the idle layer the
@@ -186,6 +188,56 @@ training work orders (uses another crew member's Leadership/skill, or courseware
 Crew are hired at ports from a faction-flavored pool (union hiring halls — better
 vetted, wage floor, rest rules; independent boards — cheaper, riskier, occasional
 gem). Wages are a recurring cost — the economic pump that keeps missions mattering.
+Hiring pools aren't generated on demand — they're drawn from the persistent person
+registry (§4.5): the mechanic you passed over at Ceres last month may have shipped
+out on someone else's boat by the time you come back around.
+
+### 4.5 Lifecycle, aging & permadeath
+
+Crew are **persistent people, and death is permanent.** No resurrection, no
+save-scumming (the UTC-anchored single timeline enforces this for free). At 24×
+time, one game year ≈ 15 real days — a full 30-year career unfolds over roughly a
+real-world year of play. Generational crew turnover is the game's long arc.
+
+**The career arc.** People age in game time. Stats follow a life curve: physical
+stats (STR/DEX/END) peak in the late 20s–30s and decline; INT/Perception hold
+longer; skills keep growing but learning slows with age. So every crew member is a
+stage in an arc: cheap promising novices → expensive irreplaceable masters → aging
+veterans whose hands shake but who teach like nobody else. **Mentorship becomes a
+core system**: a veteran's training work orders are how skill outlives the person —
+the Guild's whole ideology, mechanically real.
+
+**Life events.** People have ambitions, ties, and histories, driven by the same
+event-queue sim: an ambition ("save 40k to buy a homestead on Mars", "get certified
+as an astrogator", "one big score") that, when met, may mean they *leave* — settle
+down at a port, retire, start a family, take a berth on another ship. Marriages,
+births, feuds, friendships between crewmates (affecting morale and watch-bill
+chemistry), letters from home, a former crewmate turning up at a port bar with a
+lead. Departure is negotiable but real: counter-offers, one-last-run promises,
+or letting them go well (standing + morale) vs. badly.
+
+**A world of persons.** Anyone who ever crewed with you, plus current port hiring
+pools and notable NPCs, lives in a persistent **person registry** simulated coarsely
+by life events (background population is statistical, not simulated). Ex-crew keep
+living: they age, settle, crew other ships, occasionally re-enter your story. The
+roster screen has an alumni page; the ship keeps a memorial wall.
+
+**Ways to die.** All permanent, all attributable:
+- **Old age / health decline** — foreshadowed over game-years; the medic gives
+  prognoses; veterans get a *final voyage* and a retirement decision before the end.
+- **Radiation dose** — the career-cumulative counter now has teeth: dose history
+  raises late-life illness risk. Shielding mass, flare protocols, and rotating who
+  takes EVA/high-dose work become long-horizon crew management.
+- **Acute emergencies** — accidents (EVA, high-g burn with an unsecured crewman,
+  reactor casualty), medical crises mid-transfer beyond the med bay's reach,
+  escalations of ignored failures. Governed by the fair-play rules in §7.4.
+- **Player recklessness** — overridden safety margins, rationed life support,
+  skipped maintenance. The game lets you, and owns the consequences.
+
+Death has weight: a funeral (burial in space or carriage home — crew have wishes),
+a morale/culture shock scaled by tenure and ties, possible obligations (Guild death
+benefit to a widow), and a permanent entry on the memorial wall. Losing a master is
+meant to *hurt* — that's what makes keeping them alive the game.
 
 ---
 
@@ -327,21 +379,33 @@ Events that *require* the captain queue a decision and fire a push notification;
 if unanswered past their window they resolve by the standing policy's conservative
 default.
 
-### 7.4 The kindness rules (non-negotiable)
+### 7.4 The fair-play rules (non-negotiable)
 
-Real-time sims die when players return to disasters they couldn't prevent. Hard
-rules:
+This is a permadeath game (§4.5), so the rule is not "nothing bad happens while
+you're away" — it's **"no death without foreshadowing and a decision."** Permanent
+consequences must always trace back to a choice the player actually made:
 
-- **No offline death.** Life-critical spirals degrade to **safe mode**: ship drops
-  to minimal power, coasts, crew in bunks on rations. Costs money, time, morale,
-  standing — never lives, never the ship.
-- **No stranding.** The nav computer refuses departures whose delta-v/consumable
-  margins can't survive worst-case scheduled events. (Skilled players can override
-  — *that* failure is on them and still ends in an expensive rescue, not a corpse.)
-- **Bounded decay.** Everything that worsens offline has a floor (morale, condition,
-  standing). Missable = money and opportunities, not the ship or crew.
-- **Return is a story.** Re-entry screen is a captain's log digest of what happened,
-  best-moments first — not a wall of red.
+- **Every acute emergency opens a decision window** (push notification + in-game
+  timer scaled to severity). Unanswered, it resolves by the player's standing
+  policies, whose conservative defaults reach **safe mode**: minimal power, coast,
+  crew secured on rations. If margins were sane at departure, safe mode always
+  suffices — costing money, time, morale, standing, the mission. Death while
+  unattended can only occur when the player pre-committed to thin margins
+  (overrides, rationing, deferred maintenance) — and the game says so at commit
+  time, in red, with names: *"If a scrubber fails past Vesta, Osei and Reyes
+  don't come home."*
+- **Chronic deaths are telegraphed in game-years.** Age, dose, and illness decline
+  visibly; the medic gives prognoses; there is always time for a final voyage, a
+  retirement, a goodbye. No one dies of old age as an offline surprise line-item.
+- **No silent stranding.** The nav computer refuses departures whose delta-v /
+  consumable margins can't absorb worst-case scheduled events, unless explicitly
+  overridden (see above — the override *is* the foreshadowing).
+- **The ship survives.** Crew are mortal; the campaign is not. Hull loss is not in
+  v1 (a dead-crew ship gets recovered/towed at ruinous cost). Bounded decay still
+  applies to everything non-living: condition, morale, standing have floors.
+- **Return is a story.** Re-entry screen is a captain's log digest — including,
+  when it must be, an honest account of a death and the policy chain that led
+  there. Grief the player can read is fair; a red number is not.
 
 ---
 
@@ -448,8 +512,9 @@ deterministic generator instantiates them from world state.
 - **M2 — Going somewhere.** System map, windows + Lambert transfers, delta-v/
   consumables budgeting, one cargo mission loop, arrival/departure burns, money.
 - **M3 — A world with opinions.** All four factions, standing, contract boards,
-  price drift + speculative trade, hiring halls, mission archetypes 1–4, events
-  with policies + notifications.
+  price drift + speculative trade, hiring halls backed by the person registry,
+  aging + permadeath + first life events (ambitions, departures, funerals),
+  mission archetypes 1–4, events with policies + notifications.
 - **M4 — Ship of Theseus.** Part market, swapping, mods/tinkering, hull upgrade
   path, engine tiers through NEP, salvage missions.
 - **M5 — Polish & ship.** Kindness-rules audit, captain's-log return screen,
@@ -464,9 +529,12 @@ deterministic generator instantiates them from world state.
 2. **Realism ceiling:** is the late-game fusion torch acceptable as the one
    speculative exaggeration, or do we hold the +25–50% line strictly (and accept
    multi-real-week outer-system runs forever)? → M4.
-3. **Crew mortality:** never / only from player-present overrides / rare-and-earned?
-   Interacts hard with §7.4. Proposal: crew can be *injured/invalided out* but die
-   only from explicitly reckless player overrides. → M3.
+3. **Captain mortality & legacy.** Crew permadeath is decided (§4.5) — but is the
+   captain a person too? If the captain ages and dies, we get a legacy/succession
+   system (a groomed first officer inherits the ship, debts, and standing — the
+   campaign outlives the character, generational play all the way down). If not,
+   the captain is an abstract immortal viewpoint. Proposal: captain is mortal,
+   succession is the endgame loop. → M3.
 4. **Notifications backend timing:** local notifications only (no server) for v1,
    or stand up the minimal push relay at launch? → M5.
 5. **Art direction** for the cross-section: clean diagram/blueprint style (cheap,
@@ -481,8 +549,14 @@ deterministic generator instantiates them from world state.
 2. **Realism vs. fun** (the §5.2 delta-v tension). Mitigation: honest numbers but
    *curated choices* — the game surfaces 2–3 good transfer options, not a porkchop
    plot; depth for those who look, clarity for those who don't.
-3. **Offline resentment** (returning to a mess). Mitigation: §7.4 kindness rules,
-   tested explicitly ("leave every playtest build idle for 3 days" as a ritual).
-4. **Determinism discipline erosion** (one `Math.random()` in the sim breaks
+3. **Offline resentment** (returning to a mess — sharpened by permadeath).
+   Mitigation: §7.4 fair-play rules, tested explicitly ("leave every playtest
+   build idle for 3 days" as a ritual; "did any death feel unfair?" as the exit
+   question of every playtest).
+4. **Person-simulation scope creep.** The §4.5 registry could quietly become
+   Dwarf Fortress. Mitigation: hard boundary — only ever-crewed persons + current
+   hiring pools are simulated, coarsely, by life events; everyone else is
+   statistics. Life-event depth grows by milestone, not by enthusiasm.
+5. **Determinism discipline erosion** (one `Math.random()` in the sim breaks
    catch-up and the MMO path silently). Mitigation: lint rule banning
    `Math.random`/`Date.now` in `packages/sim` + the state-hash property tests.
