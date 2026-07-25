@@ -520,31 +520,66 @@ universe wants (§8.4).
 
 ### 6.4 Guild politics: influence & policy
 
-The last progression axis, and the one that closes the game's loop. Early on, guild
-policy is the **constraint** you work inside — Wrightworks' mandatory rest costs you
-throughput, Helios' delivery penalties squeeze your margins, Meridian's data-sharing
-mandate caps your income. As rank, resources, and reputation accumulate, those
-policies become **something you author**. You start by serving the institution and
-end up deciding what it does to people.
+Early on, guild policy is the **constraint** you work inside — Wrightworks' mandatory
+rest costs you throughput, Helios' delivery penalties squeeze your margins,
+Meridian's data-sharing mandate caps your income. Over time those same policies
+become **something you author**. You start by serving the institution and end up
+deciding what it does to people.
 
 That is the ethical spine of the game, and it should be presented without a thumb on
 the scale: you can make Helios more humane or make Wrightworks more ruthless, and
 the game's job is to show you the consequences honestly, not to grade you.
 
-**Political capital** is a third currency alongside budget and standing, and it's
-earned by things money can't buy: contracts delivered without incident, obligations
-honored when they cost you, crew retained for years, dangerous work done well,
-initiatives funded, other locals backed when they asked. Crucially, **treating crew
-well is a political asset** — the thing that costs you money in the short run is the
-thing that buys you power in the long run. Capital is spent at **guild assemblies**,
-periodic sessions (a game-quarter ≈ 3.75 real days at 24× — an excellent recurring
-event cadence to accumulate toward) where motions are debated and voted. Motions
-arise from world state and from rival locals, not only from you: you sponsor, vote,
-block, trade support, and build blocs with NPC representatives who have their own
-consistent agendas.
+#### There is no gate — only scale
 
-**What policy actually controls** — deliberately, the numbers the player already
-watches, so influence is legible rather than abstract:
+**Influence is available from your first week; only its *magnitude* is limited.**
+There's no unlock, no rank threshold, no "politics chapter." Political capital buys
+change on a continuous curve: a little capital buys a small, local, temporary
+change; a great deal of capital buys a large, permanent, guild-wide one. The system
+you learn in week one is the system you're still using a game-decade later, played
+for three orders of magnitude more.
+
+The tiers are the same lever at different scales, and each has its own in-fiction
+name, blast radius, and cadence — so the scale is legible without a tutorial:
+
+| Tier | What it is | Affects | Takes effect | Capital |
+|---|---|---|---|---|
+| **Waiver** | a one-off exception, called in as a favour | one ship, one voyage | immediately (subject to light-lag — you're asking your local, and they have to answer) | trivial |
+| **Variance** | a standing exception for your operation | your ship(s), until revoked | days | small |
+| **Local rule** | how *your* port actually does things | everyone based at your HQ | next local meeting (~weeks) | moderate |
+| **Guild policy** | a motion carried at assembly | every ship in the guild | quarterly assembly (≈3.75 real days at 24×) | large |
+| **Charter amendment** | the guild's founding terms | the guild, permanently, including its identity | annual, needs a supermajority built over time | enormous |
+
+Cost scales multiplicatively along four axes, which keeps the formula legible:
+
+> **cost = base(policy) × scope × permanence × ideological resistance**
+
+The last term is what makes each guild play differently: changes *aligned* with a
+guild's values are cheap, changes *against* them are brutally expensive. Raising the
+wage floor in Wrightworks is a modest ask; cutting it is a war. Helios is the mirror.
+This means the same political capital buys a very different game depending on which
+guild you embody — and it's where schism pressure comes from.
+
+#### The choice that makes it interesting
+
+Because capital is one pool, **every waiver you buy is a charter amendment you
+don't.** The manager who keeps purchasing small exceptions to get through this
+quarter never accumulates enough to change the rule that keeps forcing the
+exceptions. That's a real strategic tension, it's the same shape as the
+delta-v-versus-consumables trade that governs travel (§5.2), and it happens to be
+true about institutions — which is the best thing this system does.
+
+The safety mandate shows the whole curve in one lever. Early: spend a little to
+waive the departure margin for *one* voyage, risking *your* crew, whose names you
+know. Middle: a standing variance for your operation — you've stopped asking
+each time. Late: carry a motion loosening the mandate for every ship in the
+guild, and read the accident statistics for the next game-year. Same decision,
+three scales, and the game never once tells you which was wrong.
+
+#### What policy actually controls
+
+Deliberately, the numbers the player already watches, so influence is legible rather
+than abstract. Each entry below can be targeted at any tier above:
 
 | Policy | Immediate effect | Long-run effect |
 |---|---|---|
@@ -556,23 +591,40 @@ watches, so influence is legible rather than abstract:
 | Salvage rights / data sharing / exclusivity | contract income and access | inter-guild friction and standing |
 | Insurance pool | premiums | how much a disaster actually costs you |
 
-Two of those deserve emphasis. The **safety mandates** are the §7.4 rules that have
-been quietly protecting you all game — late game, you can vote to loosen them, for
-every ship in the guild, and read the accident statistics afterward. And the
-**apprenticeship program** is a pure collective good: expensive, slow, benefits
-competitors as much as you, and compounds for decades. Whether players fund it is
-the most interesting question this system asks.
+The **apprenticeship program** deserves emphasis as the system's best dilemma: a
+pure collective good — expensive, slow, benefits competitors exactly as much as you,
+and compounds for decades. At waiver scale it's funding one apprentice's berth on
+your own ship; at charter scale it's a guild that trains everyone's crews forever.
+Whether players ever fund it at the top of the ladder is the most interesting
+question this design asks.
 
-**Schism.** Push policy far enough from a guild's identity and you get internal
-conflict: traditionalists organize, motions get blocked, and a sustained campaign can
-end in a split — a faction leaves with locals, ships, and crew. Being on either side
-of a schism is a late-game story beat, and a second, more interesting answer to
-"what if I want to be something else" than defection (§6.1).
+#### Earning capital
 
-**The Drift is the deliberate exception.** It has no bylaws and no assemblies —
-that's its entire proposition. Influence there is personal: protection, favors owed,
-who vouches for whom, and the slow accumulation of being the name people trust.
-Same currency, no institution to spend it in.
+Political capital is a third currency alongside budget and standing, earned by
+things money can't buy: contracts delivered without incident, obligations honored
+when they cost you, crew retained for years, dangerous work done well, other locals
+backed when they asked. Crucially, **treating crew well is a political asset** — the
+thing that costs you money in the short run is the thing that buys you power in the
+long run. Capital accrues slowly and continuously, so there is always a cheap tier
+you can afford and always an expensive one you're saving toward.
+
+At the upper tiers you don't spend capital alone: motions are debated and voted at
+assemblies, arising from world state and from rival locals as well as from you. You
+sponsor, vote, block, trade support, and build blocs with NPC representatives who
+hold consistent agendas — so late-game capital buys *votes*, not outcomes.
+
+**Schism.** Push policy far enough from a guild's identity — enough expensive
+against-the-grain motions — and traditionalists organize: motions get blocked,
+capital costs rise further, and a sustained campaign can end in a split, a faction
+leaving with locals, ships, and crew. Being on either side of a schism is a
+late-game story beat, and a more interesting answer to "what if I want to be
+something else" than defection (§6.1).
+
+**The Drift is the deliberate exception.** It has no bylaws, no assemblies, and no
+charter — that's its entire proposition. The same ladder exists as purely personal
+obligation: a favour owed, a standing arrangement, a reputation across a port, and
+finally being the name that everyone in the grey market trusts. Same currency, same
+curve, no institution to spend it in.
 
 ---
 
@@ -824,18 +876,22 @@ yourself is what kind of employer you are.
   price drift + speculative trade, hiring halls backed by the person registry,
   aging + permadeath + first life events (ambitions, departures, funerals),
   the captain-autonomy and trust system, light-lag, mission archetypes 1–4,
-  standing orders + notifications.
+  standing orders + notifications — **plus political capital and the bottom two
+  rungs of the influence ladder** (waivers and variances). Cheap to build (they're
+  costed modifiers), and they validate the political system early instead of
+  betting a late milestone on an unproven idea.
 - **M4 — Ship of Theseus, and the long game.** Part market, swapping, mods/
   tinkering, hull upgrade path, engine tiers through NEP, salvage missions —
   plus **HQ relocation** (§6.3), which needs M3's light-lag and hiring halls in
   place and gives the late game a strategic axis that isn't a bigger engine.
-- **M5 — The institution.** Guild politics (§6.4) at v1 scope: political capital,
-  quarterly assemblies, ~8–10 policy motions with real mechanical effects, NPC
-  representatives with consistent agendas. *Not* in v1: blocs and vote-trading,
-  schism, multi-local politics — those are post-v1 depth on a system that only needs
-  to exist, not to be deep, for the arc to land. **This is the designated cut line**
-  (§12.1): if v1 is running long, M5 ships as a single annual assembly with four
-  motions, and the full system becomes the v1.x headline.
+- **M5 — The institution.** The upper rungs of the ladder (§6.4): local rules, guild
+  policy, charter amendments; quarterly assemblies; ~8–10 policies targetable at
+  every tier; NPC representatives with consistent agendas. *Not* in v1: vote-trading
+  blocs, schism, multi-local politics — post-v1 depth on a system that only needs to
+  exist, not to be deep, for the arc to land. **This is the designated cut line**
+  (§12.1), and the continuous-scale design makes it a safe one: cutting M5 leaves a
+  complete, working political system capped at local scale rather than no politics
+  at all. Players still spend capital from week one; the ceiling is just lower.
 - **M6 — Polish & ship.** Fair-play audit, dispatch-inbox return screen, session
   zero (§10.1) with all four guild openings, push notifications, save migrations,
   perf pass.
@@ -864,11 +920,14 @@ yourself is what kind of employer you are.
    the game cap you at the Belt to keep lag legible? Proposal: allow it, gate it
    behind high rank, and let the 123-minute Saturn opposition be a lesson players
    teach themselves. → M4.
-6. **How long is the arc to political influence?** The §6.4 endgame has to be
-   reachable by a real player, not theoretical. At 24×, a year of guild service is
-   ~15 real days — so "first meaningful vote" wants to land somewhere around
-   30–60 real days of play. If that's too far, capital accrues faster and motions
-   start smaller. → measure in M5, tune against real playtest retention.
+6. **How steep is the influence curve?** Now that influence starts at session one
+   (§6.4), the question isn't *when* but *how many orders of magnitude* separate a
+   one-voyage waiver from a charter amendment, and how fast capital accrues along
+   it. Too flat and guild-scale change is trivial; too steep and the top rungs are
+   decorative. Proposal: a waiver costs roughly a week of accrual, a charter
+   amendment roughly two game-years — with the explicit goal that a dedicated player
+   carries their first *guild policy* motion within ~30 real days.
+   → tune in M3 (bottom rungs), validate in M5.
 7. **Notifications backend timing:** local notifications only (no server) for v1,
    or stand up the minimal push relay at launch? → M6.
 8. **Art direction** for the cross-section: clean diagram/blueprint style (cheap,
@@ -894,9 +953,12 @@ to kill it.** The mitigations have to be real, not rhetorical:
   Everything after that is the long tail. If we ship M0–M3 and nothing else, we
   have a good game.
 - **Designated cut lines, decided in advance** (so they're not fought over under
-  deadline pressure): M5 guild politics degrades to a single annual assembly with
-  four motions; M4 HQ relocation degrades to a one-time mid-game move with a fixed
-  destination list; multi-ship and multi-local are already out.
+  deadline pressure): M5 degrades to the lower rungs of the influence ladder only
+  (§6.4 — a complete system with a lower ceiling, not a missing one); M4 HQ
+  relocation degrades to a one-time mid-game move with a fixed destination list;
+  multi-ship and multi-local are already out. Designing systems as *continuous
+  scales* rather than *unlocked tiers* is what makes cuts survivable — a scale can
+  be truncated, a tier can only be absent.
 - **Every milestone ends with a fun check**, and a milestone that fails its check
   gets fixed or cut before the next one starts. Adding systems on top of an
   unproven core is how this design dies.
