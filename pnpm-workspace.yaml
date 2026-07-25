@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+
+# vitest's bundler needs its platform binary built at install time.
+onlyBuiltDependencies:
+  - esbuild

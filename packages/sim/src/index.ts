@@ -1,0 +1,17 @@
+/**
+ * @solsyn/sim -- the whole game simulation.
+ *
+ * Design doc §8.1: this package has ZERO browser dependencies. It runs
+ * unchanged in the browser, in Node (tests), or on a server. That boundary is
+ * the insurance policy for cloud save and the shared-universe roadmap (§8.4),
+ * and it is cheap to keep only if it is never crossed.
+ */
+export * from './types.js'
+export * from './time.js'
+export * from './rng.js'
+export * from './hash.js'
+export * from './resources.js'
+export * from './queue.js'
+export * from './power.js'
+export * from './log.js'
+export * from './engine.js'

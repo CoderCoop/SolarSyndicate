@@ -1,0 +1,134 @@
+[
+  {
+    "id": "reactor.fission.beacon4",
+    "name": "Beacon-4 Fission Plant",
+    "roomId": "reactor",
+    "powerKw": 22.0,
+    "massKg": 9400,
+    "priority": "critical",
+    "switchable": false,
+    "startsEnabled": true,
+    "blurb": "22 kWe compact fission plant. Derived from Kilopower-class surface reactors, scaled up for shipboard use."
+  },
+  {
+    "id": "power.solar.foldout",
+    "name": "Fold-out Solar Wing",
+    "roomId": "reactor",
+    "powerKw": 3.5,
+    "massKg": 310,
+    "priority": "normal",
+    "switchable": true,
+    "startsEnabled": true,
+    "blurb": "Supplementary array. Useful in the inner system, dead weight past the Belt. Must be stowed before any burn."
+  },
+  {
+    "id": "power.battery.bank",
+    "name": "Battery Bank",
+    "roomId": "machinery",
+    "powerKw": 0,
+    "massKg": 570,
+    "priority": "critical",
+    "switchable": false,
+    "startsEnabled": true,
+    "blurb": "200 kWh at 350 Wh/kg. The margin between a quiet watch and a dark one."
+  },
+  {
+    "id": "life.scrubber.co2",
+    "name": "CO2 Scrubber",
+    "roomId": "life-support",
+    "powerKw": -1.2,
+    "massKg": 480,
+    "priority": "critical",
+    "switchable": false,
+    "startsEnabled": true,
+    "blurb": "Amine-bed scrubber, ISS CDRA lineage. Removes roughly 1 kg of CO2 per crew per day."
+  },
+  {
+    "id": "life.oxygen.electrolysis",
+    "name": "O2 Electrolysis Unit",
+    "roomId": "life-support",
+    "powerKw": -3.6,
+    "massKg": 390,
+    "priority": "critical",
+    "switchable": false,
+    "startsEnabled": true,
+    "blurb": "Splits reclaimed water for breathing oxygen. The single largest steady draw on the ship."
+  },
+  {
+    "id": "life.water.recycler",
+    "name": "Water Recycler",
+    "roomId": "life-support",
+    "powerKw": -0.9,
+    "massKg": 340,
+    "priority": "high",
+    "switchable": true,
+    "startsEnabled": true,
+    "blurb": "98% closure. Every point below that is mass you have to carry."
+  },
+  {
+    "id": "life.hydroponics.lamps",
+    "name": "Hydroponics Lamps",
+    "roomId": "life-support",
+    "powerKw": -4.2,
+    "massKg": 210,
+    "priority": "low",
+    "switchable": true,
+    "startsEnabled": true,
+    "blurb": "Grow lights for the rack. Food, a little oxygen, and the only green anyone sees for months."
+  },
+  {
+    "id": "thermal.loop.pumps",
+    "name": "Thermal Loop & Radiators",
+    "roomId": "machinery",
+    "powerKw": -1.6,
+    "massKg": 1250,
+    "priority": "critical",
+    "switchable": false,
+    "startsEnabled": true,
+    "blurb": "Pumps for the radiator loop. Everything the ship does becomes heat, and heat has to go somewhere."
+  },
+  {
+    "id": "nav.computers",
+    "name": "Navigation & Flight Computers",
+    "roomId": "bridge",
+    "powerKw": -1.1,
+    "massKg": 95,
+    "priority": "high",
+    "switchable": true,
+    "startsEnabled": true,
+    "blurb": "Astrogation solver and flight control. Off means flying blind."
+  },
+  {
+    "id": "comms.array",
+    "name": "Comms Array",
+    "roomId": "bridge",
+    "powerKw": -0.8,
+    "massKg": 140,
+    "priority": "normal",
+    "switchable": true,
+    "startsEnabled": true,
+    "blurb": "High-gain dish. Your only link to the Local, and it travels no faster than light."
+  },
+  {
+    "id": "hab.systems",
+    "name": "Habitation Systems",
+    "roomId": "quarters",
+    "powerKw": -2.6,
+    "massKg": 620,
+    "priority": "normal",
+    "switchable": true,
+    "startsEnabled": true,
+    "blurb": "Lighting, galley, water heating, and the exercise rig that keeps bone density off the medic's list."
+  },
+  {
+    "id": "engine.ntr.preheat",
+    "name": "NTR Preheat",
+    "roomId": "engines",
+    "powerKw": -14.0,
+    "massKg": 0,
+    "priority": "low",
+    "switchable": true,
+    "startsEnabled": false,
+    "blurb": "Brings the nuclear thermal cluster to readiness. Enormous draw, and you cannot burn without it."
+  }
+]
