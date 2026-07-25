@@ -34,9 +34,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # `enablement: true` turns Pages on for the repository if it is not
-      # already, so a fresh clone of this repo deploys without anyone visiting
-      # the settings page.
+      # `enablement: true` asks GitHub to turn Pages on if it is off. Whether
+      # that works depends on the org: in CoderCoop the workflow token is not
+      # allowed to create a Pages site ("Resource not accessible by
+      # integration"), so Pages has to be switched on once by hand at
+      # Settings -> Pages -> Source: GitHub Actions. After that this step just
+      # reads the existing configuration and the flag is harmless.
       - uses: actions/configure-pages@v5
         with:
           enablement: true

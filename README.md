@@ -8,6 +8,9 @@ responsibility.
 
 **[Play the current build →](https://codercoop.github.io/SolarSyndicate/)** — installable
 from the browser menu on a phone; it runs entirely offline once loaded.
+*(Requires Pages to be enabled once: Settings → Pages → Source: GitHub Actions.
+Note that this repository is private, so publishing makes the game — though not
+the source — reachable by anyone with the link.)*
 
 The full design lives in [`docs/design.md`](docs/design.md). Read that first — the
 code deliberately references its section numbers (§7.2, §8.2, and so on) so that
