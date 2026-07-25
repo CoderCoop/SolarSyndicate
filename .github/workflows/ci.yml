@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` here on purpose -- the action errors out if the version
+      # is given both here and as `packageManager` in package.json, and
+      # package.json is the better single source of truth.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Typecheck, lint (including the determinism guard that keeps
+      # Math.random and Date.now out of packages/sim), and the property tests.
+      - run: pnpm check
+
+  verify:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` here on purpose -- the action errors out if the version
+      # is given both here and as `packageManager` in package.json, and
+      # package.json is the better single source of truth.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Builds the PWA, serves it, and drives the real thing in a phone
+      # viewport -- including a clock-emulated jump forward to prove the ship
+      # keeps running while the app is closed.
+      - run: pnpm verify
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-screenshots
+          path: .verify-shots/
+          if-no-files-found: ignore
+          retention-days: 7

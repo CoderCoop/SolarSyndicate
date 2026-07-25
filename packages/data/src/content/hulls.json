@@ -1,0 +1,19 @@
+[
+  {
+    "id": "hull.kestrel",
+    "name": "Ariadne",
+    "className": "Kestrel-class light hauler",
+    "dryMassKg": 41000,
+    "cabinVolumeM3": 180,
+    "thermalMassKjPerK": 36900,
+    "batteryCapacityKwh": 200,
+    "batteryStartKwh": 168,
+    "o2CapacityKg": 90,
+    "waterCapacityKg": 900,
+    "foodCapacityKg": 620,
+    "propellantCapacityKg": 18000,
+    "sparesCapacity": 60,
+    "rooms": ["bridge", "quarters", "life-support", "cargo", "machinery", "reactor", "engines"],
+    "blurb": "Thirty-one years old, three owners, and a maintenance log the Guild describes as 'characterful'. She is yours now."
+  }
+]

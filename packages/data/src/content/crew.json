@@ -1,0 +1,42 @@
+[
+  {
+    "id": "crew.ballard",
+    "name": "Ines Ballard",
+    "role": "Captain",
+    "age": 44,
+    "watch": "A",
+    "stats": { "strength": 5, "dexterity": 6, "endurance": 6, "intellect": 7, "perception": 8, "resolve": 8 },
+    "skills": { "mechanics": 24, "lifeSupport": 18, "medicine": 12, "piloting": 61, "leadership": 66 },
+    "blurb": "Nineteen years in the seat, most of them on other people's ships. Reads a dossier better than she reads a room."
+  },
+  {
+    "id": "crew.okonkwo",
+    "name": "Dolores Okonkwo",
+    "role": "Chief Engineer",
+    "age": 51,
+    "watch": "B",
+    "stats": { "strength": 6, "dexterity": 7, "endurance": 6, "intellect": 8, "perception": 7, "resolve": 6 },
+    "skills": { "mechanics": 71, "lifeSupport": 34, "medicine": 8, "piloting": 15, "leadership": 30 },
+    "blurb": "Learned the trade on Belt salvage. Believes every failure announced itself weeks earlier and nobody was listening."
+  },
+  {
+    "id": "crew.sandoval",
+    "name": "Mira Sandoval",
+    "role": "Life Support Technician",
+    "age": 29,
+    "watch": "C",
+    "stats": { "strength": 4, "dexterity": 7, "endurance": 7, "intellect": 7, "perception": 6, "resolve": 5 },
+    "skills": { "mechanics": 33, "lifeSupport": 58, "medicine": 21, "piloting": 9, "leadership": 12 },
+    "blurb": "Talks to the hydroponics rack. Insists this is not unusual and that the rack does better for it."
+  },
+  {
+    "id": "crew.berg",
+    "name": "Tomas Berg",
+    "role": "Medic",
+    "age": 37,
+    "watch": "A",
+    "stats": { "strength": 6, "dexterity": 8, "endurance": 5, "intellect": 7, "perception": 7, "resolve": 7 },
+    "skills": { "mechanics": 14, "lifeSupport": 26, "medicine": 52, "piloting": 11, "leadership": 24 },
+    "blurb": "Signed on for one run to Ceres and stayed for six years. Keeps the dose log obsessively, including his own."
+  }
+]

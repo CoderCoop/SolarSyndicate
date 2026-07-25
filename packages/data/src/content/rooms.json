@@ -1,0 +1,51 @@
+[
+  {
+    "id": "bridge",
+    "name": "Sensors & Navigation",
+    "short": "Bridge",
+    "deck": 0,
+    "blurb": "Helm, comms, and the sensor mast. Two acceleration couches, one of them usually occupied."
+  },
+  {
+    "id": "quarters",
+    "name": "Crew Quarters",
+    "short": "Quarters",
+    "deck": 1,
+    "blurb": "Six bunks, a galley, and the only table on the ship."
+  },
+  {
+    "id": "life-support",
+    "name": "Life Support",
+    "short": "Life Support",
+    "deck": 2,
+    "blurb": "Scrubbers, recyclers, and a hydroponics rack that smells faintly of wet soil."
+  },
+  {
+    "id": "cargo",
+    "name": "Cargo Hold",
+    "short": "Cargo",
+    "deck": 3,
+    "blurb": "Four modular bays. Empty, which is the problem."
+  },
+  {
+    "id": "machinery",
+    "name": "Machinery",
+    "short": "Machinery",
+    "deck": 4,
+    "blurb": "Workshop, spares lockers, battery bank, and the thermal loop pumps."
+  },
+  {
+    "id": "reactor",
+    "name": "Reactor",
+    "short": "Reactor",
+    "deck": 5,
+    "blurb": "Shielded fission plant. The shadow shield is why the tanks sit where they do."
+  },
+  {
+    "id": "engines",
+    "name": "Engines",
+    "short": "Engines",
+    "deck": 6,
+    "blurb": "Nuclear thermal cluster, cold. Preheating takes hours and a great deal of power."
+  }
+]
