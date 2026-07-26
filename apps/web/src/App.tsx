@@ -135,6 +135,7 @@ export function App() {
           <>
             <CrewPanel
               crew={crew}
+              nowHour={((state.now % 86400) + 86400) % 86400 / 3600}
               onSetWatch={(crewId, watch) => dispatch({ kind: 'SET_CREW_WATCH', crewId, watch })}
             />
             <WorkOrders

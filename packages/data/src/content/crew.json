@@ -6,8 +6,33 @@
     "age": 44,
     "watch": "A",
     "stationRoomId": "bridge",
-    "stats": { "strength": 5, "dexterity": 6, "endurance": 6, "intellect": 7, "perception": 8, "resolve": 8 },
-    "skills": { "mechanics": 24, "lifeSupport": 18, "medicine": 12, "piloting": 61, "leadership": 66 },
+    "stats": {
+      "strength": 5,
+      "dexterity": 6,
+      "endurance": 6,
+      "intellect": 7,
+      "perception": 8,
+      "resolve": 8
+    },
+    "knowledge": {
+      "mechanical": 28,
+      "electronics": 34,
+      "physics": 30,
+      "chemistry": 18,
+      "biology": 16,
+      "medicine": 14
+    },
+    "skills": {
+      "operationMonitoring": 52,
+      "equipmentMaintenance": 24,
+      "troubleshooting": 44,
+      "repairing": 20,
+      "qualityControl": 38,
+      "judgment": 71
+    },
+    "qualifications": [
+      "gnc"
+    ],
     "blurb": "Nineteen years in the seat, most of them on other people's ships. Reads a dossier better than she reads a room."
   },
   {
@@ -17,8 +42,35 @@
     "age": 51,
     "watch": "B",
     "stationRoomId": "machinery",
-    "stats": { "strength": 6, "dexterity": 7, "endurance": 6, "intellect": 8, "perception": 7, "resolve": 6 },
-    "skills": { "mechanics": 71, "lifeSupport": 34, "medicine": 8, "piloting": 15, "leadership": 30 },
+    "stats": {
+      "strength": 6,
+      "dexterity": 7,
+      "endurance": 6,
+      "intellect": 8,
+      "perception": 7,
+      "resolve": 6
+    },
+    "knowledge": {
+      "mechanical": 78,
+      "electronics": 62,
+      "physics": 54,
+      "chemistry": 40,
+      "biology": 12,
+      "medicine": 8
+    },
+    "skills": {
+      "operationMonitoring": 64,
+      "equipmentMaintenance": 74,
+      "troubleshooting": 81,
+      "repairing": 79,
+      "qualityControl": 58,
+      "judgment": 46
+    },
+    "qualifications": [
+      "eps",
+      "tcs",
+      "eva"
+    ],
     "blurb": "Learned the trade on Belt salvage. Believes every failure announced itself weeks earlier and nobody was listening."
   },
   {
@@ -28,8 +80,33 @@
     "age": 29,
     "watch": "C",
     "stationRoomId": "life-support",
-    "stats": { "strength": 4, "dexterity": 7, "endurance": 7, "intellect": 7, "perception": 6, "resolve": 5 },
-    "skills": { "mechanics": 33, "lifeSupport": 58, "medicine": 21, "piloting": 9, "leadership": 12 },
+    "stats": {
+      "strength": 4,
+      "dexterity": 7,
+      "endurance": 7,
+      "intellect": 7,
+      "perception": 6,
+      "resolve": 5
+    },
+    "knowledge": {
+      "mechanical": 34,
+      "electronics": 30,
+      "physics": 22,
+      "chemistry": 66,
+      "biology": 71,
+      "medicine": 26
+    },
+    "skills": {
+      "operationMonitoring": 74,
+      "equipmentMaintenance": 52,
+      "troubleshooting": 46,
+      "repairing": 33,
+      "qualityControl": 61,
+      "judgment": 30
+    },
+    "qualifications": [
+      "eclss"
+    ],
     "blurb": "Talks to the hydroponics rack. Insists this is not unusual and that the rack does better for it."
   },
   {
@@ -39,8 +116,34 @@
     "age": 37,
     "watch": "A",
     "stationRoomId": "quarters",
-    "stats": { "strength": 6, "dexterity": 8, "endurance": 5, "intellect": 7, "perception": 7, "resolve": 7 },
-    "skills": { "mechanics": 14, "lifeSupport": 26, "medicine": 52, "piloting": 11, "leadership": 24 },
+    "stats": {
+      "strength": 6,
+      "dexterity": 8,
+      "endurance": 5,
+      "intellect": 7,
+      "perception": 7,
+      "resolve": 7
+    },
+    "knowledge": {
+      "mechanical": 18,
+      "electronics": 22,
+      "physics": 20,
+      "chemistry": 44,
+      "biology": 58,
+      "medicine": 76
+    },
+    "skills": {
+      "operationMonitoring": 48,
+      "equipmentMaintenance": 26,
+      "troubleshooting": 34,
+      "repairing": 14,
+      "qualityControl": 69,
+      "judgment": 41
+    },
+    "qualifications": [
+      "cmo",
+      "eva"
+    ],
     "blurb": "Signed on for one run to Ceres and stayed for six years. Keeps the dose log obsessively, including his own."
   }
 ]

@@ -215,6 +215,40 @@ check(
   doings.join(' | '),
 )
 
+// --- the crew tab (RF-21 to RF-26) ------------------------------------------
+const stripLabels = await page.$$eval('.watchstrip__seg', (els) => els.map((e) => e.textContent))
+check(
+  'a watch is explained as a day, not as a letter (RF-21)',
+  stripLabels.includes('On watch') && stripLabels.includes('Off') && stripLabels.includes('Asleep'),
+  stripLabels.join(' · '),
+)
+check('with a marker at the current hour', await page.isVisible('.watchstrip__now'))
+
+const blocks = await page.$$eval('.statblock__title', (els) =>
+  els.map((e) => e.textContent?.trim().split(' ')[0]),
+)
+check(
+  'skills, knowledge and attributes are shown separately (RF-22, RF-23)',
+  ['Skills', 'Knowledge', 'Attributes'].every((b) => blocks.includes(b)),
+  blocks.join(' / '),
+)
+
+const skillNames = await page.$$eval('.statblock .statrow__label', (els) =>
+  els.map((e) => e.textContent),
+)
+check(
+  'skills are the O*NET technical cluster',
+  ['Monitoring', 'Maintenance', 'Diagnosis', 'Repair', 'Inspection'].every((n) =>
+    skillNames.includes(n),
+  ),
+  skillNames.slice(0, 6).join(', '),
+)
+
+const quals = await page.$$eval('.qual', (els) => els.map((e) => e.textContent))
+check('endorsements are named by their real system (RF-26)', quals.length > 0, quals.join(' '))
+
+await page.screenshot({ path: join(SHOTS, '10-crew-detail.png'), fullPage: true })
+
 check('the work order appears with an owner and a duration', await page.isVisible('.orders'))
 const eta = await page.textContent('.order__eta')
 check('the job has an honest completion estimate', /to go$/.test(eta?.trim() ?? ''), eta?.trim() ?? '')

@@ -111,9 +111,21 @@ export function crewEffectiveness(state: SimState, crew: CrewState, t: GameTime)
  * already watching, and "days until this is fixed" is the most watched number
  * in M1.
  */
-export function laborRate(state: SimState, crew: CrewState, t: GameTime): number {
+export function laborRate(
+  state: SimState,
+  crew: CrewState,
+  t: GameTime,
+  kind: 'service' | 'repair' = 'repair',
+): number {
   const def = getCrewDef(crew.defId)
-  const skillFactor = 0.4 + (def.skills.mechanics / 100) * 1.1
+  // Different work, different competence (§4.2). Routine servicing is
+  // Equipment Maintenance; bringing a failed unit back is Repairing, gated by
+  // Troubleshooting -- you cannot fix what you have not diagnosed.
+  const skill =
+    kind === 'service'
+      ? def.skills.equipmentMaintenance / 100
+      : (def.skills.repairing / 100) * 0.7 + (def.skills.troubleshooting / 100) * 0.3
+  const skillFactor = 0.4 + skill * 1.1
   return skillFactor * crewEffectiveness(state, crew, t)
 }
 

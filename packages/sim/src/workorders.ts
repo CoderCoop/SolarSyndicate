@@ -77,9 +77,7 @@ export function resolveWorkOrders(state: SimState, at: GameTime): void {
     .filter((w) => w.status !== 'done')
     .sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1))
 
-  const free = availableCrew(state).sort(
-    (a, b) => getCrewDef(b.defId).skills.mechanics - getCrewDef(a.defId).skills.mechanics,
-  )
+  const free = availableCrew(state)
 
   for (const order of open) {
     settle(order.progress, at)
@@ -93,6 +91,9 @@ export function resolveWorkOrders(state: SimState, at: GameTime): void {
       continue
     }
 
+    // Pick the best hand *for this job*: servicing and repairing are different
+    // competences (§4.2), so the ranking is per order rather than per watch.
+    free.sort((a, b) => laborRate(state, b, at, order.kind) - laborRate(state, a, at, order.kind))
     const hand = free.shift()
     if (!hand) {
       order.status = 'queued'
@@ -101,7 +102,7 @@ export function resolveWorkOrders(state: SimState, at: GameTime): void {
       continue
     }
 
-    const rate = laborRate(state, hand, at)
+    const rate = laborRate(state, hand, at, order.kind)
     order.status = rate > 0 ? 'active' : 'queued'
     order.assignedCrewId = hand.id
     hand.workOrderId = order.id

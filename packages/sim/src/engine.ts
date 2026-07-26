@@ -16,6 +16,7 @@ import {
   getPart,
   STARTER_HULL_ID,
   TUNE,
+  type CrewDef,
   type Fitting,
   type Glyph,
   type SizeM,
@@ -491,7 +492,11 @@ export interface CrewView {
   fatigue: number
   health: number
   effectiveness: number
-  mechanics: number
+  /** The whole stat block (RF-26). The sim already holds it; this publishes it. */
+  knowledge: CrewDef['knowledge']
+  skills: CrewDef['skills']
+  qualifications: CrewDef['qualifications']
+  stats: CrewDef['stats']
   blurb: string
   workOrderId?: string
   /** What they are doing, in words. */
@@ -526,7 +531,10 @@ export function crewViews(state: SimState): CrewView[] {
       fatigue: levelAt(crew.fatigue, t),
       health: levelAt(crew.health, t),
       effectiveness: crewEffectiveness(state, crew, t),
-      mechanics: def.skills.mechanics,
+      knowledge: def.knowledge,
+      skills: def.skills,
+      qualifications: def.qualifications,
+      stats: def.stats,
       blurb: def.blurb,
       ...(crew.workOrderId ? { workOrderId: crew.workOrderId } : {}),
       doing,
