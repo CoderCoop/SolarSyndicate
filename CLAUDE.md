@@ -27,10 +27,15 @@ when an older save can no longer be read. Keep the two independent.
 
 All workspace packages share the root version.
 
-**Tag on `main`, after the merge** — never on the feature branch. Squash-merging
-creates a new commit, so a tag pushed from the branch points at history that is
-not on `main`. (The session's git proxy refuses tag pushes anyway, so this is
-a release step for a human or for CI, not something to do from a work session.)
+**Tagging is CI's job** — `.github/workflows/release.yml` tags whatever version
+`package.json` claims when it changes on `main`, and cuts a GitHub release using
+that version's `CHANGELOG.md` section as the notes. So releasing is just bumping
+the version in a reviewed PR.
+
+Never tag from a feature branch: squash-merging creates a new commit, so the tag
+would point at history that never lands on `main`. (A work session cannot do it
+in any case — the git proxy refuses tag pushes and the GitHub tooling it has is
+read-only for tags.)
 
 ## Conventions
 
