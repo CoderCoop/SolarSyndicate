@@ -231,6 +231,7 @@ export type Command =
   | { kind: 'ACCEPT_CONTRACT'; contractId: string }
   | { kind: 'ABANDON_CONTRACT' }
   | { kind: 'DEPART'; optionId: string }
+  | { kind: 'PURCHASE_HULL'; hullId: string }
 
 /** A command with the game time it was issued at. */
 export interface TimedCommand {

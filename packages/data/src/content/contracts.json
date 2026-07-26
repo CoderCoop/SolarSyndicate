@@ -51,10 +51,10 @@
     "cargoKg": 9800,
     "deadlineDays": 300,
     "allowance": {
-      "water": 340,
-      "o2": 46,
-      "food": 1960,
-      "propellant": 48100,
+      "water": 880,
+      "o2": 155,
+      "food": 1810,
+      "propellant": 104800,
       "spares": 11
     },
     "blurb": "Instruments in crated foam, and a note asking that the crates not be stacked. The window is the window; miss it and the next is two years out."
@@ -71,10 +71,10 @@
     "cargoKg": 6400,
     "deadlineDays": 300,
     "allowance": {
-      "water": 340,
-      "o2": 46,
-      "food": 1960,
-      "propellant": 46200,
+      "water": 880,
+      "o2": 155,
+      "food": 1810,
+      "propellant": 102800,
       "spares": 11
     },
     "blurb": "Core samples, spent instruments and eleven crates nobody will explain. The Office wants all of it and will not say which part matters."
@@ -91,10 +91,10 @@
     "cargoKg": 6400,
     "deadlineDays": 540,
     "allowance": {
-      "water": 615,
-      "o2": 82,
-      "food": 3580,
-      "propellant": 59300,
+      "water": 1605,
+      "o2": 285,
+      "food": 3300,
+      "propellant": 132100,
       "spares": 16
     },
     "blurb": "Refrigerated, insured, and expected. Belt Mutual has a long memory for hulls that arrive late and a longer one for hulls that arrive warm."
@@ -111,10 +111,10 @@
     "cargoKg": 15600,
     "deadlineDays": 540,
     "allowance": {
-      "water": 615,
-      "o2": 82,
-      "food": 3580,
-      "propellant": 66000,
+      "water": 1605,
+      "o2": 285,
+      "food": 3300,
+      "propellant": 138800,
       "spares": 14
     },
     "blurb": "Sixteen tonnes of finished billet, and every kilo of it is delta-v you have to pay for."
@@ -131,10 +131,10 @@
     "cargoKg": 5100,
     "deadlineDays": 650,
     "allowance": {
-      "water": 745,
-      "o2": 99,
-      "food": 4340,
-      "propellant": 38000,
+      "water": 1950,
+      "o2": 345,
+      "food": 4020,
+      "propellant": 85500,
       "spares": 19
     },
     "blurb": "Ration packs and filter cartridges. Nobody on Phobos will thank you, but they will notice if it does not come."

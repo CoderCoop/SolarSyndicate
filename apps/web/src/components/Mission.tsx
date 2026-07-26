@@ -28,10 +28,12 @@ import {
   type LedgerView,
   type Settlement,
   type SettlementLine,
+  type HullOffer,
   type TransferOption,
   type VoyageView,
 } from '@solsyn/sim'
 import { MISSION_BLURB, MISSION_LABEL, RouteMap } from './RouteMap.js'
+import { Shipyard } from './Shipyard.js'
 
 /** Allowance lines are kg except spares, which are whole units. */
 function formatStores(key: string, value: number): string {
@@ -429,6 +431,8 @@ export function Mission({
   settlement,
   portId,
   docked,
+  hullOffers,
+  onPurchase,
   onAccept,
   onAbandon,
   onDepart,
@@ -441,6 +445,8 @@ export function Mission({
   settlement: Settlement | undefined
   portId: string
   docked: boolean
+  hullOffers: HullOffer[]
+  onPurchase: (hullId: string) => void
   onAccept: (contractId: string) => void
   onAbandon: () => void
   onDepart: (optionId: string) => void
@@ -480,6 +486,9 @@ export function Mission({
           )}
         </section>
       )}
+
+      {/* A yard is a place: this is empty at every berth that has no yard. */}
+      {docked && <Shipyard offers={hullOffers} onPurchase={onPurchase} />}
 
       {settlement && !active && <SettlementPanel settlement={settlement} />}
 

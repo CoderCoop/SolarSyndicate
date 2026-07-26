@@ -36,6 +36,49 @@
       "comms.array",
       "hab.systems",
       "engine.ntr.preheat"
-    ]
+    ],
+    "priceCr": 430000,
+    "tradeInCr": 165000
+  },
+  {
+    "id": "hull.albatross",
+    "name": "Thessaly",
+    "className": "Albatross-class long-hauler",
+    "dryMassKg": 58000,
+    "cabinVolumeM3": 260,
+    "thermalMassKjPerK": 53000,
+    "batteryCapacityKwh": 320,
+    "batteryStartKwh": 320,
+    "o2CapacityKg": 260,
+    "waterCapacityKg": 3200,
+    "foodCapacityKg": 2600,
+    "propellantCapacityKg": 110000,
+    "sparesCapacity": 140,
+    "rooms": [
+      "bridge",
+      "quarters",
+      "life-support",
+      "cargo",
+      "machinery",
+      "reactor",
+      "engines"
+    ],
+    "blurb": "Nine years old and built for the window trade: a habitat and an engine bolted either side of a cryogenic tank that dwarfs both. Nothing about her is elegant, and she will put four people on Mars and bring them home.",
+    "fitOut": [
+      "reactor.fission.beacon4",
+      "power.solar.foldout",
+      "power.battery.bank",
+      "life.scrubber.co2",
+      "life.oxygen.electrolysis",
+      "life.water.recycler",
+      "life.hydroponics.lamps",
+      "thermal.loop.radiators",
+      "nav.computers",
+      "comms.array",
+      "hab.systems",
+      "engine.ntr.preheat"
+    ],
+    "priceCr": 1050000,
+    "tradeInCr": 780000
   }
 ]

@@ -310,6 +310,15 @@ export const HullDef = z.object({
    * states its fit-out; a refit changes it.
    */
   fitOut: z.array(z.string()),
+  /**
+   * What a yard charges for this hull, and what it allows against an old one.
+   *
+   * Trade-in is a property of the hull being given up, not of the one being
+   * bought, so it lives here rather than on the transaction: a Kestrel is worth
+   * what a Kestrel is worth whatever you replace it with.
+   */
+  priceCr: z.number().positive(),
+  tradeInCr: z.number().nonnegative(),
   blurb: z.string(),
 })
 export type HullDef = z.infer<typeof HullDef>
@@ -439,6 +448,11 @@ export const PortDef = z.object({
    * worse lie than the one this fixes.
    */
   moon: z.string().optional(),
+  /**
+   * Hulls this port's yard will sell. Most ports have no yard: buying a ship is
+   * a reason to go somewhere, not something every berth offers.
+   */
+  sellsHullIds: z.array(z.string()).default([]),
   blurb: z.string(),
 })
 export type PortDef = z.infer<typeof PortDef>

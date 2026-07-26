@@ -554,21 +554,37 @@ the Apollo Service Module ran 75% and a Falcon 9 upper stage 97%; 31% was a
 building, not a vehicle.
 
 **What that buys, and what it does not.** The Earth–Moon system works properly
-now, with margin. Mars does not, and the reason is worth stating because it is
+now, with margin. Mars does not — and the reason is worth stating because it is
 *not* the tank:
 
-| Constraint | Kestrel | Earth→Phobos needs |
-|---|---|---|
-| Propellant | 32 t | 47 t |
-| Food endurance | **91 days** | **259 days** |
-| Water endurance | 281 days | 259 days |
+| Constraint | Kestrel | Albatross | Earth→Phobos needs |
+|---|---|---|---|
+| Propellant | 32 t | 110 t | 103 t |
+| **Food endurance** | **91 days** | **382 days** | **259 days** |
+| Water endurance | 281 days | 1,000 days | 259 days |
 
 Stores gate Mars harder than mass ratio does. Feeding four people for a Mars
-crossing needs roughly three times the pantry this hull has, *and* half again
-the tank — which is a different ship, not a bigger number. That makes the
-interplanetary board exactly what §10.2's M4 "hull upgrade path" is for: the
-runs are visible, priced, and marked with the shortfall in tonnes (TR-3b), so
-the player can see what the next hull buys before they can afford it.
+crossing needs roughly three times the pantry the Kestrel has *and* three times
+the tank — which is a different ship, not a bigger number.
+
+**So it is a different ship you have to go and buy.** §10.2's M4 hull-upgrade
+path, pulled forward, because it was the only thing standing between the player
+and half the board. The Albatross is sold at Tranquillity — hulls are sold where
+hulls are built, and having to fly somewhere to buy a ship is what stops the map
+being decoration. It is priced as a difference: list less what the yard allows
+for the Kestrel, so the upgrade costs what replacing a working ship costs.
+
+Three consequences worth having chosen deliberately:
+
+- **Mars is reachable on minimum energy only.** The faster ellipses stay
+  blocked, so buying the hull opens the destination without removing the trade.
+- **The Belt stays out of reach** at 14.9 km/s, which leaves somewhere to go.
+  §10.2 already puts NEP in M4, and high-Isp electric propulsion is the honest
+  answer for outer-system work — the Belt is gated behind a *drive*, not a tank.
+- **A new ship is new.** She arrives at nameplate condition and spec tune, so
+  months of attention paid to the old recycler do not transfer. That is a real
+  cost of switching, and the purchase card says so rather than letting it be
+  discovered.
 
 **A real result that fell out of doing this honestly:** a faster run to the Moon
 is nearly free. Minimum energy is 3.91 km/s and the three-and-a-half-day express
@@ -577,6 +593,16 @@ three-day trajectory rather than a five-day one, and it means the cislunar
 trajectory choice is genuinely low-stakes. The interesting version of that
 decision lives on interplanetary crossings, where stretching the ellipse costs
 delta-v steeply (Earth→Phobos: 9.62 km/s at minimum energy, 14.93 express).
+
+⚠ **Open, and found by flying it:** on a 259-day crossing the allowance
+currently *rewards neglect on the spares line*. A tended ship spends its whole
+11-unit spares budget on repairs and scores 0 there; a ship left alone spends
+none and banks 9,680 cr — while arriving with a dead reactor, four broken
+systems and no way home. The punishment is real but it is entirely deferred,
+and the settlement reads backwards at the moment the player looks at it.
+Deliberately not patched by inflating the spares allowance, because the honest
+fix is that a broken part should be a *liability on the books* — asset
+valuation, which is a mechanic rather than a number. Decide before M4.
 
 **Still open, and deliberately so:** the Belt needs 14.9 km/s and ~148 t of
 propellant, which no single-stage NTR of this class reaches. §10.2 already puts

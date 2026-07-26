@@ -7,6 +7,7 @@ import {
   flowChannels,
   lastSettlement,
   ledgerView,
+  shipyardOffers,
   lifeSupportView,
   powerView,
   recentLog,
@@ -89,6 +90,7 @@ export function App() {
   const options = transferOptions(state)
   const voyage = voyageView(state)
   const settlement = lastSettlement(state)
+  const hullOffers = shipyardOffers(state)
   const brokenCount = state.ship.parts.filter((p) => p.broken).length
 
   // The Mission tab is where the only timed decision in the game lives, so the
@@ -173,6 +175,8 @@ export function App() {
             settlement={settlement}
             portId={state.ship.portId}
             docked={state.ship.docked}
+            hullOffers={hullOffers}
+            onPurchase={(hullId) => dispatch({ kind: 'PURCHASE_HULL', hullId })}
             onAccept={(contractId) => dispatch({ kind: 'ACCEPT_CONTRACT', contractId })}
             onAbandon={() => dispatch({ kind: 'ABANDON_CONTRACT' })}
             onDepart={(optionId) => dispatch({ kind: 'DEPART', optionId })}
@@ -207,8 +211,8 @@ export function App() {
           <p className="app__milestone">
             M2 — the ship goes somewhere. Contracts with a stated resupply allowance, real
             transfer orbits, and books that settle on arrival: efficiency now has a price.
-            The Kestrel is a cislunar hauler: Mars and the Belt are priced on the board and
-            out of reach until a bigger hull. No guilds or crew hiring yet.
+            The Kestrel is a cislunar hauler; the yard at Tranquillity sells the hull that
+            reaches Mars. The Belt is still out of reach. No guilds or crew hiring yet.
           </p>
           <p className="app__links">
             <a href={SITE_URL} target="_blank" rel="noreferrer">
