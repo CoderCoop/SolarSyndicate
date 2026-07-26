@@ -14,7 +14,8 @@
     "typecheck": "tsc -b --pretty",
     "lint": "eslint .",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
-    "verify": "pnpm --filter @solsyn/web build && node scripts/verify.mjs"
+    "verify": "pnpm --filter @solsyn/web build && node scripts/verify.mjs",
+    "shots": "pnpm --filter @solsyn/web build && node scripts/capture-shots.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

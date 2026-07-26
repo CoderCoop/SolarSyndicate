@@ -6,9 +6,10 @@ an operations desk. You choose the guild, hire the crew, authorise the money, an
 set the policy the ship runs on. The people aboard are not you; they are your
 responsibility.
 
-**[Play the current build →](https://codercoop.github.io/SolarSyndicate/)** — installable
+**[Project site](https://codercoop.github.io/SolarSyndicate/)** ·
+**[Play the current build →](https://codercoop.github.io/SolarSyndicate/play/)** — installable
 from the browser menu on a phone; it runs entirely offline once loaded. Every push
-to `main` redeploys it.
+to `main` redeploys both.
 
 The full design lives in [`docs/design.md`](docs/design.md). Read that first — the
 code deliberately references its section numbers (§7.2, §8.2, and so on) so that
@@ -71,10 +72,13 @@ Two things worth trying:
 | `pnpm check` | typecheck + lint + test |
 | `pnpm verify` | Build, then drive the real PWA in Chromium end to end |
 
-Every push to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`.
-The build uses relative asset paths so the same artifact runs from a project
-subpath, the domain root, or straight off disk — and `pnpm verify` serves it
-from a subpath so that stays true.
+Every push to `main` deploys to GitHub Pages via `.github/workflows/pages.yml`:
+the project site (`docs/`) at the root, the game beneath it at `/play/`. The
+build uses relative asset paths so the same artifact runs from any mount point
+— and `pnpm verify` serves it from the deployed subpath so that stays true.
+
+`pnpm shots` recaptures the site's screenshots from the running build; they are
+real, not mockups, so they go stale if the UI changes.
 
 ## Secrets
 

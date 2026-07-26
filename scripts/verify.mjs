@@ -34,11 +34,12 @@ if (!existsSync(DIST)) {
 }
 
 /**
- * Serve under a subpath rather than at the root, mirroring a GitHub Pages
- * project site. Deploying to /SolarSyndicate/ while only ever testing at / is
- * how you ship a build whose assets 404 on the live site.
+ * Serve under the exact subpath the game is deployed to. The project site sits
+ * at /SolarSyndicate/ and the game one level beneath it; testing at the root
+ * while deploying to a subpath is how you ship a build whose assets 404 on the
+ * live site.
  */
-const MOUNT = '/SolarSyndicate/'
+const MOUNT = '/SolarSyndicate/play/'
 
 const server = createServer(async (req, res) => {
   const url = (req.url ?? '/').split('?')[0]
