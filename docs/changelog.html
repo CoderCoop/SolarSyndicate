@@ -139,6 +139,101 @@
 
   <!-- ============================================================ -->
   <article class="entry entry--ship">
+    <p class="stamp"><b>Fix</b> <span class="pr">#21</span> <span class="state state--shipped">shipped</span></p>
+    <h2>The cabin was reading zero CO₂</h2>
+    <div class="decision bug">
+      <h3>Bug · a reading the player can see is impossible</h3>
+      <p>
+        With the scrubbers comfortably ahead of four people, cabin CO₂ read
+        <strong>exactly 0.0 ppm</strong> within a day and stayed there — visible
+        in this site's own before/after screenshot since M1. Nothing physical
+        reaches zero, and a number you can tell is impossible is worse than one
+        that is merely wrong, in the one figure the design promises is real.
+      </p>
+      <p>
+        A sorbent bed does not strip a gas out of an atmosphere; it reaches
+        equilibrium with its own sorbent. The ISS runs around 2,000–3,000 ppm
+        with CDRA working perfectly, against Earth ambient of about 420. Every
+        remover now declares the lowest partial pressure it can hold, and the
+        best one running sets the floor: <strong>1,200 ppm with the hydroponics
+        rack helping, 2,000 without it.</strong> The rack now earns its power
+        twice — food, and cleaner air than the amine bed manages alone.
+      </p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · a bound, not a concentration-dependent rate</h3>
+      <p>
+        The obvious physical model is a scrub rate proportional to partial
+        pressure, which is what a real bed does. It is also exponential decay,
+        and the entire offline catch-up story rests on levels staying
+        closed-form. A bound on the reservoir reaches the same asymptote while
+        keeping a month of absence as cheap to compute as a second.
+      </p>
+      <p class="against">
+        A smaller honesty problem turned up alongside it: the ship was delivered
+        <em>below</em> its own floor, so the very first reading would have been a
+        clamp rather than a measurement. It now starts at 1,584 ppm and settles
+        down to 1,200.
+      </p>
+    </div>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>Spec 004</b> <span>RF-30</span> <span class="state state--shipped">shipped</span></p>
+    <h2>Upgrade tiers, so hardware and crew stay separate levers</h2>
+    <p>
+      Attendance gave crew a multiplier. This gives equipment the base that
+      multiplier applies to — three tiers each of CO₂ scrubber and water
+      recycler, rising in efficiency, mass and price.
+    </p>
+
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Water recycler</th><th>Closure</th><th>Mass</th><th>Price</th></tr></thead>
+        <tbody>
+          <tr><td>Filtration</td><td>97.0%</td><td>340 kg</td><td>134,000</td></tr>
+          <tr><td>Vapour Compression</td><td>98.3%</td><td>470 kg</td><td>312,000</td></tr>
+          <tr><td>Catalytic Closed Loop</td><td>98.9%</td><td>560 kg</td><td>740,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · diminishing returns, in efficiency and in value per credit</h3>
+      <p>
+        The last six tenths of a percent cost more than the first ninety-seven,
+        which is how closure actually goes. If the gains were linear the top
+        tier would always be correct and the choice would stop being one. A
+        test asserts both the shrinking gain <em>and</em> the shrinking gain per
+        credit, so a later balance pass cannot quietly flatten it.
+      </p>
+      <p>
+        Upgrades also cost <strong>mass</strong>, not only money — and mass is
+        delta-v. An upgrade that cost only credits would be a free choice.
+      </p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · a hull states its fit-out</h3>
+      <p>
+        Parts used to be installed by the rule "everything whose room exists",
+        which was fine until a line had more than one version — at which point
+        it fits all three at once. A hull now declares the parts it is delivered
+        with, which is also how a real hull spec reads, and content integrity
+        refuses a fit-out naming a room the hull does not have.
+      </p>
+      <p class="against">
+        The refit itself is not built: there is no money until M2. The tiers,
+        prices and the catalogue query exist and are tested; spending is the
+        next milestone's problem.
+      </p>
+    </div>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
     <p class="stamp"><b>Spec 004</b> <span class="pr">#19</span> <span class="state state--shipped">shipped</span></p>
     <h2>A skill model borrowed rather than invented</h2>
     <p>

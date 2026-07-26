@@ -13,7 +13,29 @@
     "foodCapacityKg": 620,
     "propellantCapacityKg": 18000,
     "sparesCapacity": 60,
-    "rooms": ["bridge", "quarters", "life-support", "cargo", "machinery", "reactor", "engines"],
-    "blurb": "Thirty-one years old, three owners, and a maintenance log the Guild describes as 'characterful'. She is yours now."
+    "rooms": [
+      "bridge",
+      "quarters",
+      "life-support",
+      "cargo",
+      "machinery",
+      "reactor",
+      "engines"
+    ],
+    "blurb": "Thirty-one years old, three owners, and a maintenance log the Guild describes as 'characterful'. She is yours now.",
+    "fitOut": [
+      "reactor.fission.beacon4",
+      "power.solar.foldout",
+      "power.battery.bank",
+      "life.scrubber.co2",
+      "life.oxygen.electrolysis",
+      "life.water.recycler",
+      "life.hydroponics.lamps",
+      "thermal.loop.radiators",
+      "nav.computers",
+      "comms.array",
+      "hab.systems",
+      "engine.ntr.preheat"
+    ]
   }
 ]

@@ -351,6 +351,13 @@ Upgrades raise the **base**; crew raise the **multiplier**. Keeping them on
 separate terms means neither obsoletes the other: a superb technician cannot
 substitute for a worn-out recycler, and a new recycler still runs better tended.
 
+Tiers give **diminishing returns**, in efficiency and in value per credit. The
+recycler line runs 97.0% → 98.3% → 98.9% closure for roughly 134k → 312k → 740k,
+because the last six tenths of a percent genuinely do cost more than the first
+ninety-seven. If the gains were linear the top tier would always be correct and
+the choice would stop being one. Upgrades cost **mass** as well as money, and
+mass is delta-v (§5.2) — an upgrade that cost only credits would be free.
+
 ### 4.3 Shifts & schedule
 
 The ship runs a 24 h clock with a 3-shift watch bill (or 2-shift if understaffed —
