@@ -66,11 +66,53 @@ button {
 }
 
 .boot {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
   min-height: 100dvh;
+  padding: var(--pad);
   color: var(--ink-dim);
   font-variant-numeric: tabular-nums;
+}
+
+/* The way out of a boot that will not finish. See recover.ts. */
+.boot__stuck {
+  width: 100%;
+  max-width: 380px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  text-align: left;
+}
+
+.boot__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.boot__why {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.boot__button {
+  width: 100%;
+}
+
+.boot__note {
+  margin: 6px 0 16px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-dim);
+}
+
+.boot__note:last-child {
+  margin-bottom: 0;
 }
 
 /* ---------------------------------------------------------------- status bar */

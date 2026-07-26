@@ -9,6 +9,35 @@ means here.
 
 ## [Unreleased]
 
+## [0.5.2] — 2026-07-26
+
+### Added
+
+- **The loading screen offers a way out of itself.** 0.5.1 stopped the save that
+  wedged the boot; it did nothing for the player already looking at the wedge,
+  because the fix ships *inside* the build that will not start. Six seconds in,
+  the boot screen now names the two things that can be wrong and gives each a
+  button: **Start a new world**, which discards the save, for a world this build
+  cannot read; and **Fetch the game again**, which drops the precached shell and
+  the worker serving it, for a build that is itself broken. Both say what they
+  cost before they are pressed, and neither touches anything outside the
+  browser.
+
+  A PWA earns this. The shell is precached, so a build that hangs on load keeps
+  being served from the cache and keeps hanging; the save survives reloads and
+  takes the fault with it; and every control the game has — including "Scuttle
+  and start over" — sits behind the one screen that never goes away. The only
+  remedy was the browser's site-data settings, which is not something to ask of
+  someone who wanted to play a game. §7.4 says a player is never stranded; this
+  is that promise applied to the screen that was breaking it.
+
+- The end-to-end pass wedges the boot for real — a held IndexedDB connection and
+  a version bump that can never begin — and requires the way out to appear.
+  Nothing throws, so no error handling could have rescued it, which is the
+  point: this covers the faults not yet imagined, not the one already fixed.
+
+- A Help entry for it, so the answer is findable once the game is running again.
+
 ## [0.5.1] — 2026-07-26
 
 ### Fixed

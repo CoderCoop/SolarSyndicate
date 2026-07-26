@@ -827,6 +827,78 @@ for (const bad of [
 }
 
 // ---------------------------------------------------------------------------
+// A boot that never finishes must still offer a way out (§7.4).
+//
+// The guards above stop the saves we know about. This is the case for the ones
+// we do not: whatever wedges the boot, the player must not need the browser's
+// site-data settings to get their game back. A PWA makes that worse than it
+// sounds -- the broken shell is precached, so it comes back on every reload.
+//
+// Wedged here with a real IndexedDB stall rather than a stub: a connection is
+// held open and every open is sent through a version bump on that same
+// database, which cannot start while the connection is held. The request
+// blocks for ever and nothing throws, so no error handling can rescue it --
+// which is the point.
+// ---------------------------------------------------------------------------
+console.log('\n  -- a boot that never finishes --')
+
+const wedgedCtx = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+})
+const wedged = await wedgedCtx.newPage()
+/* eslint-disable no-undef */
+await wedged.addInitScript(() => {
+  const holder = indexedDB.open('wedge', 1)
+  holder.onsuccess = () => {
+    // Kept in a global so nothing garbage-collects the connection shut.
+    window.__heldOpen = holder.result
+  }
+  const nativeOpen = IDBFactory.prototype.open
+  indexedDB.open = function () {
+    return nativeOpen.call(this, 'wedge', 2)
+  }
+})
+/* eslint-enable no-undef */
+await wedged.goto(base, { waitUntil: 'domcontentloaded' })
+
+check('the boot screen holds while it waits', await wedged.isVisible('.boot__line'))
+
+let offeredWayOut = true
+try {
+  // Comfortably past the patience window in App.tsx.
+  await wedged.waitForSelector('.boot__stuck', { timeout: 15_000 })
+} catch {
+  offeredWayOut = false
+}
+check(
+  'a boot that hangs offers a way out of itself rather than waiting for ever',
+  offeredWayOut,
+  offeredWayOut ? '' : 'the loading screen never offered anything',
+)
+
+if (offeredWayOut) {
+  const ways = await wedged.$$eval('.boot__stuck .button', (els) =>
+    els.map((e) => e.textContent?.trim()),
+  )
+  check(
+    'both faults have a button: the save, and the stored copy of the game',
+    ways.length === 2,
+    ways.join(' · '),
+  )
+  const notes = await wedged.$$eval('.boot__note', (els) => els.map((e) => e.textContent?.trim()))
+  check(
+    'and each says what it will cost, before it is pressed',
+    notes.length === 2 && /Discards the saved ship/.test(notes[0] ?? ''),
+    notes.join(' | '),
+  )
+  await wedged.screenshot({ path: join(SHOTS, '16-stuck-boot.png'), fullPage: true })
+}
+
+await wedgedCtx.close()
+
+// ---------------------------------------------------------------------------
 // Offline catch-up (§7.2, §7.4) -- the whole point of M0.
 //
 // Emulate the clock so real wall-time can jump while the app is closed. The
