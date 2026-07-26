@@ -140,6 +140,8 @@ export function ShipViewport({
 }: ShipViewportProps) {
   const [openCrewId, setOpenCrewId] = useState<string | undefined>()
   const [openPartId, setOpenPartId] = useState<string | undefined>()
+  // Furniture the sim does not model still answers when you tap it (SV-10).
+  const [openFixture, setOpenFixture] = useState<{ name: string; blurb: string } | undefined>()
 
   const openCrew = crew.find((c) => c.id === openCrewId)
 
@@ -198,10 +200,17 @@ export function ShipViewport({
                   onSelectPart={(id) => {
                     setOpenPartId(id)
                     setOpenCrewId(undefined)
+                    setOpenFixture(undefined)
                   }}
                   onSelectCrew={(id) => {
                     setOpenCrewId(id)
                     setOpenPartId(undefined)
+                    setOpenFixture(undefined)
+                  }}
+                  onSelectFixture={(f) => {
+                    setOpenFixture(f)
+                    setOpenPartId(undefined)
+                    setOpenCrewId(undefined)
                   }}
                 />
 
@@ -269,6 +278,26 @@ export function ShipViewport({
           </div>
           <p className="whois__doing">{openCrew.doing}</p>
           <p className="whois__blurb">{openCrew.blurb}</p>
+        </div>
+      )}
+
+      {openFixture && (
+        <div className="whois whois--fixture" role="dialog" aria-label={openFixture.name}>
+          <div className="whois__head">
+            <span className="whois__names">
+              <strong className="whois__name">{openFixture.name}</strong>
+              <span className="whois__role">Fitting — not simulated</span>
+            </span>
+            <button
+              type="button"
+              className="whois__close"
+              aria-label="Close"
+              onClick={() => setOpenFixture(undefined)}
+            >
+              ×
+            </button>
+          </div>
+          <p className="whois__blurb">{openFixture.blurb}</p>
         </div>
       )}
     </section>

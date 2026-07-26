@@ -539,6 +539,46 @@ equation, honest) next to a consumables budget bar (crew-days of O2/water/food) 
 choosing a faster transfer burns delta-v; a slower one burns life support margin.
 That single tension is the travel game.
 
+#### The Kestrel's mass budget is wrong, and it is the cause of three separate problems
+
+Stated plainly because it keeps resurfacing in different costumes. The engine is
+**not** the problem: 1200 s Isp sits squarely inside the +25–50% band §5.4 claims
+over real NTR work (NERVA managed ~850 s). The problem is that the ship is built
+like a building rather than a vehicle.
+
+| | Propellant mass fraction |
+|---|---|
+| Kestrel as specced (41 t dry, 18 t tank) | **31%** |
+| Apollo Service Module | 75% |
+| Saturn V S-IVB stage | 89% |
+| Falcon 9 second stage | 97% |
+
+A full tank buys **3.85 km/s**, total, for the whole ship. That single number
+explains all three of the things that have looked like separate bugs:
+
+- **Luna is priced dishonestly.** The real LEO→lunar-orbit Hohmann is 3.91 km/s;
+  the game charges ~1.59 because at the true figure the Kestrel cannot get there
+  with a *completely full* tank (18.2 t needed, 18 t capacity).
+- **Mars and the Belt are unreachable.** Earth→Phobos wants 9.62 km/s, which is
+  58.8 t of propellant — more than three times the tank.
+- **The efficiency mechanic barely pays.** The resupply allowance scales with
+  voyage length, so it only bites on long crossings, and the only flyable runs
+  are five-day hops.
+
+One number fixes all three: **raise `propellantCapacityKg` to ~60,000**. That is
+a 59% propellant fraction — still well short of Apollo's 75%, entirely ordinary
+for a real vehicle — and it yields 9.75 km/s, which covers Earth→Phobos, makes
+Luna round trips comfortable, and lets the Luna delta-v be corrected to the
+honest figure.
+
+The catch to accept with it: NTR burns hydrogen at ~71 kg/m³, so 60 t is roughly
+845 m³ of tankage. A realistic NTR hauler is a habitat and an engine bolted to an
+enormous cryogenic balloon, and the cross-section should look like that. The
+current drawing implies the opposite silhouette, which is arguably how the mass
+budget got set this way in the first place. **Decision needed before M3**; until
+it is taken, the understated Luna delta-v is load-bearing and must not be
+"corrected" on its own.
+
 ### 5.3 Missions
 
 Generated from guild need + world state, not fully random. v1 archetypes:

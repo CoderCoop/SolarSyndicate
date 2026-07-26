@@ -13,6 +13,7 @@
  */
 import { useState } from 'react'
 import type { CrewView } from '@solsyn/sim'
+import { CREW_HELP, WATCH_HELP, type Explanation } from './crewGlossary.js'
 import type { Watch } from '@solsyn/data'
 import { WATCH_HOURS } from '@solsyn/sim'
 
@@ -119,12 +120,14 @@ function Bars({
   values,
   labels,
   best,
+  onExplain,
 }: {
   title: string
   note: string
   values: Record<string, number>
   labels: Record<string, string>
   best: string
+  onExplain: (key: string) => void
 }) {
   const entries = Object.entries(values).sort(([, a], [, b]) => b - a)
   return (
@@ -134,15 +137,45 @@ function Bars({
       </p>
       <div className="statblock__rows">
         {entries.map(([key, value]) => (
-          <div key={key} className={`statrow ${key === best ? 'is-best' : ''}`}>
+          <button
+            key={key}
+            type="button"
+            className={`statrow ${key === best ? 'is-best' : ''}`}
+            onClick={() => onExplain(key)}
+            aria-label={`${labels[key] ?? key} ${value}. What this means.`}
+          >
             <span className="statrow__label">{labels[key] ?? key}</span>
             <span className="statrow__track">
               <span className="statrow__fill" style={{ width: `${value}%` }} />
             </span>
             <span className="statrow__value">{value}</span>
-          </div>
+          </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * The card that opens when a stat is tapped. A roster of bars is a character
+ * sheet; this is what turns it into an explanation -- what the number is, and
+ * what it actually moves in the sim.
+ */
+function Explainer({ entry, onClose }: { entry: Explanation; onClose: () => void }) {
+  return (
+    <div className="explain" role="dialog" aria-label={entry.label}>
+      <div className="explain__head">
+        <strong className="explain__label">{entry.label}</strong>
+        <button type="button" className="explain__close" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+      </div>
+      <p className="explain__what">{entry.what}</p>
+      <p className="explain__affects">
+        <span className="explain__affects-label">What it affects</span>
+        {entry.affects}
+      </p>
+      {entry.source && <p className="explain__source">{entry.source}</p>}
     </div>
   )
 }
@@ -150,10 +183,20 @@ function Bars({
 function Detail({ member, nowHour }: { member: CrewView; nowHour: number }) {
   const bestSkill = Object.entries(member.skills).sort(([, a], [, b]) => b - a)[0]![0]
   const bestKnowledge = Object.entries(member.knowledge).sort(([, a], [, b]) => b - a)[0]![0]
+  const [explain, setExplain] = useState<Explanation | undefined>()
+  const show = (key: string) => setExplain(CREW_HELP[key])
 
   return (
     <>
       <WatchStrip member={member} nowHour={nowHour} />
+
+      {/* The A/B/C letters were explained in a title attribute, which on a
+          phone is explained to nobody. */}
+      <button type="button" className="explain__hint" onClick={() => setExplain(WATCH_HELP)}>
+        What do A, B and C mean?
+      </button>
+
+      {explain && <Explainer entry={explain} onClose={() => setExplain(undefined)} />}
 
       <p className="crew__blurb">{member.blurb}</p>
 
@@ -161,9 +204,15 @@ function Detail({ member, nowHour }: { member: CrewView; nowHour: number }) {
         <div className="quals">
           <span className="quals__label">Endorsed</span>
           {member.qualifications.map((q) => (
-            <span key={q} className="qual" title={QUAL_TITLE[q]}>
+            <button
+              key={q}
+              type="button"
+              className="qual"
+              title={QUAL_TITLE[q]}
+              onClick={() => show(q)}
+            >
               {QUAL_LABEL[q] ?? q}
-            </span>
+            </button>
           ))}
         </div>
       )}
@@ -174,6 +223,7 @@ function Detail({ member, nowHour }: { member: CrewView; nowHour: number }) {
         values={member.skills}
         labels={SKILL_LABEL}
         best={bestSkill}
+        onExplain={show}
       />
       <Bars
         title="Knowledge"
@@ -181,6 +231,7 @@ function Detail({ member, nowHour }: { member: CrewView; nowHour: number }) {
         values={member.knowledge}
         labels={KNOWLEDGE_LABEL}
         best={bestKnowledge}
+        onExplain={show}
       />
 
       <div className="statblock">
@@ -189,9 +240,11 @@ function Detail({ member, nowHour }: { member: CrewView; nowHour: number }) {
         </p>
         <ul className="pips">
           {Object.entries(member.stats).map(([key, value]) => (
-            <li key={key} className="pip">
-              <span className="pip__label">{STAT_LABEL[key] ?? key}</span>
-              <span className="pip__value">{value}</span>
+            <li key={key}>
+              <button type="button" className="pip" onClick={() => show(key)}>
+                <span className="pip__label">{STAT_LABEL[key] ?? key}</span>
+                <span className="pip__value">{value}</span>
+              </button>
             </li>
           ))}
         </ul>

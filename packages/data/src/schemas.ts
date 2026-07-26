@@ -78,9 +78,17 @@ export type SizeM = z.infer<typeof SizeM>
  */
 export const FixtureDef = z.object({
   glyph: Glyph,
+  /** What it is, for the card that opens when the player taps it. */
+  name: z.string(),
   count: z.number().int().positive().default(1),
   fitting: Fitting.default('floor'),
   sizeM: SizeM,
+  /**
+   * Why it is here. Fixtures are the things the sim does not model, so this is
+   * the only answer a player ever gets about them -- and "everything on the
+   * drawing can be asked about" is worth more than a shorter data file.
+   */
+  blurb: z.string(),
 })
 export type FixtureDef = z.infer<typeof FixtureDef>
 
@@ -412,6 +420,17 @@ export const PortDef = z.object({
    * like a bug.
    */
   orbitRadiusKm: z.number().positive(),
+  /**
+   * The moon this port is stationed at, when it is not orbiting the primary
+   * directly. Tranquillity's bodyId is `earth` because that is the gravity
+   * well and the heliocentric orbit it shares — but it is *at Luna*, and a
+   * route drawn "Earth to Earth" made a five-day crossing look like a bug.
+   *
+   * Moons are not entries in `bodies` on purpose: that list is heliocentric,
+   * and giving Luna an orbit about the sun to satisfy a label would be a
+   * worse lie than the one this fixes.
+   */
+  moon: z.string().optional(),
   blurb: z.string(),
 })
 export type PortDef = z.infer<typeof PortDef>

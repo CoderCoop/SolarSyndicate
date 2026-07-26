@@ -137,10 +137,28 @@ function End({
   const body = getBody(port.bodyId)
   const mark = BODY_MARK[port.bodyId] ?? { r: 7, tone: 'ceres' }
 
+  // A port at a moon is drawn as a moon: a small disc standing off the
+  // primary, with its own tick. Otherwise Tranquillity reads as another
+  // station in Earth orbit and the five-day crossing looks like a bug.
+  const moonR = 4
+  const moonX = x + mark.r + 9
+  const moonY = BASE - mark.r - 1
+
   return (
     <g className={`route__end route__end--${mark.tone} ${here ? 'is-here' : ''}`}>
       {mark.ring && <circle className="route__ring" cx={x} cy={BASE} r={mark.r + 4.5} />}
       <circle className="route__body" cx={x} cy={BASE} r={mark.r} />
+
+      {port.moon && (
+        <g className="route__moon">
+          <path
+            d={`M${x} ${BASE} A ${mark.r + 12} ${mark.r + 12} 0 0 1 ${moonX} ${moonY}`}
+            className="route__moon-arc"
+          />
+          <circle cx={moonX} cy={moonY} r={moonR} />
+        </g>
+      )}
+
       <text className="route__port" x={x} y={BASE + mark.r + 14} textAnchor="middle">
         {port.name}
       </text>
@@ -148,8 +166,9 @@ function End({
       <text className="route__alt" x={x} y={BASE + mark.r + 24} textAnchor="middle">
         {formatDistance(port.orbitRadiusKm)}
       </text>
+      {/* Named for where the ship actually is, with the well it sits in after. */}
       <text className="route__body-name" x={x} y={BASE - mark.r - 7} textAnchor="middle">
-        {body.name}
+        {port.moon ? `${port.moon} · ${body.name}` : body.name}
       </text>
       {/* An anchor for screen readers; the visual order is left to right. */}
       <title>{align === 'start' ? `Departs ${port.name}` : `Arrives ${port.name}`}</title>

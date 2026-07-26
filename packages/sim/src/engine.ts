@@ -642,7 +642,7 @@ export interface RoomView {
   /** Deck head height in metres (RF-4). */
   deckHeightM: number
   /** Furniture the sim does not model but the room draws (SV-4, RF-3). */
-  fixtures: { glyph: Glyph; count: number; fitting: Fitting; sizeM: SizeM }[]
+  fixtures: { glyph: Glyph; name: string; blurb: string; count: number; fitting: Fitting; sizeM: SizeM }[]
   /** Who is tending this room right now, and what that is worth (RF-27). */
   attendance: { attended: boolean; quality: number; wearScale: number; name?: string }
   parts: {

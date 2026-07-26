@@ -27,6 +27,7 @@
     },
     "escapeDeltaVMs": 1870,
     "orbitRadiusKm": 384400,
+    "moon": "Luna",
     "blurb": "Lunar orbit. Cheaper to leave than Earth, and the only yard in the inner system that will look at a Kestrel without laughing."
   },
   {
@@ -42,6 +43,7 @@
     },
     "escapeDeltaVMs": 830,
     "orbitRadiusKm": 9376,
+    "moon": "Phobos",
     "blurb": "A hollowed-out moon with a docking spine bolted through it. Thin margins, thinner air."
   },
   {

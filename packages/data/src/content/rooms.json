@@ -8,12 +8,14 @@
     "fixtures": [
       {
         "glyph": "couch",
+        "name": "Acceleration couch",
         "count": 2,
         "fitting": "floor",
         "sizeM": {
           "w": 1.1,
           "h": 0.7
-        }
+        },
+        "blurb": "Two of them, facing the consoles. Occupied for burns and for nothing else — the rest of the watch is spent standing at the boards."
       }
     ],
     "needs": [
@@ -38,21 +40,25 @@
     "fixtures": [
       {
         "glyph": "bunk",
+        "name": "Bunk",
         "count": 6,
         "fitting": "floor",
         "sizeM": {
           "w": 1.9,
           "h": 0.65
-        }
+        },
+        "blurb": "Six for a crew of four: the watch bill means two are always warm, and the spares are where you put a passenger or an argument."
       },
       {
         "glyph": "table",
+        "name": "Mess table",
         "count": 1,
         "fitting": "floor",
         "sizeM": {
           "w": 1.3,
           "h": 0.7
-        }
+        },
+        "blurb": "The only surface aboard big enough for four people at once. Meals, briefings, cards, and the occasional autopsy of a work order."
       }
     ],
     "needs": [
@@ -101,12 +107,14 @@
     "fixtures": [
       {
         "glyph": "bay",
+        "name": "Cargo bay",
         "count": 4,
         "fitting": "floor",
         "sizeM": {
           "w": 1.3,
           "h": 1.4
-        }
+        },
+        "blurb": "Empty tie-down grid. What sits here is mass, and mass is delta-v you pay for on every burn."
       }
     ],
     "needs": [
@@ -126,12 +134,14 @@
     "fixtures": [
       {
         "glyph": "locker",
+        "name": "Spares locker",
         "count": 3,
         "fitting": "floor",
         "sizeM": {
           "w": 0.55,
           "h": 1.2
-        }
+        },
+        "blurb": "Bar stock, seals, filter cartridges and fasteners. A repair that cannot find what it needs waits until the locker is restocked."
       }
     ],
     "needs": [

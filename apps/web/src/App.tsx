@@ -19,6 +19,7 @@ import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
 import { Flows } from './components/Flows.js'
+import { Help, SITE_URL } from './components/Help.js'
 import { Mission } from './components/Mission.js'
 import { StarChart } from './components/StarChart.js'
 import { LifeSupport } from './components/LifeSupport.js'
@@ -27,7 +28,7 @@ import { StatusBar } from './components/StatusBar.js'
 import { WorkOrders } from './components/WorkOrders.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
-type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'log'
+type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'log' | 'help'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ship', label: 'Ship' },
@@ -37,6 +38,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'life', label: 'Life' },
   { id: 'crew', label: 'Crew' },
   { id: 'log', label: 'Log' },
+  { id: 'help', label: 'Help' },
 ]
 
 export function App() {
@@ -194,11 +196,18 @@ export function App() {
 
         {tab === 'log' && <DispatchLog entries={recentLog(state, 60)} />}
 
+        {tab === 'help' && <Help />}
+
         <footer className="app__footer">
           <p className="app__milestone">
             M2 — the ship goes somewhere. Contracts with a stated resupply allowance, real
             transfer orbits, and books that settle on arrival: efficiency now has a price.
             No guilds or crew hiring yet.
+          </p>
+          <p className="app__links">
+            <a href={SITE_URL} target="_blank" rel="noreferrer">
+              Project site &amp; design doc
+            </a>
           </p>
           <button type="button" className="button button--quiet" onClick={() => void resetWorld()}>
             Scuttle and start over

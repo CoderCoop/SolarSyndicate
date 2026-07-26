@@ -335,6 +335,65 @@ check('the flow overlay is gone (RF-13)', (await page.$$('.flowtoggle, .flow__ch
 const figures = await page.$$('.schema .person')
 check('crew are drawn in their rooms as figures (RF-5)', figures.length === 4, `${figures.length} aboard`)
 
+// --- everything on the drawing answers when tapped (SV-10) ------------------
+await page.click('.tabs__btn:has-text("Ship")')
+await page.waitForSelector('.ship')
+await page.click('.deck:nth-child(2) .deck__head') // Quarters: bunks and a table
+await page.waitForSelector('.deck.is-open .schema')
+await tap(page, '.deck.is-open .hit--fixture')
+const fixtureName = await page.textContent('.whois--fixture .whois__name')
+check('furniture answers when tapped, not just machines', Boolean(fixtureName), fixtureName ?? '')
+const fixtureBlurb = await page.textContent('.whois--fixture .whois__blurb')
+check('and says why it is there', (fixtureBlurb?.length ?? 0) > 30, `${fixtureBlurb?.slice(0, 48)}…`)
+await page.click('.whois--fixture .whois__close')
+await page.click('.deck:nth-child(2) .deck__head')
+
+// --- crew stats explain themselves (RF-26) ----------------------------------
+await page.click('.tabs__btn:has-text("Crew")')
+await page.waitForSelector('.watchstrip')
+await tap(page, '.explain__hint')
+const watchHelp = await page.textContent('.explain__what')
+check(
+  'the A/B/C watches are explained on screen, not in a tooltip',
+  /eight-hour/.test(watchHelp ?? ''),
+  watchHelp?.slice(0, 60) ?? '',
+)
+
+await tap(page, '.statrow')
+const skillLabel = await page.textContent('.explain__label')
+const skillAffects = await page.textContent('.explain__affects')
+check('tapping a skill says what it is', Boolean(skillLabel), skillLabel ?? '')
+check(
+  'and, crucially, what it affects',
+  /What it affects/.test(skillAffects ?? '') && (skillAffects?.length ?? 0) > 60,
+  skillAffects?.slice(0, 60) ?? '',
+)
+
+await tap(page, '.qual')
+const qualWhat = await page.textContent('.explain__what')
+check('endorsements explain themselves too', (qualWhat?.length ?? 0) > 30, qualWhat?.slice(0, 50) ?? '')
+
+// --- help, and the way out to the site --------------------------------------
+await page.click('.tabs__btn:has-text("Help")')
+await page.waitForSelector('.help__list')
+const questions = await page.$$eval('.help__q', (els) => els.map((e) => e.textContent))
+check('help answers real questions', questions.length >= 10, `${questions.length} topics`)
+check(
+  'including the two that are least guessable',
+  questions.some((q) => /A, B and C/.test(q ?? '')) &&
+    questions.some((q) => /five days/.test(q ?? '')),
+  questions.filter((q) => /A, B and C|five days/.test(q ?? '')).join(' | '),
+)
+
+const siteHref = await page.getAttribute('.help__link', 'href')
+check(
+  'and a way to reach the project site',
+  siteHref === 'https://codercoop.github.io/SolarSyndicate/',
+  siteHref ?? '',
+)
+check('which opens in a new tab', (await page.getAttribute('.help__link', 'target')) === '_blank')
+await page.screenshot({ path: join(SHOTS, '16-help.png'), fullPage: true })
+
 // --- the chart (§5.1) -------------------------------------------------------
 await page.click('.tabs__btn:has-text("Chart")')
 await page.waitForSelector('.chart')
@@ -444,14 +503,34 @@ check(
   chanLabels.join(' / '),
 )
 
-const powerRoles = await page.$$eval('.fgroup__label', (els) => els.map((e) => e.textContent))
+// The grammar is structural now, not a set of headings: sources feed a bus,
+// consumers hang off it ranked by draw, and the buffer sits to one side.
+await page.waitForSelector('.fdia')
+const grammar = {
+  sources: (await page.$$('.fdia__src')).length,
+  bus: (await page.$$('.fdia__bus')).length,
+  consumers: (await page.$$('.fdia__row')).length,
+  buffer: (await page.$$('.fdia__buffer')).length,
+}
 check(
   'every channel uses the same grammar (RF-15)',
-  powerRoles.includes('in') && powerRoles.includes('out') && powerRoles.includes('buffer'),
-  powerRoles.join(' · '),
+  grammar.sources > 0 && grammar.bus === 1 && grammar.consumers > 0 && grammar.buffer === 1,
+  JSON.stringify(grammar),
 )
 
-const powerNames = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+// Link width is magnitude, so the biggest consumer must draw the thickest line.
+const widths = await page.$$eval('.fdia__row .fdia__edge', (els) =>
+  els.map((e) => Number.parseFloat(e.getAttribute('stroke-width'))),
+)
+check(
+  'the thickest link is the biggest draw (RF-16)',
+  widths.length > 1 && widths[0] === Math.max(...widths),
+  widths.map((w) => w.toFixed(1)).join(' > '),
+)
+
+const powerNames = await page.$$eval('.fdia__src-name, .fdia__row-name', (els) =>
+  els.map((e) => e.textContent),
+)
 check(
   'nodes are named parts, not decks (RF-16)',
   powerNames.includes('Beacon-4 Fission Plant') && powerNames.includes('O2 Electrolysis Unit'),
@@ -461,7 +540,9 @@ check(
 // The crew are a node wherever they are actually a load -- which is the air and
 // the stores, not the electrical bus.
 await tap(page, '.chans__btn:has-text("O₂")')
-const o2Names = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+const o2Names = await page.$$eval('.fdia__src-name, .fdia__row-name', (els) =>
+  els.map((e) => e.textContent),
+)
 check(
   'and the crew are a node where the crew are a load',
   o2Names.some((n) => n?.startsWith('Crew')),
@@ -469,8 +550,8 @@ check(
 )
 
 await tap(page, '.chans__btn:has-text("Water")')
-await page.waitForSelector('.fnode--return')
-const returnName = await page.textContent('.fnode--return .fnode__name')
+await page.waitForSelector('.fdia__return')
+const returnName = await page.textContent('.fdia__return-label')
 check('the water loop is drawn as a loop (RF-17)', /Recycler/.test(returnName ?? ''), returnName ?? '')
 
 const whatIf = await page.textContent('.flowch__what-if')
