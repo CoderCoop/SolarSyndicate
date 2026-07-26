@@ -27,6 +27,11 @@ when an older save can no longer be read. Keep the two independent.
 
 All workspace packages share the root version.
 
+**Tag on `main`, after the merge** — never on the feature branch. Squash-merging
+creates a new commit, so a tag pushed from the branch points at history that is
+not on `main`. (The session's git proxy refuses tag pushes anyway, so this is
+a release step for a human or for CI, not something to do from a work session.)
+
 ## Conventions
 
 - `docs/design.md` is the source of truth for *why*. Code comments reference its
