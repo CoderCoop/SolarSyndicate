@@ -135,6 +135,38 @@ describe('rooms carry what the schematic needs', () => {
     expect(rooms.find((r) => r.id === 'cargo')!.waterKgPerDay).toBe(0)
   })
 
+  it('reports the same water draw the sim actually spends', () => {
+    // SV-14, and the reason it matters: the sim deliberately does NOT derate
+    // water use by condition, because a worn electrolysis unit drinking the
+    // same water for less oxygen *is* the inefficiency. A selector that scaled
+    // it would draw a link narrower than the flow it depicts.
+    const s = world()
+    const rooms = roomViews(s)
+    const shipWater = rooms.reduce((sum, r) => sum + r.waterKgPerDay, 0)
+
+    const running = new Set(s.ship.parts.filter((p) => p.enabled && !p.broken).map((p) => p.defId))
+    const equipmentUse = content.parts
+      .filter((p) => running.has(p.id))
+      .reduce((sum, p) => sum + (p.provides.waterUseKgPerDay ?? 0), 0)
+
+    expect(shipWater).toBeCloseTo(-equipmentUse, 9)
+    // And it is genuinely off full condition, so a scaled version would differ.
+    const scrubberRoom = rooms.find((r) => r.id === 'life-support')!
+    expect(scrubberRoom.parts.some((p) => p.condition < 100)).toBe(true)
+  })
+
+  it('returns a part water draw in full when it stops', () => {
+    let s = world()
+    const before = roomViews(s).find((r) => r.id === 'life-support')!.waterKgPerDay
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'SET_PART_ENABLED', partId: 'life.hydroponics.lamps', enabled: false },
+    })
+    const after = roomViews(s).find((r) => r.id === 'life-support')!.waterKgPerDay
+    // The rack drinks 2.0 kg/day flat; switching it off returns exactly that.
+    expect(after - before).toBeCloseTo(2.0, 9)
+  })
+
   it('stops drawing a part as a load once it is switched off', () => {
     let s = world()
     const before = roomViews(s).find((r) => r.id === 'life-support')!
