@@ -18,10 +18,12 @@ import {
   createWorld,
   hohmannTransfer,
   propellantForDeltaV,
+  SAME_BODY_TRANSFER_DAYS,
   stretchedTransfer,
   transferOptions,
   voyageView,
 } from '../src/index.js'
+import { getPort } from '@solsyn/data'
 import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
@@ -262,5 +264,48 @@ describe('the short run is flyable by the ship you are given', () => {
     const expected = propellantForDeltaV(wet, option.deltaVMs, 1200)
     expect(option.propellantKg).toBeGreaterThan(expected * 0.9)
     expect(option.propellantKg).toBeLessThan(expected * 1.1)
+  })
+})
+
+describe('the five-day Luna hop is real physics, and the delta-v is not', () => {
+  const MU_EARTH = 3.986004418e14
+
+  it('matches a Hohmann between the two ports’ actual orbits', () => {
+    // "Why does it take five days between two stations both orbiting Earth?"
+    // Because one is 400 km up and the other is in lunar orbit, 384,400 km
+    // out. Sharing a parent body does not make two ports neighbours, and this
+    // pins the stated figure to the arithmetic that justifies it.
+    const r1 = getPort('port.gateway').orbitRadiusKm * 1000
+    const r2 = getPort('port.tranquillity').orbitRadiusKm * 1000
+    const a = (r1 + r2) / 2
+    const days = (Math.PI * Math.sqrt(a ** 3 / MU_EARTH)) / DAY
+
+    expect(days).toBeCloseTo(4.98, 1)
+    expect(SAME_BODY_TRANSFER_DAYS).toBeCloseTo(days, 0)
+  })
+
+  it('charges less delta-v than that transfer really costs, on purpose', () => {
+    // Documenting a known, load-bearing lie so it cannot be mistaken for an
+    // oversight. The honest figure is 3.91 km/s; at that price the Kestrel
+    // cannot reach Luna with a full tank, and the game has no destination.
+    const r1 = getPort('port.gateway').orbitRadiusKm * 1000
+    const r2 = getPort('port.tranquillity').orbitRadiusKm * 1000
+    const a = (r1 + r2) / 2
+    const honest =
+      Math.sqrt(MU_EARTH * (2 / r1 - 1 / a)) -
+      Math.sqrt(MU_EARTH / r1) +
+      (Math.sqrt(MU_EARTH / r2) - Math.sqrt(MU_EARTH * (2 / r2 - 1 / a)))
+
+    const s = applyCommand(createWorld(20260726, T0), {
+      at: 0,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    const charged = transferOptions(s).find((o) => o.id === 'economy')!.deltaVMs
+
+    expect(honest).toBeGreaterThan(3_800)
+    expect(charged).toBeLessThan(honest)
+    // If this ever gets "fixed" without a bigger hull, every run becomes
+    // infeasible and the board goes empty. That is the thing to notice.
+    expect(charged).toBeCloseTo(1_590, -2)
   })
 })

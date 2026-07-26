@@ -90,6 +90,16 @@ export const THERMAL_CLEAR_C = 26
 export const HULL_PASSIVE_KW_PER_K = 1.2
 
 /**
+ * What station services top up per day while the ship is alongside. Casting
+ * off stops it, at which point the consumable clocks start mattering.
+ *
+ * Named rather than inlined because the flow view has to draw this as a node:
+ * it is a real input to the balance, and a diagram that leaves it out shows
+ * more water going out than coming back while the tank reads "holding".
+ */
+export const ALONGSIDE_SUPPLY = { o2: 0.5, water: 6, food: 8 } as const
+
+/**
  * A single part's actual contribution in kW right now: rated power, scaled by
  * condition and engineer for generation, and by any thermal derate.
  *
@@ -252,15 +262,13 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
   const cabinTempC = levelAt(state.ship.resources.heat, t)
   heatRejectKw += Math.max(0, cabinTempC - 21) * HULL_PASSIVE_KW_PER_K
 
-  // Alongside, station services keep the stores up. M2 casts off and this
-  // stops, at which point the consumable clocks start mattering.
   const dockedSupply = state.ship.docked ? 1 : 0
 
   return {
-    o2PerDay: o2Production - crewO2 + dockedSupply * 0.5,
+    o2PerDay: o2Production - crewO2 + dockedSupply * ALONGSIDE_SUPPLY.o2,
     co2PerDay: crewCo2 - co2Scrub,
-    waterPerDay: -waterLoss + dockedSupply * 6,
-    foodPerDay: foodProduction - crewFood + dockedSupply * 8,
+    waterPerDay: -waterLoss + dockedSupply * ALONGSIDE_SUPPLY.water,
+    foodPerDay: foodProduction - crewFood + dockedSupply * ALONGSIDE_SUPPLY.food,
     heatInKw,
     heatRejectKw,
     recycleFraction,

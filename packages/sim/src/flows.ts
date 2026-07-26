@@ -23,7 +23,14 @@
 import { getHull, getPart } from '@solsyn/data'
 import { crewViews } from './engine.js'
 import { METABOLIC, activityLoad } from './crew.js'
-import { lifeBalance, partScale, partRunning, powerBalance, partPowerKw } from './networks.js'
+import {
+  ALONGSIDE_SUPPLY,
+  lifeBalance,
+  partScale,
+  partRunning,
+  powerBalance,
+  partPowerKw,
+} from './networks.js'
 import { levelAt } from './resources.js'
 import { co2Ppm } from './crew.js'
 import { type GameTime } from './time.js'
@@ -67,6 +74,25 @@ export interface FlowChannel {
 }
 
 const dayRate = (perDay: number) => perDay
+
+/**
+ * Station services, while alongside. A source like any other -- and one the
+ * diagram has to draw, because without it the water channel shows 21.5 kg/day
+ * leaving, 18.3 coming back, and a tank cheerfully reporting "holding".
+ */
+function alongsideNode(state: SimState, key: keyof typeof ALONGSIDE_SUPPLY): FlowNode[] {
+  if (!state.ship.docked) return []
+  return [
+    {
+      id: `alongside.${key}`,
+      name: 'Station services',
+      where: 'alongside',
+      role: 'source',
+      magnitude: ALONGSIDE_SUPPLY[key],
+      note: 'topped up at the berth — this stops when the ship casts off',
+    },
+  ]
+}
 
 /** Days a store lasts at a signed per-day rate. */
 function horizon(level: number, netPerDay: number): number {
@@ -232,6 +258,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
   // --- O2 ------------------------------------------------------------------
   const o2Nodes: FlowNode[] = [
     ...ranked(partNodes(state, t, (d) => d.provides.o2KgPerDay, 'source')),
+    ...alongsideNode(state, 'o2'),
     crewNode(METABOLIC.o2KgPerDay * load, 'about 0.84 kg each per day'),
     {
       id: 'o2tank',
@@ -268,6 +295,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
   const recovered = throughput * life.recycleFraction
   const recycler = state.ship.parts.find((p) => getPart(p.defId).provides.waterRecycleFraction)
   const waterNodes: FlowNode[] = [
+    ...alongsideNode(state, 'water'),
     crewNode(waterCrew, 'drinking, hygiene'),
     ...waterEquipment,
     {
@@ -293,6 +321,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
   // --- food ----------------------------------------------------------------
   const foodNodes: FlowNode[] = [
     ...ranked(partNodes(state, t, (d) => d.provides.foodKgPerDay, 'source')),
+    ...alongsideNode(state, 'food'),
     crewNode(METABOLIC.foodKgPerDay * load, 'about 1.8 kg each per day'),
     {
       id: 'foodstore',

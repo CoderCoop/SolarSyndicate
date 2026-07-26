@@ -402,6 +402,16 @@ export const PortDef = z.object({
    * Earth is not.
    */
   escapeDeltaVMs: z.number().nonnegative(),
+  /**
+   * Radius of this port's orbit about its parent body, in km.
+   *
+   * Two ports sharing a bodyId are not therefore neighbours: Gateway sits a few
+   * hundred km up Earth's well and Tranquillity is in lunar orbit, 384,400 km
+   * out. Both orbit Earth, and the crossing between them is still five days.
+   * Without this number the route reads "Earth to Earth" and the duration looks
+   * like a bug.
+   */
+  orbitRadiusKm: z.number().positive(),
   blurb: z.string(),
 })
 export type PortDef = z.infer<typeof PortDef>

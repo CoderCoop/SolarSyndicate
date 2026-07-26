@@ -40,6 +40,14 @@ export const PROPELLANT_RESERVE_KG = 900
  */
 export const SAME_BODY_INSERTION_MS = 260
 
+/**
+ * Minimum-energy crossing time between two orbits about the same body, days.
+ *
+ * Pinned by test against a real Hohmann from Gateway's radius to
+ * Tranquillity's (4.98 days), so it cannot drift into being a made-up number.
+ */
+export const SAME_BODY_TRANSFER_DAYS = 5
+
 export interface VoyageState {
   optionId: string
   fromPortId: string
@@ -112,12 +120,28 @@ export function transferOptions(state: SimState): TransferOption[] {
     : from.escapeDeltaVMs + to.escapeDeltaVMs
 
   return PROFILES.map((profile) => {
-    // Two ports on one body have no transfer ellipse between them: the whole
-    // cost is the wells, and "faster" means a more direct, dearer burn.
+    // Two ports on one body have no *heliocentric* transfer ellipse between
+    // them: the whole cost is the wells, and "faster" means a more direct,
+    // dearer burn.
+    //
+    // The five days is not arbitrary. Gateway sits 400 km up and Tranquillity
+    // is in lunar orbit 384,400 km out, and a minimum-energy Hohmann between
+    // those two radii about Earth takes **4.98 days** -- so the figure is
+    // honest even though it is stated rather than derived. (Apollo did the same
+    // trip in three, on a far hotter trajectory than a loaded hauler would fly.)
+    //
+    // The delta-v is the part that is NOT honest, and it is worth stating
+    // plainly: that same Hohmann costs **3.91 km/s** (3,082 m/s to depart,
+    // 829 m/s to arrive), against the ~1.59 km/s charged here. The
+    // understatement is deliberate and load-bearing -- at the true figure the
+    // Kestrel cannot reach Luna even with a completely full tank (18.2 t
+    // needed, 18 t capacity), which would leave the game with no reachable
+    // destination at all. Correcting it is a content decision that needs a
+    // bigger hull first, not a one-line fix. See docs/design.md §5.2.
     const leg = sameBody
       ? {
           deltaVMs: wellDeltaV * (profile.multiplier - 1) * 4,
-          durationS: (5 * DAY) / profile.multiplier ** 3,
+          durationS: (SAME_BODY_TRANSFER_DAYS * DAY) / profile.multiplier ** 3,
         }
       : stretchedTransfer(from.bodyId, to.bodyId, profile.multiplier)
 

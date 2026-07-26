@@ -19,7 +19,7 @@ import { useId } from 'react'
 import { getBody, getPort, type MissionType } from '@solsyn/data'
 
 const W = 320
-const H = 92
+const H = 108
 /**
  * The ends sit well inside the frame because the port label is centred under
  * the body mark and "Tranquillity Yards" is wider than the mark it labels.
@@ -28,7 +28,21 @@ const H = 92
  */
 const LEFT = 52
 const RIGHT = W - 52
-const BASE = 62
+const BASE = 56
+
+/** Astronomical unit, km. */
+const AU_KM = 149_597_870
+
+/**
+ * Distances here span five orders of magnitude — 378,000 km between Gateway
+ * and Tranquillity, 265 million between Earth and Ceres — so the unit changes
+ * with the number rather than forcing one scale on both.
+ */
+export function formatDistance(km: number): string {
+  if (km >= 1e7) return `${(km / AU_KM).toFixed(2)} AU`
+  if (km >= 1e6) return `${(km / 1e6).toFixed(1)} million km`
+  return `${Math.round(km).toLocaleString()} km`
+}
 
 /**
  * How each body is drawn. Deliberately not to scale and not coloured
@@ -127,8 +141,12 @@ function End({
     <g className={`route__end route__end--${mark.tone} ${here ? 'is-here' : ''}`}>
       {mark.ring && <circle className="route__ring" cx={x} cy={BASE} r={mark.r + 4.5} />}
       <circle className="route__body" cx={x} cy={BASE} r={mark.r} />
-      <text className="route__port" x={x} y={BASE + mark.r + 15} textAnchor="middle">
+      <text className="route__port" x={x} y={BASE + mark.r + 14} textAnchor="middle">
         {port.name}
+      </text>
+      {/* The altitude is what makes "Earth to Earth, five days" make sense. */}
+      <text className="route__alt" x={x} y={BASE + mark.r + 24} textAnchor="middle">
+        {formatDistance(port.orbitRadiusKm)}
       </text>
       <text className="route__body-name" x={x} y={BASE - mark.r - 7} textAnchor="middle">
         {body.name}
@@ -172,6 +190,14 @@ export function RouteMap({ fromPortId, toPortId, type, progress }: RouteMapProps
     }
   }
 
+  // How far it actually is. Inside one well that is the gap between two orbital
+  // radii; between bodies it is the gap between two heliocentric orbits, which
+  // is the honest order of magnitude even though the real separation depends on
+  // where the two are in their years.
+  const spanKm = sameBody
+    ? Math.abs(to.orbitRadiusKm - from.orbitRadiusKm)
+    : Math.abs(getBody(to.bodyId).orbitRadiusAu - getBody(from.bodyId).orbitRadiusAu) * AU_KM
+
   const badge = at(0.5)
   const underWay = progress !== undefined
   const t = Math.max(0, Math.min(1, progress ?? 0))
@@ -186,6 +212,13 @@ export function RouteMap({ fromPortId, toPortId, type, progress }: RouteMapProps
     >
       {/* The whole route, faint. */}
       <path className="route__path" d={path} />
+
+      {/* How far, stated. Two ports around one body are not neighbours, and
+          without this the Luna hop reads as Earth-to-Earth in five days. */}
+      <text className="route__span" x={W / 2} y={H - 4} textAnchor="middle">
+        {formatDistance(spanKm)}
+        {sameBody ? '' : ' at closest approach'}
+      </text>
 
       {/* Flown so far, drawn over it. A dash array scaled to the path length
           would need a measured path; instead the ship mark carries position and

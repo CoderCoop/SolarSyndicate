@@ -2858,3 +2858,15 @@ button {
   line-height: 1.45;
   color: var(--ink-faint);
 }
+
+.route__alt {
+  font-size: 7.5px;
+  fill: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.route__span {
+  font-size: 9px;
+  fill: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
