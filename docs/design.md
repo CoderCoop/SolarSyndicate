@@ -167,6 +167,14 @@ Heat is the underrated one: radiators are big, fragile, and mass-expensive, and 
 us a real engineering trade-off that most games skip. Reactor output is ultimately
 radiator-limited.
 
+**Removers have a floor.** A sorbent bed does not strip a gas out of an
+atmosphere; it reaches equilibrium with its own sorbent. The ISS runs around
+2,000–3,000 ppm of CO2 with CDRA working perfectly, and Earth ambient is about
+420. So every remover declares the lowest partial pressure it can hold, and the
+best one running sets how clean the cabin can get — plants pull lower than the
+amine bed, which is why the hydroponics rack earns its power beyond the food it
+grows. Nothing reaches zero, because nothing physical does.
+
 Consumption anchors (per crew member per day, ISS-derived): O2 ~0.84 kg, CO2 out
 ~1.0 kg, water ~3.5 L gross (recycled), food ~1.8 kg. Near-future closure: water
 loop ~98%, O2 loop ~85–90% with hydroponics contributing food + CO2 draw-down.

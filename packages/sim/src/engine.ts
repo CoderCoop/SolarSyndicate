@@ -122,7 +122,10 @@ export function createWorld(seed: number, utcMs: number): SimState {
         battery: makeReservoir(hull.batteryStartKwh, 0, hull.batteryCapacityKwh, t0),
         heat: makeReservoir(21, 21, 55, t0),
         o2: makeReservoir(hull.o2CapacityKg * 0.82, 0, hull.o2CapacityKg, t0),
-        co2: makeReservoir(0.34, 0, 6, t0),
+        // Delivered a little above what the removers will hold it at, so the
+        // cabin settles *down* to its floor. Starting below the floor would
+        // make the very first reading a clamp rather than a measurement.
+        co2: makeReservoir(0.52, 0, 6, t0),
         water: makeReservoir(hull.waterCapacityKg * 0.88, 0, hull.waterCapacityKg, t0),
         food: makeReservoir(hull.foodCapacityKg * 0.74, 0, hull.foodCapacityKg, t0),
         propellant: makeReservoir(hull.propellantCapacityKg * 0.41, 0, hull.propellantCapacityKg, t0),

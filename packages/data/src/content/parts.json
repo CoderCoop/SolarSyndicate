@@ -84,7 +84,8 @@
       "h": 1.8
     },
     "provides": {
-      "co2ScrubKgPerDay": 5.2
+      "co2ScrubKgPerDay": 5.2,
+      "co2FloorPpm": 2000
     },
     "wearPerDay": 0.52,
     "serviceHours": 5,
@@ -162,6 +163,7 @@
       "foodKgPerDay": 0.9,
       "o2KgPerDay": 0.4,
       "co2ScrubKgPerDay": 0.5,
+      "co2FloorPpm": 1200,
       "waterUseKgPerDay": 2.0
     },
     "wearPerDay": 0.18,

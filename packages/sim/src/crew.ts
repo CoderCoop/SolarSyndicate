@@ -62,13 +62,25 @@ export function fatigueRatePerSecond(activity: CrewActivity): number {
 // Environment -> crew performance
 // ---------------------------------------------------------------------------
 
+/** Moles of air per m3 at 1 atm, 21 C. */
+const MOLES_PER_M3 = 41.45
+
+/** Molar mass of CO2, kg/mol. */
+const CO2_KG_PER_MOL = 0.044
+
 /** Cabin CO2 in parts per million, from mass and pressurised volume. */
 export function co2Ppm(state: SimState, t: GameTime): number {
   const hull = getHull(state.ship.hullId)
   const kg = levelAt(state.ship.resources.co2, t)
-  // Moles of air per m3 at 1 atm, 21 C. CO2 is 0.044 kg/mol.
-  const molesTotal = 41.45 * hull.cabinVolumeM3
-  return ((kg / 0.044) / molesTotal) * 1e6
+  const molesTotal = MOLES_PER_M3 * hull.cabinVolumeM3
+  return (kg / CO2_KG_PER_MOL / molesTotal) * 1e6
+}
+
+/** The inverse: what a given cabin concentration weighs. */
+export function co2KgForPpm(state: SimState, ppm: number): number {
+  const hull = getHull(state.ship.hullId)
+  const molesTotal = MOLES_PER_M3 * hull.cabinVolumeM3
+  return (ppm / 1e6) * molesTotal * CO2_KG_PER_MOL
 }
 
 /** Comfortable operating temperature; the thermal loop holds this when it can. */
