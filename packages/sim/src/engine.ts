@@ -23,6 +23,7 @@ import {
   lifeBalance,
   powerBalance,
   partPowerKw,
+  partRunning,
   partScale,
   resolveNetworks,
   resourceBoundMessage,
@@ -656,7 +657,12 @@ export function roomViews(state: SimState): RoomView[] {
               Math.max(0, -draw) +
               (pd.provides.thermalWasteKw ?? 0) * scale -
               (pd.provides.heatRejectKw ?? 0) * scale,
-            waterKgPerDay: -(pd.provides.waterUseKgPerDay ?? 0) * scale,
+            // Deliberately NOT scaled by condition, matching lifeBalance: a
+            // worn electrolysis unit drinks the same water and returns less
+            // oxygen for it. That *is* the inefficiency -- scaling both ends
+            // would hold efficiency constant and there would be nothing for
+            // maintenance or a better unit to improve.
+            waterKgPerDay: partRunning(p) ? -(pd.provides.waterUseKgPerDay ?? 0) : 0,
             enabled: p.enabled,
             shed: p.shed,
             broken: p.broken,
