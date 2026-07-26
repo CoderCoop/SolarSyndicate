@@ -471,7 +471,43 @@ export const Tuning = z.object({
 })
 export type Tuning = z.infer<typeof Tuning>
 
+/**
+ * What the Guild has budgeted for a run. Spec 002 TR-16.
+ *
+ * Quantities, not money: the price is whatever the port charges when the books
+ * are settled (TR-17, TR-19). Stated before the contract is accepted, which is
+ * the whole point -- "can I do this inside the budget" is a question asked at
+ * the board, not discovered on arrival (TR-20).
+ */
+export const Allowance = z.object({
+  water: z.number().nonnegative(),
+  o2: z.number().nonnegative(),
+  food: z.number().nonnegative(),
+  propellant: z.number().nonnegative(),
+  spares: z.number().nonnegative(),
+})
+export type Allowance = z.infer<typeof Allowance>
+
+export const ContractDef = z.object({
+  id: z.string(),
+  title: z.string(),
+  client: z.string(),
+  fromPortId: z.string(),
+  toPortId: z.string(),
+  /** Payment on delivery, before the allowance is reconciled. */
+  payCr: z.number().positive(),
+  /** What abandoning it costs. Never a refusal, always a price (TR-21). */
+  abandonCr: z.number().nonnegative(),
+  cargoKg: z.number().nonnegative(),
+  /** Days from acceptance. The Guild's estimate, and the allowance follows it. */
+  deadlineDays: z.number().positive(),
+  allowance: Allowance,
+  blurb: z.string(),
+})
+export type ContractDef = z.infer<typeof ContractDef>
+
 export const ContentPack = z.object({
+  contracts: z.array(ContractDef),
   tuning: Tuning,
   rooms: z.array(RoomDef),
   parts: z.array(PartDef),
