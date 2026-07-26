@@ -672,12 +672,16 @@ check('service worker registers (offline-capable shell)', swRegistered)
 check('no install banner when the browser has not offered', (await page.$$('.install')).length === 0)
 
 // Fire the event the way Chromium would, and the offer should appear.
+/* The body of page.evaluate runs in the browser, not in Node -- so its globals
+   are the page's, which is why eslint cannot see them here. */
+/* eslint-disable no-undef */
 await page.evaluate(() => {
   const e = new Event('beforeinstallprompt')
   e.prompt = () => Promise.resolve()
   e.userChoice = Promise.resolve({ outcome: 'accepted' })
   window.dispatchEvent(e)
 })
+/* eslint-enable no-undef */
 await page.waitForSelector('.install', { timeout: 3000 })
 check('the game offers to install itself once the browser allows it', await page.isVisible('.install'))
 const offerWhy = await page.textContent('.install__why')

@@ -9,6 +9,10 @@ means here.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-07-26
+
+A patch by the stated rule: new surfaces, no gameplay capability changed.
+
 ### Added
 
 - **The game offers to install itself.** It has been an installable PWA since
