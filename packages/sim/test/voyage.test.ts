@@ -22,6 +22,7 @@ import {
   transferOptions,
   voyageView,
 } from '../src/index.js'
+import { getPort } from '@solsyn/data'
 import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
@@ -111,9 +112,10 @@ describe('the astrogator lays out real options', () => {
 
   it('marks what the ship cannot actually fly rather than hiding it', () => {
     // TR-3b: a choice the ship cannot take is still information -- it tells the
-    // player what a bigger tank would buy. The Kestrel is a 41 t hull with an
-    // 18 t tank, which is an Earth-system ship; Mars wants a mass ratio it
-    // simply does not have, and the board says so rather than pretending.
+    // player what a bigger ship would buy. The Kestrel is a 41 t hull with a
+    // 32 t tank and 91 days of food -- a cislunar ship. Mars is 259 days away
+    // and wants 47 t of propellant, so it fails on stores and mass ratio both,
+    // and the board says so rather than pretending (§5.2).
     const options = transferOptions(bookedFar())
     expect(options.every((o) => !o.feasible)).toBe(true)
     for (const o of options) {
@@ -143,11 +145,13 @@ describe('the astrogator lays out real options', () => {
   })
 
   it('does not charge two escapes for one gravity well', () => {
-    // Gateway and Tranquillity both orbit Earth. Charging both escapes made a
-    // Luna hop cost more delta-v than the hull can ever carry, which priced
-    // the opening contract out of the game.
+    // Gateway and Tranquillity both orbit Earth. A ship moving between two
+    // orbits inside one well never escapes it, so charging both escapes
+    // (5.07 km/s) priced the opening contract out of the game entirely.
+    const from = getPort('port.gateway')
+    const to = getPort('port.tranquillity')
     const hop = transferOptions(booked())[0]!
-    expect(hop.deltaVMs).toBeLessThan(3200)
+    expect(hop.deltaVMs).toBeLessThan(from.escapeDeltaVMs + to.escapeDeltaVMs)
   })
 })
 
@@ -262,5 +266,59 @@ describe('the short run is flyable by the ship you are given', () => {
     const expected = propellantForDeltaV(wet, option.deltaVMs, 1200)
     expect(option.propellantKg).toBeGreaterThan(expected * 0.9)
     expect(option.propellantKg).toBeLessThan(expected * 1.1)
+  })
+})
+
+describe('the Luna hop is priced by the same maths as everything else', () => {
+  const MU_EARTH = 3.986004418e14
+
+  const honestHohmann = () => {
+    const r1 = getPort('port.gateway').orbitRadiusKm * 1000
+    const r2 = getPort('port.tranquillity').orbitRadiusKm * 1000
+    const a = (r1 + r2) / 2
+    return {
+      days: (Math.PI * Math.sqrt(a ** 3 / MU_EARTH)) / DAY,
+      deltaVMs:
+        Math.sqrt(MU_EARTH * (2 / r1 - 1 / a)) -
+        Math.sqrt(MU_EARTH / r1) +
+        (Math.sqrt(MU_EARTH / r2) - Math.sqrt(MU_EARTH * (2 / r2 - 1 / a))),
+    }
+  }
+
+  it('takes as long as the transfer between those two orbits really takes', () => {
+    // "Why does it take five days between two stations both orbiting Earth?"
+    // Because one is 400 km up and the other is in lunar orbit, 384,400 km
+    // out. Sharing a parent body does not make two ports neighbours.
+    const s = applyCommand(createWorld(20260726, T0), {
+      at: 0,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    const economy = transferOptions(s).find((o) => o.id === 'economy')!
+    expect(economy.durationS / DAY).toBeCloseTo(honestHohmann().days, 2)
+    expect(honestHohmann().days).toBeCloseTo(4.98, 1)
+  })
+
+  it('costs what that transfer really costs -- no discount', () => {
+    // This used to be charged at 1.59 km/s against a true 3.91, because the
+    // tank could not afford the truth. The tank was resized instead; if this
+    // ever diverges again, something has been bent to fit the ship rather
+    // than the ship built to fit the physics (§5.2).
+    const s = applyCommand(createWorld(20260726, T0), {
+      at: 0,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    const economy = transferOptions(s).find((o) => o.id === 'economy')!
+    expect(economy.deltaVMs).toBeCloseTo(honestHohmann().deltaVMs, 6)
+    expect(economy.deltaVMs).toBeGreaterThan(3_800)
+  })
+
+  it('leaves the ship able to fly its own opening contract', () => {
+    // The invariant that the honest price has to be checked against: a desk
+    // that cannot take the job it is handed is not a starting position.
+    const s = applyCommand(createWorld(20260726, T0), {
+      at: 0,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    expect(transferOptions(s).filter((o) => o.feasible).length).toBeGreaterThan(0)
   })
 })

@@ -11,7 +11,7 @@
     "o2CapacityKg": 90,
     "waterCapacityKg": 900,
     "foodCapacityKg": 620,
-    "propellantCapacityKg": 18000,
+    "propellantCapacityKg": 32000,
     "sparesCapacity": 60,
     "rooms": [
       "bridge",

@@ -14,7 +14,7 @@
  * Nothing here can refuse the player anything. Abandoning a run costs credits,
  * never the ship (TR-21).
  */
-import { contractsFrom, getContract, type Allowance } from '@solsyn/data'
+import { contractsFrom, getContract, type Allowance, type MissionType } from '@solsyn/data'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { levelAt } from './resources.js'
@@ -52,6 +52,8 @@ export interface BoardEntry {
   id: string
   title: string
   client: string
+  /** What kind of errand it is (§5.3). Flavour and framing, never arithmetic. */
+  type: MissionType
   fromPortId: string
   toPortId: string
   payCr: number

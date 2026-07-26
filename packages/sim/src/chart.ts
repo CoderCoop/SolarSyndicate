@@ -26,7 +26,7 @@ export interface ChartBody {
   y: number
   orbitRadiusAu: number
   /** Ports berthed here, so the chart can label a place by what is at it. */
-  ports: { id: string; name: string }[]
+  ports: { id: string; name: string; moon?: string }[]
 }
 
 export interface ChartShip {
@@ -185,5 +185,7 @@ function chartBodies() {
 function portsOn(bodyId: string) {
   return content.ports
     .filter((p) => p.bodyId === bodyId)
-    .map((p) => ({ id: p.id, name: p.name }))
+    // The moon travels with the port: a chart that says "Tranquillity, Earth"
+    // hides the 384,400 km that makes the crossing take five days.
+    .map((p) => ({ id: p.id, name: p.name, ...(p.moon ? { moon: p.moon } : {}) }))
 }

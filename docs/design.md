@@ -389,9 +389,10 @@ watch bill for the whole transfer.
 ### 4.5 Lifecycle, aging & permadeath
 
 Crew are **persistent people, and death is permanent.** No resurrection, no
-save-scumming (the UTC-anchored single timeline enforces this for free). At 24×
-time, one game year ≈ 15 real days — a full 30-year career unfolds over roughly a
-real-world year of play. Generational crew turnover is the game's long arc.
+save-scumming (the UTC-anchored single timeline enforces this for free). At 720×
+time, one game year ≈ 12 real hours — a full 30-year career unfolds over roughly a
+real-world fortnight of play. Generational crew turnover is the game's long arc,
+and at this multiplier it is an arc a player can actually reach.
 
 **The career arc.** People age in game time. Stats follow a life curve: physical
 stats (STR/DEX/END) peak in the late 20s–30s and decline; INT/Perception hold
@@ -463,18 +464,34 @@ reports travel at *c*, between **your headquarters and the ship** — so the num
 below are for a starting Earth HQ, and relocating the desk (§6.3) rewrites the whole
 table:
 
-| Ship at | One-way | Round trip | Real time at 24× |
-|---|---|---|---|
-| Luna | ~1.3 s | ~3 s | instant |
-| Mars | 4–21 min | 9–42 min | 0.4–1.7 min |
-| Ceres | 15–31 min | 29–63 min | 1.2–2.6 min |
-| Jupiter | 35–52 min | 70–103 min | 2.9–4.3 min |
-| Saturn | 71–87 min | 141–175 min | 5.9–7.3 min |
+| Ship at | One-way | Round trip | Real time at 720× | (was, at 24×) |
+|---|---|---|---|---|
+| Luna | ~1.3 s | ~3 s | instant | instant |
+| Mars | 4–21 min | 9–42 min | 0.8–3.5 s | 0.4–1.7 min |
+| Ceres | 15–31 min | 29–63 min | 2.4–5.3 s | 1.2–2.6 min |
+| Jupiter | 35–52 min | 70–103 min | 5.8–8.6 s | 2.9–4.3 min |
+| Saturn | 71–87 min | 141–175 min | 11.8–14.6 s | 5.9–7.3 min |
 
-Consequences that fall straight out: near-Earth ops are tightly managed and feel
-supervised; the Belt gets a real conversational lag; the outer system is
-*genuinely autonomous*, where you set policy and trust your captain because you
-cannot do anything else. The distance progression of the game is simultaneously a
+⚠ **720× costs us light-lag as a *felt* mechanic, and this is the real price of
+the new multiplier.** At 24× a Saturn round trip was a seven-minute wait — long
+enough that you stopped issuing orders and started setting policy, which is the
+entire point of §4.6. At 720× it is fourteen seconds: perceptible, but not
+enough to change how anyone plays. The distance-to-autonomy curve still exists
+in *game* time and still gates what a captain must decide alone, but the player
+no longer feels it in their own clock.
+
+Three ways out when M3 gets here, none of them chosen yet: decouple comms lag
+from the time multiplier and hold it in real seconds; lean on conjunction
+blackouts (still game-weeks long, so still real hours) to carry the mechanic
+instead of routine lag; or accept that autonomy is communicated through *what
+the captain did without asking* rather than through waiting. Flagged here rather
+than quietly rescaled, because §4.6 called light-lag "the best mechanic this
+framing unlocks" and it has just been substantially weakened.
+
+Consequences that still fall straight out, in game time: near-Earth ops are
+tightly managed and feel supervised; the Belt gets a real conversational lag;
+the outer system is *genuinely autonomous*, where you set policy and trust your
+captain because you cannot do anything else. The distance progression of the game is simultaneously a
 progression in **how much control you give up** — which is a far more interesting
 difficulty curve than bigger numbers, and it makes hiring a great captain the actual
 unlock for deep-space work. Real conjunctions (Sun between HQ and ship) produce
@@ -521,6 +538,50 @@ Delta-v is the currency of travel. The player sees a delta-v budget bar (rocket
 equation, honest) next to a consumables budget bar (crew-days of O2/water/food) —
 choosing a faster transfer burns delta-v; a slower one burns life support margin.
 That single tension is the travel game.
+
+#### The Kestrel is a cislunar hauler, and that is now true in the numbers
+
+The in-system leg used to get its own hand-set duration and price — five days
+and 1.59 km/s — sitting next to honestly derived interplanetary legs. It is now
+solved with the same vis-viva and Kepler maths, against the parent body's
+gravitational parameter: **3.91 km/s over 4.98 days**, Gateway's 6,778 km orbit
+to Tranquillity's 384,400 km one. Two ports around one body is the same problem
+as two planets around the sun; only the primary changes.
+
+The tank was resized to afford the truth rather than the truth being bent to fit
+the tank: **18 t → 32 t**, a propellant mass fraction of 31% → 44%. For scale,
+the Apollo Service Module ran 75% and a Falcon 9 upper stage 97%; 31% was a
+building, not a vehicle.
+
+**What that buys, and what it does not.** The Earth–Moon system works properly
+now, with margin. Mars does not, and the reason is worth stating because it is
+*not* the tank:
+
+| Constraint | Kestrel | Earth→Phobos needs |
+|---|---|---|
+| Propellant | 32 t | 47 t |
+| Food endurance | **91 days** | **259 days** |
+| Water endurance | 281 days | 259 days |
+
+Stores gate Mars harder than mass ratio does. Feeding four people for a Mars
+crossing needs roughly three times the pantry this hull has, *and* half again
+the tank — which is a different ship, not a bigger number. That makes the
+interplanetary board exactly what §10.2's M4 "hull upgrade path" is for: the
+runs are visible, priced, and marked with the shortfall in tonnes (TR-3b), so
+the player can see what the next hull buys before they can afford it.
+
+**A real result that fell out of doing this honestly:** a faster run to the Moon
+is nearly free. Minimum energy is 3.91 km/s and the three-and-a-half-day express
+is 4.04 — a 3% premium for 30% off the clock. That is why Apollo flew a
+three-day trajectory rather than a five-day one, and it means the cislunar
+trajectory choice is genuinely low-stakes. The interesting version of that
+decision lives on interplanetary crossings, where stretching the ellipse costs
+delta-v steeply (Earth→Phobos: 9.62 km/s at minimum energy, 14.93 express).
+
+**Still open, and deliberately so:** the Belt needs 14.9 km/s and ~148 t of
+propellant, which no single-stage NTR of this class reaches. §10.2 already puts
+NEP in M4, and high-Isp electric propulsion is the honest answer for outer-system
+work — so the Belt is gated behind a drive, not behind a bigger tank.
 
 ### 5.3 Missions
 
@@ -700,7 +761,7 @@ name, blast radius, and cadence — so the scale is legible without a tutorial:
 | **Waiver** | a one-off exception, called in as a favour | one ship, one voyage | immediately (subject to light-lag — you're asking your local, and they have to answer) | trivial |
 | **Variance** | a standing exception for your operation | your ship(s), until revoked | days | small |
 | **Local rule** | how *your* port actually does things | everyone based at your HQ | next local meeting (~weeks) | moderate |
-| **Guild policy** | a motion carried at assembly | every ship in the guild | quarterly assembly (≈3.75 real days at 24×) | large |
+| **Guild policy** | a motion carried at assembly | every ship in the guild | quarterly assembly (≈3 real hours at 720×) | large |
 | **Charter amendment** | the guild's founding terms | the guild, permanently, including its identity | annual, needs a supermajority built over time | enormous |
 
 Cost scales multiplicatively along four axes, which keeps the formula legible:
@@ -785,22 +846,53 @@ curve, no institution to spend it in.
 
 The most consequential design decision in the game.
 
-### 7.1 Time scale: game time = 24× real time (proposal)
+### 7.1 Time scale: game time = 720× real time
 
-One real hour = one game day. Anchored to UTC wall-clock, never paused (pillar 3).
+One real minute = half a game day. Anchored to UTC wall-clock, never paused
+(pillar 3). Open question 1 is now closed, and the answer came from playing it.
 
-- A game day passing per real hour means a play session always sees crew life:
-  shift changes, meals, sleep — the ship feels alive on screen.
-- Transfer pacing at 24×: NTR-era Mars run (~6 game-months) ≈ **7½ real days**;
-  Belt run ≈ 2–3 real weeks; late-game torch Mars run (~3 game-weeks) ≈ **21 real
-  hours**. Long-haul missions are multi-day idle commitments punctuated by
-  notification moments — mobile-idle cadence, and drive upgrades compress *real*
-  wait time, which makes progression viscerally felt.
+**Set by the voyage, not by the ship.** A crossing is the only span the player
+*chooses and then waits out*, so it is the span the multiplier has to fit. The
+flyable Earth-system transfers are 3.6–5.0 game days; at 720× they take
+**7.2–10 real minutes**, which resolves inside the sitting in which the
+decision was made.
+
+The original 24× was set from the other end — "one real hour = one game day"
+reads well and keeps crew life visible on screen. But it made those same
+crossings **four to five real hours**. That is the right cadence for a game
+checked twice a day and the wrong one for a game whose central verb is casting
+off: the player pressed the button they came to press and then had nothing to
+look at.
+
+- Handy conversions: one real second is 12 game minutes; a watch turns over
+  every 40 real seconds; a game day passes in 2 real minutes; a game year in
+  roughly 12 real hours.
+- Transfer pacing at 720×: NTR-era Mars run (~6 game-months) ≈ **6 real
+  hours**; Belt run ≈ half a real day; the Luna hop ≈ **10 real minutes**.
+  Drive upgrades still compress *real* wait time, which is what makes
+  progression viscerally felt — there is simply less of it to compress.
+- **The cost, stated plainly:** offline catch-up is now far more dramatic. An
+  hour away is 30 game days and a night away is most of a game year, so a ship
+  left with a thin margin will not merely have drifted — it will have run its
+  stores out and be sitting on a dead loop. §7.4's fair-play rules still hold
+  (nothing is destroyed that the player could not have foreseen), but the
+  *stakes* of walking away have gone up by thirty times, and the away report
+  has that much more to explain. Watch this in playtest; it is the most likely
+  reason to revisit the number.
 - Rejected: variable/pausable time (breaks pillar 3 and any shared-universe future);
-  1× real time (Mars in 6 real months is EVE-grade patience); 100×+ (crew daily
-  life becomes an invisible blur, undermining the crew sim).
-- **Open question for playtesting:** 24× vs 48×. Tune early, then freeze — changing
-  it after launch warps every balance number and any shared universe.
+  1× real time (Mars in 6 real months is EVE-grade patience).
+- The old objection to 100×+ was that "crew daily life becomes an invisible
+  blur, undermining the crew sim". 720× goes well past that line, and the
+  objection was half right: a watch now turns over every 40 real seconds, so
+  you no longer *witness* shift changes, you read them in the log. What saves
+  it is that M1 made the crew sim legible through state rather than through
+  animation — the watch strip, the roster, the attendance model — none of which
+  depends on watching a change happen live. If crew life does start reading as
+  noise, the fix is a slower multiplier, not a busier screen.
+- **Now frozen.** Changing it after launch warps every balance number and any
+  shared universe. The two things that would reopen it: offline catch-up proving
+  too punishing (§7.1 above), or light-lag's loss (§4.6) mattering more in
+  practice than it does on paper.
 
 ### 7.2 Offline progress = same simulation, fast-forwarded
 
@@ -895,7 +987,7 @@ consequences must always trace back to a choice the player actually made:
 - **Event-queue architecture** per §7.2: `SimState` (plain serializable object) +
   priority queue of `SimEvent`s + pure reducer `apply(state, event) → state'`.
 - **Time:** all sim timestamps in game-seconds from epoch; single conversion
-  function to/from UTC. The 24× constant lives in exactly one place.
+  function to/from UTC. The 720× constant lives in exactly one place.
 - Continuous quantities (tank levels, condition, position) stored as
   *(value at last event, rate)* — current value derived on read. UI animates
   between truths; the sim never ticks per-frame.
@@ -1053,7 +1145,11 @@ yourself is what kind of employer you are.
 
 ## 11. Open Questions (want answers before their milestone, not before M0)
 
-1. **Time multiplier** (§7.1): 24× or 48×? → playtest in M2, freeze by M3.
+1. ~~**Time multiplier** (§7.1): 24× or 48×?~~ **Answered in M2: 720×**, set by
+   how long a crossing should take rather than by how fast crew life should
+   read. Neither candidate was close — both were chosen from the ship-management
+   side and left the voyage a multi-hour wait. Freeze by M3; the thing to watch
+   first is offline catch-up (§7.1).
 2. **Realism ceiling:** is the late-game fusion torch acceptable as the one
    speculative exaggeration, or do we hold the +25–50% line strictly (and accept
    multi-real-week outer-system runs forever)? → M4.

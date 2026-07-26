@@ -335,6 +335,69 @@ check('the flow overlay is gone (RF-13)', (await page.$$('.flowtoggle, .flow__ch
 const figures = await page.$$('.schema .person')
 check('crew are drawn in their rooms as figures (RF-5)', figures.length === 4, `${figures.length} aboard`)
 
+// --- everything on the drawing answers when tapped (SV-10) ------------------
+await page.click('.tabs__btn:has-text("Ship")')
+await page.waitForSelector('.ship')
+await page.click('.deck:nth-child(2) .deck__head') // Quarters: bunks and a table
+await page.waitForSelector('.deck.is-open .schema')
+await tap(page, '.deck.is-open .hit--fixture')
+const fixtureName = await page.textContent('.whois--fixture .whois__name')
+check('furniture answers when tapped, not just machines', Boolean(fixtureName), fixtureName ?? '')
+const fixtureBlurb = await page.textContent('.whois--fixture .whois__blurb')
+check('and says why it is there', (fixtureBlurb?.length ?? 0) > 30, `${fixtureBlurb?.slice(0, 48)}…`)
+await page.click('.whois--fixture .whois__close')
+await page.click('.deck:nth-child(2) .deck__head')
+
+// --- crew stats explain themselves (RF-26) ----------------------------------
+await page.click('.tabs__btn:has-text("Crew")')
+await page.waitForSelector('.watchstrip')
+await tap(page, '.explain__hint')
+const watchHelp = await page.textContent('.explain__what')
+check(
+  'the A/B/C watches are explained on screen, not in a tooltip',
+  /eight-hour/.test(watchHelp ?? ''),
+  watchHelp?.slice(0, 60) ?? '',
+)
+
+await tap(page, '.statrow')
+const skillLabel = await page.textContent('.explain__label')
+const skillAffects = await page.textContent('.explain__affects')
+check('tapping a skill says what it is', Boolean(skillLabel), skillLabel ?? '')
+check(
+  'and, crucially, what it affects',
+  /What it affects/.test(skillAffects ?? '') && (skillAffects?.length ?? 0) > 60,
+  skillAffects?.slice(0, 60) ?? '',
+)
+
+await tap(page, '.qual')
+const qualWhat = await page.textContent('.explain__what')
+check('endorsements explain themselves too', (qualWhat?.length ?? 0) > 30, qualWhat?.slice(0, 50) ?? '')
+
+// --- help, and the way out to the site --------------------------------------
+await page.click('.tabs__btn:has-text("Help")')
+await page.waitForSelector('.help__list')
+const questions = await page.$$eval('.help__q', (els) => els.map((e) => e.textContent))
+check('help answers real questions', questions.length >= 10, `${questions.length} topics`)
+check(
+  'including the two that are least guessable',
+  questions.some((q) => /A, B and C/.test(q ?? '')) &&
+    questions.some((q) => /five days/.test(q ?? '')),
+  questions.filter((q) => /A, B and C|five days/.test(q ?? '')).join(' | '),
+)
+
+const siteHref = await page.getAttribute('.help__link', 'href')
+check(
+  'and a way to reach the project site',
+  siteHref === 'https://codercoop.github.io/SolarSyndicate/',
+  siteHref ?? '',
+)
+check('which opens in a new tab', (await page.getAttribute('.help__link', 'target')) === '_blank')
+
+// A bug report has to be able to name a build.
+const version = await page.textContent('.help__version')
+check('the build names its own version', /^Version \d+\.\d+\.\d+$/.test(version?.trim() ?? ''), version?.trim() ?? '')
+await page.screenshot({ path: join(SHOTS, '16-help.png'), fullPage: true })
+
 // --- the chart (§5.1) -------------------------------------------------------
 await page.click('.tabs__btn:has-text("Chart")')
 await page.waitForSelector('.chart')
@@ -353,12 +416,12 @@ check('and its port highlighted', await page.isVisible('.chart__body.is-current'
 
 await page.screenshot({ path: join(SHOTS, '11-chart.png'), fullPage: true })
 
-// --- the port: board, allowance, astrogator (TR-3b, TR-16, TR-20) -----------
-await page.click('.tabs__btn:has-text("Port")')
+// --- the mission: board, allowance, astrogator (TR-3b, TR-16, TR-20) -------
+await page.click('.tabs__btn:has-text("Mission")')
 await page.waitForSelector('.berth__name')
 
 check(
-  'the port tab names the berth the ship is actually at',
+  'the mission tab names the berth the ship is actually at',
   (await page.textContent('.berth__name'))?.includes('Gateway') === true,
   (await page.textContent('.berth__name'))?.trim() ?? '',
 )
@@ -383,6 +446,19 @@ check(
   allowanceLabels.join(' · '),
 )
 
+// The route strip: where a run starts, where it ends, what kind of job it is.
+const routes = await page.$$('.offer .route')
+check('every offer draws its route', routes.length === offers.length, `${routes.length}/${offers.length}`)
+
+const routeEnds = await page.$$eval('.offer:first-child .route__port', (els) =>
+  els.map((e) => e.textContent),
+)
+check('the route names both ends', routeEnds.length === 2, routeEnds.join(' → '))
+
+const types = await page.$$eval('.mtype__name', (els) => els.map((e) => e.textContent))
+check('each offer says what kind of mission it is (§5.3)', types.length === offers.length, types.join(' · '))
+check('and the types are not all the same word', new Set(types).size > 1, [...new Set(types)].join(' · '))
+
 const balance = await page.textContent('.books__balance')
 check('the books show a balance', /cr$/.test(balance?.trim() ?? ''), balance?.trim() ?? '')
 
@@ -396,19 +472,39 @@ check('accepting a run takes the board off the table', (await page.$$('.offer__a
 const optionLabels = await page.$$eval('.option__label', (els) => els.map((e) => e.textContent))
 check('the astrogator works up more than one trajectory', optionLabels.length === 3, optionLabels.join(' · '))
 
-// TR-3b: an option the ship cannot fly is shown with the reason, not hidden.
-const blocked = await page.$$('.option.is-blocked')
-check('an unflyable option is shown, not dropped (TR-3b)', blocked.length > 0, `${blocked.length} blocked`)
-if (blocked.length > 0) {
-  const why = await page.textContent('.option.is-blocked .option__why')
-  check('and says what it is short of, in tonnes', /t more/.test(why ?? ''), why?.trim() ?? '')
-  check(
-    'with no way to fly it anyway',
-    (await page.$$('.option.is-blocked .option__go')).length === 0,
-  )
-}
+// Every Luna trajectory is affordable, and that is not a balance slip: from
+// low orbit a faster run to the Moon really is nearly free, which is why Apollo
+// flew a three-day trajectory rather than a five-day one. So the cislunar
+// choice is genuinely low-stakes.
+const lunaSpread = await page.$$eval('.option__dv', (els) =>
+  els.map((e) => Number.parseFloat(e.textContent ?? '0')),
+)
+check(
+  'a faster run to the Moon costs little, as it really does',
+  Math.max(...lunaSpread) / Math.min(...lunaSpread) < 1.1,
+  lunaSpread.map((v) => v.toFixed(2)).join(' → '),
+)
+check('and all of them are flyable', (await page.$$('.option.is-blocked')).length === 0)
 
 await page.screenshot({ path: join(SHOTS, '13-astrogator.png'), fullPage: true })
+
+// TR-3b: an option the ship cannot fly is shown with the reason, not hidden.
+// Mars is where that bites -- 259 days away, and the Kestrel carries 91 days
+// of food and a third of the propellant it would need.
+await tap(page, '.panel:has(.allowance) .button--quiet')
+await page.waitForSelector('.offer')
+await tap(page, '.offer:has-text("Phobos") .offer__accept')
+await page.waitForSelector('.options')
+
+const blocked = await page.$$('.option.is-blocked')
+check('an unflyable option is shown, not dropped (TR-3b)', blocked.length > 0, `${blocked.length} blocked`)
+const why = await page.textContent('.option.is-blocked .option__why')
+check('and says what it is short of, in tonnes', /t more/.test(why ?? ''), why?.trim() ?? '')
+check(
+  'with no way to fly it anyway',
+  (await page.$$('.option.is-blocked .option__go')).length === 0,
+)
+await page.screenshot({ path: join(SHOTS, '13b-unflyable.png'), fullPage: true })
 
 // Walking away costs money and never the ship (TR-21).
 const balanceBefore = await page.textContent('.books__balance')
@@ -431,14 +527,34 @@ check(
   chanLabels.join(' / '),
 )
 
-const powerRoles = await page.$$eval('.fgroup__label', (els) => els.map((e) => e.textContent))
+// The grammar is structural now, not a set of headings: sources feed a bus,
+// consumers hang off it ranked by draw, and the buffer sits to one side.
+await page.waitForSelector('.fdia')
+const grammar = {
+  sources: (await page.$$('.fdia__src')).length,
+  bus: (await page.$$('.fdia__bus')).length,
+  consumers: (await page.$$('.fdia__row')).length,
+  buffer: (await page.$$('.fdia__buffer')).length,
+}
 check(
   'every channel uses the same grammar (RF-15)',
-  powerRoles.includes('in') && powerRoles.includes('out') && powerRoles.includes('buffer'),
-  powerRoles.join(' · '),
+  grammar.sources > 0 && grammar.bus === 1 && grammar.consumers > 0 && grammar.buffer === 1,
+  JSON.stringify(grammar),
 )
 
-const powerNames = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+// Link width is magnitude, so the biggest consumer must draw the thickest line.
+const widths = await page.$$eval('.fdia__row .fdia__edge', (els) =>
+  els.map((e) => Number.parseFloat(e.getAttribute('stroke-width'))),
+)
+check(
+  'the thickest link is the biggest draw (RF-16)',
+  widths.length > 1 && widths[0] === Math.max(...widths),
+  widths.map((w) => w.toFixed(1)).join(' > '),
+)
+
+const powerNames = await page.$$eval('.fdia__src-name, .fdia__row-name', (els) =>
+  els.map((e) => e.textContent),
+)
 check(
   'nodes are named parts, not decks (RF-16)',
   powerNames.includes('Beacon-4 Fission Plant') && powerNames.includes('O2 Electrolysis Unit'),
@@ -448,7 +564,9 @@ check(
 // The crew are a node wherever they are actually a load -- which is the air and
 // the stores, not the electrical bus.
 await tap(page, '.chans__btn:has-text("O₂")')
-const o2Names = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+const o2Names = await page.$$eval('.fdia__src-name, .fdia__row-name', (els) =>
+  els.map((e) => e.textContent),
+)
 check(
   'and the crew are a node where the crew are a load',
   o2Names.some((n) => n?.startsWith('Crew')),
@@ -456,8 +574,8 @@ check(
 )
 
 await tap(page, '.chans__btn:has-text("Water")')
-await page.waitForSelector('.fnode--return')
-const returnName = await page.textContent('.fnode--return .fnode__name')
+await page.waitForSelector('.fdia__return')
+const returnName = await page.textContent('.fdia__return-label')
 check('the water loop is drawn as a loop (RF-17)', /Recycler/.test(returnName ?? ''), returnName ?? '')
 
 const whatIf = await page.textContent('.flowch__what-if')
@@ -566,8 +684,8 @@ await p1.waitForTimeout(200)
 check('deficit set before leaving', Number.parseFloat((await p1.textContent('.status__net')) ?? '') < 0)
 await p1.close()
 
-// Six real hours away = six game days at 24x (§7.1).
-await away.clock.fastForward('06:00:00')
+// Twelve real minutes away = six game days at 720x (§7.1).
+await away.clock.fastForward('00:12:00')
 
 const p2 = await away.newPage()
 const awayErrors = []
@@ -580,7 +698,13 @@ check('return screen appears after an absence (§7.4)', reportVisible)
 
 if (reportVisible) {
   const lede = await p2.textContent('.away__lede')
-  check('return screen states how long you were gone', /hours off the desk/.test(lede ?? ''), lede?.trim() ?? '')
+  // Real time away and game time aboard are different units and both matter:
+  // at 720x twelve minutes off the desk is six days on the ship.
+  check(
+    'return screen states how long you were gone, in both clocks',
+    /(minutes|hours) off the desk/.test(lede ?? '') && /\d+d aboard/.test(lede ?? ''),
+    lede?.trim() ?? '',
+  )
 
   const first = await p2.textContent('.away__entry')
   check('worst news leads the digest', /Brownout/.test(first ?? ''), first?.trim() ?? '')
@@ -622,9 +746,9 @@ check('no errors during catch-up', awayErrors.length === 0, awayErrors.slice(0, 
 // ---------------------------------------------------------------------------
 // A run, flown and settled (TR-17 to TR-21) -- the milestone end to end.
 //
-// The Gateway-to-Tranquillity crossing is five days, which at 24x is five real
-// hours. So this is the same trick as the catch-up pass: cast off, walk away,
-// and come back to a berthed ship with its books closed.
+// The Gateway-to-Tranquillity crossing is five game days, which at 720x is ten
+// real minutes -- the point of the multiplier. Same trick as the catch-up
+// pass: cast off, walk away, and come back to a berthed ship with closed books.
 // ---------------------------------------------------------------------------
 console.log('\n  -- a run, flown and settled --')
 
@@ -637,7 +761,7 @@ v1.on('pageerror', (e) => voyageErrors.push(String(e)))
 await v1.goto(base, { waitUntil: 'networkidle' })
 await v1.waitForSelector('.ship')
 
-await v1.click('.tabs__btn:has-text("Port")')
+await v1.click('.tabs__btn:has-text("Mission")')
 await v1.waitForSelector('.offer')
 await tap(v1, '.offer:first-child .offer__accept')
 await v1.waitForSelector('.option__go')
@@ -656,11 +780,20 @@ check(
 const legs = await v1.textContent('.voyage__legs')
 check('and names both ends of the crossing', /→/.test(legs ?? ''), legs?.trim() ?? '')
 
+// The same route strip the run was chosen from, now carrying the ship.
+check('the route strip follows the ship under way', await v1.isVisible('.route__ship-mark'))
+const flownLabel = await v1.getAttribute('.route', 'aria-label')
+check(
+  'and states how much of it has been flown',
+  /per cent flown/.test(flownLabel ?? ''),
+  flownLabel ?? '',
+)
+
 await v1.screenshot({ path: join(SHOTS, '14-under-way.png'), fullPage: true })
 await v1.close()
 
-// Long enough for the five-day crossing to complete while the app is shut.
-await voyageCtx.clock.fastForward('06:00:00')
+// Long enough for the ten-minute crossing to complete while the app is shut.
+await voyageCtx.clock.fastForward('00:15:00')
 
 const v2 = await voyageCtx.newPage()
 v2.on('pageerror', (e) => voyageErrors.push(String(e)))
@@ -668,7 +801,7 @@ await v2.goto(base, { waitUntil: 'networkidle' })
 await v2.waitForSelector('.ship')
 if (await v2.isVisible('.away')) await v2.click('.away .button')
 
-await v2.click('.tabs__btn:has-text("Port")')
+await v2.click('.tabs__btn:has-text("Mission")')
 await v2.waitForSelector('.settle__list')
 
 const berth = await v2.textContent('.berth__name')

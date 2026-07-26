@@ -11,7 +11,8 @@
       "spares": 620
     },
     "escapeDeltaVMs": 3200,
-    "blurb": "The Local's home berth in high Earth orbit. Everything is available and everything is expensive."
+    "orbitRadiusKm": 6778,
+    "blurb": "The Local's home berth, four hundred kilometres up. Everything is available and everything is expensive."
   },
   {
     "id": "port.tranquillity",
@@ -25,6 +26,8 @@
       "spares": 540
     },
     "escapeDeltaVMs": 1870,
+    "orbitRadiusKm": 384400,
+    "moon": "Luna",
     "blurb": "Lunar orbit. Cheaper to leave than Earth, and the only yard in the inner system that will look at a Kestrel without laughing."
   },
   {
@@ -39,6 +42,8 @@
       "spares": 880
     },
     "escapeDeltaVMs": 830,
+    "orbitRadiusKm": 9376,
+    "moon": "Phobos",
     "blurb": "A hollowed-out moon with a docking spine bolted through it. Thin margins, thinner air."
   },
   {
@@ -53,6 +58,7 @@
       "spares": 760
     },
     "escapeDeltaVMs": 510,
+    "orbitRadiusKm": 1150,
     "blurb": "The Belt's crossroads. Half the hulls in dock are older than the crews flying them."
   }
 ]

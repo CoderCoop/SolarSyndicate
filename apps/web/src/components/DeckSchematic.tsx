@@ -37,7 +37,7 @@ const INNER_LEFT = WALL_U + 3
 const INNER_RIGHT = LADDER_LEFT - 3
 
 type Part = RoomView['parts'][number]
-type Fixture = { glyph: Glyph; key: string }
+type Fixture = { glyph: Glyph; key: string; name: string; blurb: string }
 type Item = Part | Fixture
 
 const isPart = (i: Item): i is Part => 'id' in i
@@ -60,6 +60,9 @@ export interface DeckSchematicProps {
   selectedPartId: string | undefined
   onSelectPart: (partId: string | undefined) => void
   onSelectCrew: (crewId: string) => void
+  /** Fixtures are furniture the sim does not model -- but SV-10 says every
+      object on the drawing can be asked about, and furniture is an object. */
+  onSelectFixture: (fixture: { name: string; blurb: string }) => void
 }
 
 export function DeckSchematic({
@@ -68,6 +71,7 @@ export function DeckSchematic({
   selectedPartId,
   onSelectPart,
   onSelectCrew,
+  onSelectFixture,
 }: DeckSchematicProps) {
   const items: Placeable<Item>[] = [
     ...room.parts.map((p) => ({
@@ -78,7 +82,7 @@ export function DeckSchematic({
     })),
     ...room.fixtures.flatMap((f) =>
       Array.from({ length: f.count }, (_, i) => ({
-        item: { glyph: f.glyph, key: `${f.glyph}-${i}` } as Item,
+        item: { glyph: f.glyph, key: `${f.glyph}-${i}`, name: f.name, blurb: f.blurb } as Item,
         glyph: f.glyph,
         fitting: f.fitting,
         sizeM: f.sizeM,
@@ -185,6 +189,25 @@ export function DeckSchematic({
                   <rect className="picked" x={x - 3} y={y - 3} width={w + 6} height={h + 6} rx="2" />
                 )}
               </>
+            )}
+            {!part && (
+              <rect
+                className="hit hit--fixture"
+                x={x - 2}
+                y={y - 2}
+                width={w + 4}
+                height={h + 4}
+                role="button"
+                tabIndex={0}
+                aria-label={(item as Fixture).name}
+                onClick={() => onSelectFixture(item as Fixture)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectFixture(item as Fixture)
+                  }
+                }}
+              />
             )}
           </g>
         )

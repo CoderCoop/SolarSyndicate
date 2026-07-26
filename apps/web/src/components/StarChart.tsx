@@ -82,7 +82,9 @@ export function StarChart({ chart }: { chart: ChartView }) {
               </text>
               {b.ports.length > 0 && (
                 <text className="chart__ports" x={x} y={y + 17} textAnchor="middle">
-                  {b.ports.map((p) => p.name.split(' ')[0]).join(' · ')}
+                  {b.ports
+                    .map((p) => (p.moon ? `${p.name.split(' ')[0]} (${p.moon})` : p.name.split(' ')[0]))
+                    .join(' · ')}
                 </text>
               )}
             </g>

@@ -19,7 +19,8 @@ import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
 import { Flows } from './components/Flows.js'
-import { Port } from './components/Port.js'
+import { Help, SITE_URL } from './components/Help.js'
+import { Mission } from './components/Mission.js'
 import { StarChart } from './components/StarChart.js'
 import { LifeSupport } from './components/LifeSupport.js'
 import { ShipViewport } from './components/ShipViewport.js'
@@ -27,16 +28,17 @@ import { StatusBar } from './components/StatusBar.js'
 import { WorkOrders } from './components/WorkOrders.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
-type Tab = 'ship' | 'port' | 'chart' | 'flows' | 'life' | 'crew' | 'log'
+type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'log' | 'help'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ship', label: 'Ship' },
-  { id: 'port', label: 'Port' },
+  { id: 'mission', label: 'Mission' },
   { id: 'chart', label: 'Chart' },
   { id: 'flows', label: 'Flows' },
   { id: 'life', label: 'Life' },
   { id: 'crew', label: 'Crew' },
   { id: 'log', label: 'Log' },
+  { id: 'help', label: 'Help' },
 ]
 
 export function App() {
@@ -88,9 +90,9 @@ export function App() {
   const settlement = lastSettlement(state)
   const brokenCount = state.ship.parts.filter((p) => p.broken).length
 
-  // The Port tab is where the only timed decision in the game lives, so the
+  // The Mission tab is where the only timed decision in the game lives, so the
   // nav says when it wants attention: work on offer, or a deadline running.
-  const portBadge = state.ship.docked
+  const missionBadge = state.ship.docked
     ? active
       ? `${Math.max(0, Math.ceil(active.daysRemaining))}d`
       : board.length > 0
@@ -113,7 +115,7 @@ export function App() {
           >
             {t.label}
             {t.id === 'ship' && brokenCount > 0 && <span className="tabs__dot" />}
-            {t.id === 'port' && portBadge && <span className="tabs__count">{portBadge}</span>}
+            {t.id === 'mission' && missionBadge && <span className="tabs__count">{missionBadge}</span>}
             {t.id === 'crew' && orders.length > 0 && <span className="tabs__count">{orders.length}</span>}
           </button>
         ))}
@@ -156,8 +158,8 @@ export function App() {
           </>
         )}
 
-        {tab === 'port' && (
-          <Port
+        {tab === 'mission' && (
+          <Mission
             ledger={ledger}
             board={board}
             active={active}
@@ -194,11 +196,19 @@ export function App() {
 
         {tab === 'log' && <DispatchLog entries={recentLog(state, 60)} />}
 
+        {tab === 'help' && <Help />}
+
         <footer className="app__footer">
           <p className="app__milestone">
             M2 — the ship goes somewhere. Contracts with a stated resupply allowance, real
             transfer orbits, and books that settle on arrival: efficiency now has a price.
-            No guilds or crew hiring yet.
+            The Kestrel is a cislunar hauler: Mars and the Belt are priced on the board and
+            out of reach until a bigger hull. No guilds or crew hiring yet.
+          </p>
+          <p className="app__links">
+            <a href={SITE_URL} target="_blank" rel="noreferrer">
+              Project site &amp; design doc
+            </a>
           </p>
           <button type="button" className="button button--quiet" onClick={() => void resetWorld()}>
             Scuttle and start over

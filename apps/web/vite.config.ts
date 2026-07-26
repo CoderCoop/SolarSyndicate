@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -5,7 +6,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const src = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
+/** Single source of truth for the version the app reports. */
+const { version } = JSON.parse(readFileSync(src('./package.json'), 'utf8')) as { version: string }
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   /**
    * Relative asset paths, so the same build runs from the domain root, from a
    * GitHub Pages project subpath (/SolarSyndicate/), or straight off disk.

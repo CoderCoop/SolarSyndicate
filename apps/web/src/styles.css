@@ -865,136 +865,27 @@ button {
 }
 
 /* The trunk: one continuous rule the whole channel hangs off. */
-.fnodes {
-  position: relative;
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 18px;
-}
 
-.fnodes::before {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  border-radius: 1px;
-  background: linear-gradient(180deg, var(--cyan), color-mix(in srgb, var(--cyan) 25%, transparent));
-}
 
-.fgroup {
-  list-style: none;
-}
 
-.fgroup__label {
-  margin: 12px 0 5px -18px;
-  padding-left: 18px;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
 
-.fgroup__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
 
-.fnode {
-  position: relative;
-  padding: 7px 0;
-}
 
-.fnode__branch {
-  position: absolute;
-  left: -13px;
-  top: 18px;
-  width: 11px;
-  height: 1px;
-  background: var(--line-bright);
-}
 
-.fnode__top {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: 13.5px;
-}
 
-.fnode__name {
-  flex: 1;
-  min-width: 0;
-}
 
-.fnode__value {
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-dim);
-}
 
-.fnode__track {
-  height: 4px;
-  margin: 5px 0 4px;
-  border-radius: 2px;
-  background: #131f28;
-  overflow: hidden;
-}
 
-.fnode__bar {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--cyan);
-  transition: width 600ms ease;
-}
 
-.fnode__where {
-  margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-  text-transform: uppercase;
-}
 
-.fnode__note {
-  text-transform: none;
-  letter-spacing: 0;
-}
 
 /* Role colours are semantic, and the group headings say the same thing in
    words -- colour never carries it alone. */
-.fnode--source .fnode__bar {
-  background: var(--green);
-}
-.fnode--source .fnode__value {
-  color: var(--green);
-}
 
-.fnode--return .fnode__bar {
-  background: #6f9fe0;
-}
-.fnode--return .fnode__value {
-  color: #6f9fe0;
-}
 
-.fnode--consumer .fnode__bar {
-  background: var(--amber);
-}
-.fnode--consumer .fnode__value {
-  color: var(--amber);
-}
 
-.fnode--buffer .fnode__bar {
-  background: var(--ink-faint);
-}
 
-.fnode.is-idle {
-  opacity: 0.45;
-}
 
-.fnode.is-idle .fnode__bar {
-  background: var(--ink-faint);
-}
 
 .flowch__net {
   margin-top: 16px;
@@ -2700,5 +2591,550 @@ button {
 }
 
 .books__amount.is-debit {
+  color: var(--ink-faint);
+}
+
+/* ------------------------------------------------------------- route map */
+
+/*
+ * The route strip, drawn on the mission board and again under way. Map
+ * symbols, not a chart: the star chart carries real positions, this carries
+ * "where from, where to, what kind of job, how far along".
+ */
+
+.route {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 12px 0 4px;
+}
+
+.route__path {
+  fill: none;
+  stroke: var(--line-bright);
+  stroke-width: 1.6;
+  stroke-dasharray: 5 4;
+}
+
+.route__path--flown {
+  stroke: var(--cyan);
+  stroke-width: 2.2;
+  stroke-dasharray: none;
+}
+
+.route__body {
+  fill: var(--bg-raised);
+  stroke: var(--ink-faint);
+  stroke-width: 1.4;
+}
+
+.route__end--earth .route__body {
+  fill: rgba(79, 209, 217, 0.16);
+  stroke: var(--cyan);
+}
+
+.route__end--mars .route__body {
+  fill: rgba(229, 103, 95, 0.16);
+  stroke: var(--red);
+}
+
+.route__end--ceres .route__body {
+  fill: rgba(125, 149, 168, 0.16);
+  stroke: var(--ink-dim);
+}
+
+.route__ring {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 0.8;
+  opacity: 0.35;
+}
+
+.route__end.is-here .route__body {
+  stroke-width: 2.2;
+}
+
+.route__port {
+  font-size: 8.5px;
+  fill: var(--ink);
+}
+
+.route__body-name {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+.route__badge-disc {
+  fill: var(--bg);
+  stroke: var(--line-bright);
+  stroke-width: 1.2;
+}
+
+.route__badge-mark {
+  fill: none;
+  stroke: var(--ink-dim);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.route__badge--medical .route__badge-disc {
+  stroke: var(--red);
+}
+.route__badge--medical .route__badge-mark {
+  stroke: var(--red);
+}
+
+.route__badge--survey .route__badge-disc,
+.route__badge--survey .route__badge-mark {
+  stroke: var(--cyan);
+}
+
+.route__badge--relief .route__badge-disc,
+.route__badge--relief .route__badge-mark {
+  stroke: var(--green);
+}
+
+.route__badge--bulk .route__badge-disc,
+.route__badge--bulk .route__badge-mark {
+  stroke: var(--amber);
+}
+
+.route__ship-halo {
+  fill: rgba(232, 163, 61, 0.16);
+  stroke: var(--amber);
+  stroke-width: 0.8;
+}
+
+.route__ship-mark {
+  fill: var(--amber);
+}
+
+/* mission type caption */
+
+.mtype {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border-left: 3px solid var(--line-bright);
+  border-radius: 0 6px 6px 0;
+  background: var(--bg-sunken);
+}
+
+.mtype--medical {
+  border-left-color: var(--red);
+}
+.mtype--survey {
+  border-left-color: var(--cyan);
+}
+.mtype--relief {
+  border-left-color: var(--green);
+}
+.mtype--bulk {
+  border-left-color: var(--amber);
+}
+
+.mtype__name {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.mtype__what {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}
+
+.route__alt {
+  font-size: 7.5px;
+  fill: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.route__span {
+  font-size: 9px;
+  fill: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.route__moon circle {
+  fill: var(--bg-raised);
+  stroke: var(--ink-dim);
+  stroke-width: 1.2;
+}
+
+.route__moon-arc {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 0.7;
+  stroke-dasharray: 2 2;
+}
+
+/* --------------------------------------------------------- flow diagram */
+
+/*
+ * The mockup's diagram: sources across the top, one bus, consumers ranked by
+ * draw, the buffer off to one side, and returns as a dashed edge up the left
+ * margin. Link width is magnitude on a shared scale, so the thickest line is
+ * the biggest consumer by construction rather than by being careful.
+ */
+
+.fdia {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 14px 0 4px;
+}
+
+.fdia__arrowhead {
+  fill: var(--cyan);
+}
+
+.fdia__edge {
+  fill: none;
+  stroke: var(--cyan);
+  opacity: 0.85;
+}
+
+.fdia__edge--return {
+  stroke-dasharray: 9 5;
+}
+
+.fdia__edge--buffer {
+  stroke: var(--amber);
+}
+
+.fdia__src rect {
+  fill: rgba(232, 163, 61, 0.09);
+  stroke: var(--amber);
+  stroke-width: 1.2;
+}
+
+.fdia__src.is-idle rect {
+  fill: none;
+  stroke: var(--line-bright);
+}
+
+.fdia__src.is-idle .fdia__src-name,
+.fdia__src.is-idle .fdia__src-value {
+  fill: var(--ink-faint);
+}
+
+.fdia__src-name {
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  fill: var(--amber);
+}
+
+.fdia__src-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--amber);
+}
+
+.fdia__none {
+  font-size: 10px;
+  font-style: italic;
+  fill: var(--ink-faint);
+}
+
+.fdia__bus rect {
+  fill: var(--bg-sunken);
+  stroke: var(--cyan);
+  stroke-width: 1.3;
+}
+
+.fdia__bus-label {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  fill: var(--cyan);
+}
+
+.fdia__bus-net {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--green);
+}
+
+.fdia__bus-net.is-negative {
+  fill: var(--red);
+}
+
+.fdia__buffer rect {
+  fill: rgba(232, 163, 61, 0.07);
+  stroke: var(--amber);
+  stroke-width: 1.1;
+}
+
+.fdia__buffer-name {
+  font-size: 8.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  fill: var(--amber);
+}
+
+.fdia__buffer-note {
+  font-size: 9px;
+  fill: var(--ink-dim);
+}
+
+.fdia__row rect {
+  fill: var(--bg-raised);
+  stroke: var(--line-bright);
+  stroke-width: 1;
+}
+
+.fdia__row-tab {
+  fill: var(--cyan);
+  stroke: none;
+}
+
+.fdia__row.is-idle .fdia__row-tab {
+  fill: var(--ink-faint);
+}
+
+.fdia__row.is-idle .fdia__row-name {
+  fill: var(--ink-faint);
+}
+
+.fdia__row-name {
+  font-size: 10.5px;
+  fill: var(--ink);
+}
+
+.fdia__row-where {
+  font-size: 8px;
+  fill: var(--ink-faint);
+}
+
+.fdia__row-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--cyan);
+}
+
+.fdia__more {
+  font-size: 9px;
+  fill: var(--ink-faint);
+}
+
+.fdia__return-label {
+  font-size: 7.5px;
+  letter-spacing: 0.05em;
+  fill: var(--cyan);
+}
+
+.fdia__return.is-idle .fdia__edge--return {
+  stroke: var(--ink-faint);
+}
+
+.fdia__return.is-idle .fdia__return-label {
+  fill: var(--ink-faint);
+}
+
+.whois--fixture .whois__head {
+  border-left: 3px solid var(--line-bright);
+  padding-left: 10px;
+}
+
+/* ------------------------------------------------- crew stat explanations */
+
+/*
+ * Tapping a bar, a pip or an endorsement opens what it is and what it moves.
+ * Rows are buttons rather than divs, so the affordance is real for a keyboard
+ * and a screen reader as well as for a thumb.
+ */
+
+.statrow {
+  display: grid;
+  grid-template-columns: 74px 1fr 30px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.statrow:hover,
+.statrow:focus-visible {
+  background: var(--bg-raised);
+}
+
+.pip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 100%;
+  padding: 5px 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-sunken);
+  cursor: pointer;
+}
+
+.pip:hover,
+.pip:focus-visible {
+  border-color: var(--line-bright);
+}
+
+.qual {
+  border: 1px solid var(--cyan);
+  background: rgba(79, 209, 217, 0.1);
+  cursor: pointer;
+}
+
+.explain__hint {
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 11.5px;
+  color: var(--cyan);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.explain {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid var(--cyan);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.explain__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.explain__label {
+  font-size: 13px;
+  color: var(--cyan);
+}
+
+.explain__close {
+  flex: none;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.explain__what {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.explain__affects {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+.explain__affects-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+}
+
+.explain__source {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+/* ------------------------------------------------------------------ help */
+
+.help__lede {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.help__group {
+  margin-top: 18px;
+}
+
+.help__section {
+  margin: 0 0 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+}
+
+.help__list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.help__item {
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.help__q {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.help__a {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+}
+
+.help__link {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.app__links {
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+
+.app__links a {
+  color: var(--cyan);
+  text-underline-offset: 3px;
+}
+
+.help__version {
+  margin: 14px 0 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-faint);
 }

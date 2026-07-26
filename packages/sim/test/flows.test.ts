@@ -187,3 +187,52 @@ describe('switching things off shows up honestly', () => {
     expect(channel(s, 'power').footnote).toMatch(/bank is covering/)
   })
 })
+
+describe('the arrows add up to the number under them', () => {
+  /**
+   * The invariant a diagram needs and a list of bars does not.
+   *
+   * Rendering channels as ranked bars let a contributor go missing without
+   * anything looking wrong -- station resupply while alongside was in the net
+   * and had no node, so the water channel showed 21.5 kg/day leaving, 18.3
+   * coming back, and a tank reporting "holding". Nothing summed the nodes, so
+   * nothing noticed. Drawing edges makes the contradiction visible, and this
+   * makes it fail the build instead.
+   *
+   * Only the store-backed channels are checked. Heat and CO2 use `return` for
+   * *removal* rather than for recovery, so their sign convention is genuinely
+   * different and asserting one formula across all of them would be wrong.
+   */
+  const summable = ['power', 'o2', 'water', 'food'] as const
+
+  const balance = (c: ReturnType<typeof channel>) => {
+    const of = (role: string) =>
+      c.nodes.filter((n) => n.role === role).reduce((sum, n) => sum + n.magnitude, 0)
+    return of('source') + of('return') - of('consumer')
+  }
+
+  it('holds alongside, where station services are topping the stores up', () => {
+    const s = world()
+    for (const key of summable) {
+      const c = channel(s, key)
+      expect(balance(c), `${key} nodes do not sum to its net`).toBeCloseTo(c.net, 6)
+    }
+  })
+
+  it('still holds under way, when that supply stops', () => {
+    // The node must disappear with the supply, not merely be drawn at zero.
+    const s = structuredClone(world())
+    s.ship.docked = false
+    for (const key of summable) {
+      const c = channel(s, key)
+      expect(balance(c), `${key} nodes do not sum to its net`).toBeCloseTo(c.net, 6)
+    }
+    expect(channel(s, 'water').nodes.some((n) => n.id.startsWith('alongside'))).toBe(false)
+  })
+
+  it('names the berth supply rather than folding it into a total', () => {
+    const supply = channel(world(), 'water').nodes.find((n) => n.id === 'alongside.water')!
+    expect(supply.role).toBe('source')
+    expect(supply.note).toMatch(/casts off/)
+  })
+})

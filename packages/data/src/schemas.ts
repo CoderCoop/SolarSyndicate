@@ -78,9 +78,17 @@ export type SizeM = z.infer<typeof SizeM>
  */
 export const FixtureDef = z.object({
   glyph: Glyph,
+  /** What it is, for the card that opens when the player taps it. */
+  name: z.string(),
   count: z.number().int().positive().default(1),
   fitting: Fitting.default('floor'),
   sizeM: SizeM,
+  /**
+   * Why it is here. Fixtures are the things the sim does not model, so this is
+   * the only answer a player ever gets about them -- and "everything on the
+   * drawing can be asked about" is worth more than a shorter data file.
+   */
+  blurb: z.string(),
 })
 export type FixtureDef = z.infer<typeof FixtureDef>
 
@@ -370,6 +378,14 @@ export const BodyDef = z.object({
   orbitPeriodDays: z.number().positive(),
   /** Angular position at game time zero, radians. Keeps the system unaligned. */
   phaseAtEpochRad: z.number(),
+  /**
+   * Standard gravitational parameter, m³/s². Real values.
+   *
+   * Needed so a transfer between two ports around this body can be solved with
+   * the same vis-viva and Kepler maths as an interplanetary one, instead of
+   * getting a hand-set duration and price of its own.
+   */
+  muM3S2: z.number().positive(),
 })
 export type BodyDef = z.infer<typeof BodyDef>
 
@@ -402,6 +418,27 @@ export const PortDef = z.object({
    * Earth is not.
    */
   escapeDeltaVMs: z.number().nonnegative(),
+  /**
+   * Radius of this port's orbit about its parent body, in km.
+   *
+   * Two ports sharing a bodyId are not therefore neighbours: Gateway sits a few
+   * hundred km up Earth's well and Tranquillity is in lunar orbit, 384,400 km
+   * out. Both orbit Earth, and the crossing between them is still five days.
+   * Without this number the route reads "Earth to Earth" and the duration looks
+   * like a bug.
+   */
+  orbitRadiusKm: z.number().positive(),
+  /**
+   * The moon this port is stationed at, when it is not orbiting the primary
+   * directly. Tranquillity's bodyId is `earth` because that is the gravity
+   * well and the heliocentric orbit it shares — but it is *at Luna*, and a
+   * route drawn "Earth to Earth" made a five-day crossing look like a bug.
+   *
+   * Moons are not entries in `bodies` on purpose: that list is heliocentric,
+   * and giving Luna an orbit about the sun to satisfy a label would be a
+   * worse lie than the one this fixes.
+   */
+  moon: z.string().optional(),
   blurb: z.string(),
 })
 export type PortDef = z.infer<typeof PortDef>
@@ -488,10 +525,24 @@ export const Allowance = z.object({
 })
 export type Allowance = z.infer<typeof Allowance>
 
+/**
+ * What kind of job this is. Design doc §5.3's v1 archetypes, narrowed to the
+ * ones M2 actually ships.
+ *
+ * The type is not a modifier -- it changes nothing in the sim arithmetic. It
+ * exists because "9.8 t to Phobos in 300 days" and "6.4 t of blood products to
+ * Ceres in 540" are the same row of numbers describing two completely different
+ * errands, and the board should say which is which before the player reads a
+ * single figure.
+ */
+export const MissionType = z.enum(['cargo', 'bulk', 'survey', 'medical', 'relief'])
+export type MissionType = z.infer<typeof MissionType>
+
 export const ContractDef = z.object({
   id: z.string(),
   title: z.string(),
   client: z.string(),
+  type: MissionType,
   fromPortId: z.string(),
   toPortId: z.string(),
   /** Payment on delivery, before the allowance is reconciled. */

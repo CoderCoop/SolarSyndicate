@@ -2,22 +2,25 @@
   {
     "id": "earth",
     "name": "Earth",
-    "orbitRadiusAu": 1.000000,
+    "orbitRadiusAu": 1.0,
     "orbitPeriodDays": 365.256,
-    "phaseAtEpochRad": 0.0
+    "phaseAtEpochRad": 0.0,
+    "muM3S2": 398600441800000.0
   },
   {
     "id": "mars",
     "name": "Mars",
     "orbitRadiusAu": 1.523679,
-    "orbitPeriodDays": 686.980,
-    "phaseAtEpochRad": 2.6
+    "orbitPeriodDays": 686.98,
+    "phaseAtEpochRad": 2.6,
+    "muM3S2": 42828370000000.0
   },
   {
     "id": "ceres",
     "name": "Ceres",
-    "orbitRadiusAu": 2.765800,
-    "orbitPeriodDays": 1681.630,
-    "phaseAtEpochRad": 4.1
+    "orbitRadiusAu": 2.7658,
+    "orbitPeriodDays": 1681.63,
+    "phaseAtEpochRad": 4.1,
+    "muM3S2": 62632500000.0
   }
 ]

@@ -135,10 +135,12 @@ export function createWorld(seed: number, utcMs: number): SimState {
         water: makeReservoir(hull.waterCapacityKg * 0.88, 0, hull.waterCapacityKg, t0),
         food: makeReservoir(hull.foodCapacityKg * 0.74, 0, hull.foodCapacityKg, t0),
         // Fuelled for the opening contract with room to choose how to fly it.
-        // At 0.41 the ship could not make its own first run, which is the
-        // "opening budget" number spec 002 left to playtesting -- and a desk
-        // that cannot take the job it is given is not a starting position.
-        propellant: makeReservoir(hull.propellantCapacityKg * 0.62, 0, hull.propellantCapacityKg, t0),
+        // The Luna run costs 3.91 km/s honestly priced (§5.2), which is 20 t of
+        // propellant off a 78 t wet ship -- so three quarters of a 32 t tank
+        // leaves a real margin without making the first refuelling decision
+        // free. A desk that cannot take the job it is given is not a starting
+        // position, and neither is one that never has to think about fuel.
+        propellant: makeReservoir(hull.propellantCapacityKg * 0.75, 0, hull.propellantCapacityKg, t0),
         spares: makeReservoir(21, 0, hull.sparesCapacity, t0),
       },
       portId: STARTER_PORT_ID,
@@ -642,7 +644,7 @@ export interface RoomView {
   /** Deck head height in metres (RF-4). */
   deckHeightM: number
   /** Furniture the sim does not model but the room draws (SV-4, RF-3). */
-  fixtures: { glyph: Glyph; count: number; fitting: Fitting; sizeM: SizeM }[]
+  fixtures: { glyph: Glyph; name: string; blurb: string; count: number; fitting: Fitting; sizeM: SizeM }[]
   /** Who is tending this room right now, and what that is worth (RF-27). */
   attendance: { attended: boolean; quality: number; wearScale: number; name?: string }
   parts: {
