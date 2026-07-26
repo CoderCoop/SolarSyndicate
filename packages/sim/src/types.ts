@@ -199,6 +199,10 @@ export interface SimState {
   /** Per-stream PRNG counters. §7.2 */
   rngCounters: Record<string, number>
   /** The desk's balance, in credits. May be negative (TR-21). */
+  /** The guild this desk belongs to (§6.1). */
+  guildId: string
+  /** Standing with every guild, -100..100, not only your own. */
+  standing: Record<string, number>
   credits: number
   /** What moved it, newest first. */
   ledger: LedgerEntry[]
@@ -232,6 +236,8 @@ export type Command =
   | { kind: 'ABANDON_CONTRACT' }
   | { kind: 'DEPART'; optionId: string }
   | { kind: 'PURCHASE_HULL'; hullId: string }
+  | { kind: 'HIRE_CREW'; crewId: string }
+  | { kind: 'DISMISS_CREW'; crewId: string }
 
 /** A command with the game time it was issued at. */
 export interface TimedCommand {

@@ -3340,3 +3340,156 @@ button {
   line-height: 1.45;
   color: var(--ink-faint);
 }
+
+/* ------------------------------------------------ the guild and the hall */
+
+.guild--own {
+  padding: 12px;
+  border: 1px solid var(--amber);
+  border-radius: var(--radius);
+  background: rgba(232, 163, 61, 0.06);
+}
+
+.guild__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.guild__name {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.guild__badge {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid var(--amber);
+  border-radius: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--amber);
+}
+
+.guild__identity {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.guild__culture {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+.standings {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.standing {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-raised);
+}
+
+.standing.is-own {
+  border-color: var(--line-bright);
+}
+
+.standing__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.standing__name {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.standing__value {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+.standing__track {
+  position: relative;
+  height: 5px;
+  margin: 7px 0 5px;
+  border-radius: 3px;
+  background: var(--bg-sunken);
+}
+
+.standing__zero {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--line-bright);
+}
+
+.standing__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: var(--ink-dim);
+  min-width: 2px;
+}
+
+.standing.is-trusted .standing__fill,
+.standing.is-valued .standing__fill {
+  background: var(--green);
+}
+
+.standing.is-poor .standing__fill,
+.standing.is-hostile .standing__fill {
+  background: var(--red);
+}
+
+.standing__band {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.hall__summary {
+  margin-bottom: 14px;
+}
+
+.hire {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  padding: var(--pad);
+}
+
+.hire.is-blocked {
+  border-left-color: var(--line-bright);
+  opacity: 0.75;
+}
+
+.hire__floor {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--amber);
+}
+
+.qual--static {
+  cursor: default;
+}

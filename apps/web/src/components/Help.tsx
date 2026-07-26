@@ -109,6 +109,27 @@ const TOPICS: { section: string; items: Topic[] }[] = [
     ],
   },
   {
+    section: 'The guild and the hall',
+    items: [
+      {
+        q: 'Who do I work for?',
+        a: 'Wrightworks Guild — an engineers\u2019 and salvagers\u2019 union. It gives you the best mechanics in any hall and part discounts; it asks for wage floors and mandatory rest, which are genuinely good for your crew and cost you money. Choosing between the four guilds comes later; for now you hold a Wrightworks card.',
+      },
+      {
+        q: 'Why does standing show for guilds I do not work for?',
+        a: 'Because it is tracked with all four. Delivering for the Institute is not neutral to the Combine, and standing moves on outcomes rather than intentions — what you delivered, when, and what you walked away from.',
+      },
+      {
+        q: 'Why can I not hire anyone else?',
+        a: 'Either there is no berth free — the Kestrel sleeps six and you carry four — or the desk cannot cover the wage. Crew are paid every day whether the ship is flying or sitting alongside, so a hire is a standing bill, not a purchase.',
+      },
+      {
+        q: 'Why is the wage higher than what they asked for?',
+        a: 'The guild wage floor. Wrightworks bargains its people up, so the same candidate costs more under a union card than under The Drift — which has no floor, and no safety net either. Both numbers are on the card so you can see which is which.',
+      },
+    ],
+  },
+  {
     section: 'Time',
     items: [
       {

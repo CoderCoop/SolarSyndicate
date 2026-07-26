@@ -373,6 +373,31 @@ await tap(page, '.qual')
 const qualWhat = await page.textContent('.explain__what')
 check('endorsements explain themselves too', (qualWhat?.length ?? 0) > 30, qualWhat?.slice(0, 50) ?? '')
 
+// --- M3: the guild and the hall (§6.1, §10.1) -------------------------------
+const ownGuild = await page.textContent('.guild__name')
+check('the desk flies affiliated', /Wrightworks/.test(ownGuild ?? ''), ownGuild ?? '')
+
+const standings = await page.$$eval('.standing__name', (els) => els.map((e) => e.textContent))
+check(
+  'standing is tracked with every guild, not only your own',
+  standings.length === 4,
+  standings.join(' · '),
+)
+
+const berthText = await page.textContent('.hall__summary')
+check('the hall states berths and payroll', /\d+\s*\/\s*\d+/.test(berthText ?? ''), berthText?.replace(/\s+/g, ' ').trim() ?? '')
+
+// Gateway carries the general trade; the deep bench is at the guild's own yard.
+const hires = await page.$$('.hire')
+check('candidates are standing in the hall', hires.length > 0, `${hires.length} in the hall`)
+const floorNote = await page.textContent('.hire__floor')
+check(
+  'the guild wage floor is shown, not folded into one number',
+  /wage floor/.test(floorNote ?? ''),
+  floorNote?.trim() ?? '',
+)
+await page.screenshot({ path: join(SHOTS, '17-hall.png'), fullPage: true })
+
 // --- help, and the way out to the site --------------------------------------
 await page.click('.tabs__btn:has-text("Help")')
 await page.waitForSelector('.help__list')

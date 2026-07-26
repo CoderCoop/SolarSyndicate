@@ -13,6 +13,7 @@ import bodiesRaw from './content/bodies.json' with { type: 'json' }
 import portsRaw from './content/ports.json' with { type: 'json' }
 import tuningRaw from './content/tuning.json' with { type: 'json' }
 import contractsRaw from './content/contracts.json' with { type: 'json' }
+import guildsRaw from './content/guilds.json' with { type: 'json' }
 import {
   ContentPack,
   type BodyDef,
@@ -36,6 +37,7 @@ export const content: ContentPack = ContentPack.parse({
   ports: portsRaw,
   tuning: tuningRaw,
   contracts: contractsRaw,
+  guilds: guildsRaw,
 })
 
 const roomsById = new Map(content.rooms.map((r) => [r.id, r]))
@@ -119,6 +121,26 @@ export function priceAt(portId: string, key: keyof PortPrices): number {
 export const ATTENDANCE = content.tuning.attendance
 
 /** Tune coefficients (spec 004 RF-36). */
+/** The desk's own guild. §10.1's four-way opening choice is M6; until then, this. */
+export const STARTER_GUILD_ID = 'guild.wrightworks'
+
+const guildsById = new Map(content.guilds.map((g) => [g.id, g]))
+
+export function getGuild(id: string) {
+  const guild = guildsById.get(id)
+  if (!guild) throw new Error(`Unknown guild: ${id}`)
+  return guild
+}
+
+/** Everyone in the game, aboard or in a hall. */
+export function crewInHall(portId: string) {
+  return content.crew.filter((c) => !c.startsAboard && c.hallPortId === portId)
+}
+
+export function startingCrew() {
+  return content.crew.filter((c) => c.startsAboard)
+}
+
 export const TUNE = content.tuning.tune
 
 /** How a yard values a used hull (§6.2). */

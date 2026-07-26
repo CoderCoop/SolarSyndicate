@@ -13,7 +13,14 @@
  * made "life support skill" mean nothing.
  */
 import { describe, expect, it } from 'vitest'
-import { content, getCrewDef, getRoom } from '@solsyn/data'
+import { startingCrew, content, getCrewDef, getRoom } from '@solsyn/data'
+
+/**
+ * The four who fly this ship. `content.crew` is now the whole person registry
+ * -- everyone aboard *and* everyone standing in a hiring hall -- so a claim
+ * about "the crew" has to say which crew it means.
+ */
+const aboard = () => startingCrew()
 import {
   advanceTo,
   applyCommand,
@@ -30,7 +37,7 @@ const world = () => createWorld(20260726, T0)
 
 describe('the three layers stay separate', () => {
   it('gives every crew member knowledge, skills and endorsements', () => {
-    for (const def of content.crew) {
+    for (const def of aboard()) {
       expect(Object.keys(def.knowledge)).toHaveLength(6)
       expect(Object.keys(def.skills)).toHaveLength(6)
       expect(Array.isArray(def.qualifications)).toBe(true)
@@ -38,11 +45,11 @@ describe('the three layers stay separate', () => {
   })
 
   it('keeps endorsements scarce -- that is what makes them worth hiring for', () => {
-    const held = content.crew.flatMap((c) => c.qualifications)
+    const held = aboard().flatMap((c) => c.qualifications)
     const all = ['eclss', 'eps', 'tcs', 'prop', 'gnc', 'eva', 'cmo']
     // Nobody holds everything, and at least one system has nobody certificated
     // on it, so there is a gap the player has to hire or train into.
-    for (const def of content.crew) expect(def.qualifications.length).toBeLessThan(all.length)
+    for (const def of aboard()) expect(def.qualifications.length).toBeLessThan(all.length)
     expect(all.some((q) => !held.includes(q))).toBe(true)
   })
 
@@ -63,7 +70,7 @@ describe('the three layers stay separate', () => {
       expect(room.needs.length).toBeGreaterThan(0)
       for (const need of room.needs) {
         expect(need.weight).toBeGreaterThan(0)
-        expect(Object.keys(content.crew[0]!.knowledge)).toContain(need.domain)
+        expect(Object.keys(aboard()[0]!.knowledge)).toContain(need.domain)
       }
     }
   })
@@ -72,14 +79,14 @@ describe('the three layers stay separate', () => {
 describe('knowledge is matched against what the room actually needs', () => {
   it('rates the life-support tech highest on the life-support loop', () => {
     const room = getRoom('life-support')
-    const scores = content.crew.map((c) => [c.name, knowledgeMatch(c, room)] as const)
+    const scores = aboard().map((c) => [c.name, knowledgeMatch(c, room)] as const)
     const best = scores.sort((a, b) => b[1] - a[1])[0]!
     expect(best[0]).toBe('Mira Sandoval')
   })
 
   it('rates the engineer highest on the reactor, which is a different mix', () => {
     const room = getRoom('reactor')
-    const scores = content.crew.map((c) => [c.name, knowledgeMatch(c, room)] as const)
+    const scores = aboard().map((c) => [c.name, knowledgeMatch(c, room)] as const)
     const best = scores.sort((a, b) => b[1] - a[1])[0]!
     expect(best[0]).toBe('Dolores Okonkwo')
     // And the specialist for the *other* system is not interchangeable.
@@ -113,7 +120,7 @@ describe('endorsements matter, without being a gate', () => {
   it('is what the certificated specialist is being paid for', () => {
     // Sandoval holds ECLSS and stations in Life Support. Nobody else does.
     expect(getCrewDef('crew.sandoval').qualifications).toContain('eclss')
-    for (const other of content.crew) {
+    for (const other of aboard()) {
       if (other.id === 'crew.sandoval') continue
       expect(other.qualifications).not.toContain('eclss')
     }

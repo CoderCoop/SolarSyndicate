@@ -1,0 +1,46 @@
+[
+  {
+    "id": "guild.wrightworks",
+    "name": "Wrightworks Guild",
+    "identity": "Engineers' and salvagers' labour union.",
+    "specialty": "Salvage rights, part discounts, and the best mechanics in any hall.",
+    "culture": "Wage floors and mandatory rest — genuinely good for the crew, and it costs you. Solidarity calls are expected to be answered.",
+    "playsLike": "Tinkerer. Poorer, slower, the best-maintained ship in the system, and crew who stay for decades.",
+    "homePortId": "port.tranquillity",
+    "wageFloor": 1.15,
+    "mandatoryRest": true
+  },
+  {
+    "id": "guild.helios",
+    "name": "Helios Combine",
+    "identity": "Mega-corporate bulk logistics.",
+    "specialty": "Huge cargo contracts and cheap fuel at company ports.",
+    "culture": "Schedule discipline and late-delivery penalties. Morale drags in a company town.",
+    "playsLike": "Logistics optimisation. Big margins, tight deadlines, replaceable people — and the temptation that comes with treating them that way.",
+    "homePortId": "port.gateway",
+    "wageFloor": 0.95,
+    "mandatoryRest": false
+  },
+  {
+    "id": "guild.meridian",
+    "name": "Meridian Institute",
+    "identity": "Scientific consortium.",
+    "specialty": "Survey contracts, sensor tech, astrogation training.",
+    "culture": "Data must be shared. Low pay, high tech access.",
+    "playsLike": "The long game. Bad money, unmatched tech and training, missions that go further out than anyone else's.",
+    "homePortId": "port.phobos",
+    "wageFloor": 0.85,
+    "mandatoryRest": true
+  },
+  {
+    "id": "guild.drift",
+    "name": "The Drift",
+    "identity": "Independents and smugglers.",
+    "specialty": "Grey market, no questions asked, the best margins going.",
+    "culture": "No safety net, no insurance, no death benefit. Standing is personal and fragile.",
+    "playsLike": "High risk. Best pay, worst consequences, and the only guild where your crew might be running from something.",
+    "homePortId": "port.ceres",
+    "wageFloor": 1.0,
+    "mandatoryRest": false
+  }
+]

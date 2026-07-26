@@ -38,7 +38,8 @@
       "engine.ntr.preheat"
     ],
     "priceCr": 430000,
-    "bookValueCr": 165000
+    "bookValueCr": 165000,
+    "berths": 6
   },
   {
     "id": "hull.albatross",
@@ -79,6 +80,7 @@
       "engine.ntr.preheat"
     ],
     "priceCr": 1050000,
-    "bookValueCr": 780000
+    "bookValueCr": 780000,
+    "berths": 10
   }
 ]
