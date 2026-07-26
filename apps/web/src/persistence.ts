@@ -7,7 +7,14 @@
  * and leave running for months.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { applyCommand, SIM_STATE_VERSION, type SimState, type TimedCommand } from '@solsyn/sim'
+import {
+  applyCommand,
+  missingStateFields,
+  readableSave,
+  SIM_STATE_VERSION,
+  type SimState,
+  type TimedCommand,
+} from '@solsyn/sim'
 
 const DB_NAME = 'solar-syndicate'
 const DB_VERSION = 1
@@ -45,18 +52,27 @@ function db(): Promise<IDBPDatabase<SyndicateDB>> {
 }
 
 /**
- * Handle a snapshot from a different version.
+ * Handle a snapshot this build might not be able to read.
  *
  * Pre-release, so there is nothing to preserve: a save from an older shape is
  * discarded and the world starts again, rather than carrying transforms for
  * versions nobody is playing. The version field and this hook stay because
  * they are what make a real migration possible the moment one is warranted
  * (§8.3) — there is simply nothing to migrate yet.
+ *
+ * The shape is checked as well as the version, because the version is only a
+ * claim. A build that adds a field and forgets to bump leaves saves that say
+ * v6 and are not v6; trusting the label loads one straight into a crash.
  */
-function migrate(input: SimState): SimState | undefined {
-  if (input.version === SIM_STATE_VERSION) return input
+export function migrate(input: unknown): SimState | undefined {
+  if (readableSave(input)) return input
+
+  const missing = missingStateFields(input)
+  const claimed = (input as { version?: unknown } | undefined)?.version
   console.warn(
-    `Save is v${input.version}, this build is v${SIM_STATE_VERSION}. Starting a new world.`,
+    `Save is v${String(claimed)}, this build is v${SIM_STATE_VERSION}` +
+      (missing.length > 0 ? `, and is missing ${missing.join(', ')}` : '') +
+      '. Starting a new world.',
   )
   return undefined
 }

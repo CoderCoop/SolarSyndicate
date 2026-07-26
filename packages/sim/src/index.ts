@@ -7,6 +7,7 @@
  * and it is cheap to keep only if it is never crossed.
  */
 export * from './types.js'
+export * from './save.js'
 export * from './time.js'
 export * from './rng.js'
 export * from './hash.js'

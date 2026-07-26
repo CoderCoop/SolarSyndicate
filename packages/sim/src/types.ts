@@ -17,10 +17,14 @@ import type { GameTime } from './time.js'
  *
  * Distinct from the product version in package.json on purpose. This one only
  * moves when a save written by an older build can no longer be read correctly
- * -- v6 is such a case: the propellant reservoir stores its own capacity, so a
- * v5 save keeps an 18 t tank and cannot afford the honestly priced Luna run.
+ * -- v7 is such a case: guilds arrived, and a v6 save has no `guildId`, so the
+ * first payroll after loading one looks up a guild that is not there.
+ *
+ * Remembering to move it is not left to memory any more: `save.ts` fingerprints
+ * the shape and a test refuses any change to it that this number did not
+ * follow.
  */
-export const SIM_STATE_VERSION = 6
+export const SIM_STATE_VERSION = 7
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).

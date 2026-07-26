@@ -63,7 +63,10 @@ export function App() {
   const [tab, setTab] = useState<Tab>('ship')
 
   useEffect(() => {
-    void init()
+    // A rejection here would leave the boot screen up for ever with nothing in
+    // the console to say why, which is precisely how a stale save presented
+    // itself once. init() handles its own failures; this is the backstop.
+    init().catch((err: unknown) => console.error('Boot failed', err))
     return installLifecycleHandlers()
   }, [init])
 
@@ -232,7 +235,7 @@ export function App() {
             goes somewhere. Contracts with a stated resupply allowance, real
             transfer orbits, and books that settle on arrival: efficiency now has a price.
             The Kestrel is a cislunar hauler; the yard at Tranquillity sells the hull that
-            reaches Mars. The Belt is still out of reach. No guilds or crew hiring yet.
+            reaches Mars. The Belt is still out of reach.
           </p>
           <p className="app__links">
             <a href={SITE_URL} target="_blank" rel="noreferrer">
