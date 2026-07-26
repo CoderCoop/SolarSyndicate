@@ -148,10 +148,40 @@ export const CrewDef = z.object({
 })
 export type CrewDef = z.infer<typeof CrewDef>
 
+/**
+ * A body the ports orbit. Real radii and periods; the map is 2D and coplanar
+ * (design §5.1), which is a simplification the game states rather than hides.
+ */
+export const BodyDef = z.object({
+  id: z.string(),
+  name: z.string(),
+  orbitRadiusAu: z.number().positive(),
+  orbitPeriodDays: z.number().positive(),
+  /** Angular position at game time zero, radians. Keeps the system unaligned. */
+  phaseAtEpochRad: z.number(),
+})
+export type BodyDef = z.infer<typeof BodyDef>
+
+export const PortDef = z.object({
+  id: z.string(),
+  name: z.string(),
+  bodyId: z.string(),
+  /**
+   * Delta-v to climb out of this port's gravity well onto a heliocentric
+   * transfer, and the same again to arrive. Leaving Ceres is cheap; leaving
+   * Earth is not.
+   */
+  escapeDeltaVMs: z.number().nonnegative(),
+  blurb: z.string(),
+})
+export type PortDef = z.infer<typeof PortDef>
+
 export const ContentPack = z.object({
   rooms: z.array(RoomDef),
   parts: z.array(PartDef),
   hulls: z.array(HullDef),
   crew: z.array(CrewDef),
+  bodies: z.array(BodyDef),
+  ports: z.array(PortDef),
 })
 export type ContentPack = z.infer<typeof ContentPack>
