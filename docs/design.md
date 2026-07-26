@@ -1,6 +1,11 @@
 # Solar Syndicate — Design Document
 
-*Status: pre-implementation design. Everything here is a proposal to be argued with.*
+*Status: the reasoning behind the game — the arguments, the numbers, the
+worldbuilding. This is the place to understand **why** any decision was made.*
+
+*The binding subset lives in [`.specify/memory/constitution.md`](../.specify/memory/constitution.md),
+which **governs where the two disagree**. If you find this document describing a
+rule the constitution contradicts, this document is the one that needs fixing.*
 
 ## 1. Vision & Design Pillars
 
