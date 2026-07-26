@@ -7,6 +7,10 @@ import {
   flowChannels,
   lastSettlement,
   ledgerView,
+  berths,
+  dailyWagesCr,
+  guildViews,
+  hiringHall,
   shipyardOffers,
   lifeSupportView,
   powerView,
@@ -21,6 +25,7 @@ import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
 import { Flows } from './components/Flows.js'
 import { Help, SITE_URL } from './components/Help.js'
+import { GuildPanel, HiringHall } from './components/Hall.js'
 import { InstallBanner } from './components/InstallOffer.js'
 import { Mission } from './components/Mission.js'
 import { StarChart } from './components/StarChart.js'
@@ -91,6 +96,10 @@ export function App() {
   const voyage = voyageView(state)
   const settlement = lastSettlement(state)
   const hullOffers = shipyardOffers(state)
+  const guilds = guildViews(state)
+  const candidates = hiringHall(state)
+  const crewBerths = berths(state)
+  const payroll = dailyWagesCr(state)
   const brokenCount = state.ship.parts.filter((p) => p.broken).length
 
   // The Mission tab is where the only timed decision in the game lives, so the
@@ -200,6 +209,15 @@ export function App() {
               orders={orders}
               onCancel={(workOrderId) => dispatch({ kind: 'CANCEL_WORK_ORDER', workOrderId })}
             />
+            <HiringHall
+              candidates={candidates}
+              berths={crewBerths}
+              dailyWagesCr={payroll}
+              portId={state.ship.portId}
+              docked={state.ship.docked}
+              onHire={(crewId) => dispatch({ kind: 'HIRE_CREW', crewId })}
+            />
+            <GuildPanel guilds={guilds} />
           </>
         )}
 
@@ -209,7 +227,9 @@ export function App() {
 
         <footer className="app__footer">
           <p className="app__milestone">
-            M2 — the ship goes somewhere. Contracts with a stated resupply allowance, real
+            M3 begins — guilds and hiring. Standing with four guilds, a hall to hire from,
+            berths that limit the crew, and wages drawn every day. Before that, M2 — the ship
+            goes somewhere. Contracts with a stated resupply allowance, real
             transfer orbits, and books that settle on arrival: efficiency now has a price.
             The Kestrel is a cislunar hauler; the yard at Tranquillity sells the hull that
             reaches Mars. The Belt is still out of reach. No guilds or crew hiring yet.

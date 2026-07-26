@@ -5,6 +5,8 @@
     "role": "Captain",
     "age": 44,
     "watch": "A",
+    "startsAboard": true,
+    "wageCrPerDay": 310,
     "stationRoomId": "bridge",
     "stats": {
       "strength": 5,
@@ -41,6 +43,8 @@
     "role": "Chief Engineer",
     "age": 51,
     "watch": "B",
+    "startsAboard": true,
+    "wageCrPerDay": 285,
     "stationRoomId": "machinery",
     "stats": {
       "strength": 6,
@@ -79,6 +83,8 @@
     "role": "Life Support Technician",
     "age": 29,
     "watch": "C",
+    "startsAboard": true,
+    "wageCrPerDay": 265,
     "stationRoomId": "life-support",
     "stats": {
       "strength": 4,
@@ -115,6 +121,8 @@
     "role": "Medic",
     "age": 37,
     "watch": "A",
+    "startsAboard": true,
+    "wageCrPerDay": 255,
     "stationRoomId": "quarters",
     "stats": {
       "strength": 6,
@@ -145,5 +153,240 @@
       "eva"
     ],
     "blurb": "Signed on for one run to Ceres and stayed for six years. Keeps the dose log obsessively, including his own."
+  },
+  {
+    "id": "crew.aluko",
+    "name": "Femi Aluko",
+    "role": "Reactor Technician",
+    "age": 37,
+    "watch": "B",
+    "startsAboard": false,
+    "hallPortId": "port.tranquillity",
+    "wageCrPerDay": 330,
+    "stationRoomId": "reactor",
+    "stats": {
+      "strength": 6,
+      "dexterity": 7,
+      "endurance": 7,
+      "intellect": 7,
+      "perception": 6,
+      "resolve": 6
+    },
+    "knowledge": {
+      "mechanical": 71,
+      "electronics": 52,
+      "physics": 68,
+      "chemistry": 34,
+      "biology": 12,
+      "medicine": 10
+    },
+    "skills": {
+      "operationMonitoring": 64,
+      "equipmentMaintenance": 58,
+      "troubleshooting": 61,
+      "repairing": 55,
+      "qualityControl": 49,
+      "judgment": 38
+    },
+    "qualifications": [
+      "eps",
+      "prop"
+    ],
+    "blurb": "Twelve years on fission plants and a habit of naming them. Wants a berth where the reactor is somebody's actual job."
+  },
+  {
+    "id": "crew.voss",
+    "name": "Marta Voss",
+    "role": "Hydroponicist",
+    "age": 31,
+    "watch": "C",
+    "startsAboard": false,
+    "hallPortId": "port.tranquillity",
+    "wageCrPerDay": 245,
+    "stationRoomId": "life-support",
+    "stats": {
+      "strength": 4,
+      "dexterity": 8,
+      "endurance": 6,
+      "intellect": 8,
+      "perception": 8,
+      "resolve": 6
+    },
+    "knowledge": {
+      "mechanical": 22,
+      "electronics": 18,
+      "physics": 16,
+      "chemistry": 58,
+      "biology": 79,
+      "medicine": 41
+    },
+    "skills": {
+      "operationMonitoring": 68,
+      "equipmentMaintenance": 49,
+      "troubleshooting": 44,
+      "repairing": 31,
+      "qualityControl": 62,
+      "judgment": 35
+    },
+    "qualifications": [
+      "eclss"
+    ],
+    "blurb": "Grew a full salad crop on a nine-month Belt run and lost nothing to root rot. Will tell you about it."
+  },
+  {
+    "id": "crew.reyes",
+    "name": "Danilo Reyes",
+    "role": "Deck Hand",
+    "age": 24,
+    "watch": "A",
+    "startsAboard": false,
+    "hallPortId": "port.tranquillity",
+    "wageCrPerDay": 165,
+    "stationRoomId": "cargo",
+    "stats": {
+      "strength": 8,
+      "dexterity": 6,
+      "endurance": 8,
+      "intellect": 4,
+      "perception": 5,
+      "resolve": 6
+    },
+    "knowledge": {
+      "mechanical": 31,
+      "electronics": 14,
+      "physics": 10,
+      "chemistry": 12,
+      "biology": 9,
+      "medicine": 8
+    },
+    "skills": {
+      "operationMonitoring": 28,
+      "equipmentMaintenance": 42,
+      "troubleshooting": 22,
+      "repairing": 47,
+      "qualityControl": 24,
+      "judgment": 19
+    },
+    "qualifications": [],
+    "blurb": "Cheap, strong, and entirely untrained. Somebody has to give him the first berth."
+  },
+  {
+    "id": "crew.iyer",
+    "name": "Priya Iyer",
+    "role": "Astrogator",
+    "age": 46,
+    "watch": "B",
+    "startsAboard": false,
+    "hallPortId": "port.gateway",
+    "wageCrPerDay": 345,
+    "stationRoomId": "bridge",
+    "stats": {
+      "strength": 4,
+      "dexterity": 6,
+      "endurance": 5,
+      "intellect": 9,
+      "perception": 8,
+      "resolve": 7
+    },
+    "knowledge": {
+      "mechanical": 24,
+      "electronics": 66,
+      "physics": 74,
+      "chemistry": 20,
+      "biology": 11,
+      "medicine": 13
+    },
+    "skills": {
+      "operationMonitoring": 57,
+      "equipmentMaintenance": 26,
+      "troubleshooting": 63,
+      "repairing": 22,
+      "qualityControl": 58,
+      "judgment": 74
+    },
+    "qualifications": [
+      "gnc",
+      "eva"
+    ],
+    "blurb": "Institute-trained, Institute-disillusioned. Finds windows other people say are not there."
+  },
+  {
+    "id": "crew.okafor",
+    "name": "Chidi Okafor",
+    "role": "Mechanic",
+    "age": 52,
+    "watch": "C",
+    "startsAboard": false,
+    "hallPortId": "port.gateway",
+    "wageCrPerDay": 300,
+    "stationRoomId": "machinery",
+    "stats": {
+      "strength": 7,
+      "dexterity": 8,
+      "endurance": 6,
+      "intellect": 6,
+      "perception": 7,
+      "resolve": 8
+    },
+    "knowledge": {
+      "mechanical": 82,
+      "electronics": 44,
+      "physics": 38,
+      "chemistry": 27,
+      "biology": 14,
+      "medicine": 16
+    },
+    "skills": {
+      "operationMonitoring": 59,
+      "equipmentMaintenance": 78,
+      "troubleshooting": 71,
+      "repairing": 80,
+      "qualityControl": 66,
+      "judgment": 52
+    },
+    "qualifications": [
+      "eps",
+      "eva"
+    ],
+    "blurb": "Thirty years in the trade and a Wrightworks card older than most of your crew. Slow, thorough, and never wrong twice."
+  },
+  {
+    "id": "crew.lindqvist",
+    "name": "Sonja Lindqvist",
+    "role": "Ship’s Doctor",
+    "age": 39,
+    "watch": "A",
+    "startsAboard": false,
+    "hallPortId": "port.gateway",
+    "wageCrPerDay": 290,
+    "stationRoomId": "quarters",
+    "stats": {
+      "strength": 4,
+      "dexterity": 8,
+      "endurance": 5,
+      "intellect": 8,
+      "perception": 7,
+      "resolve": 7
+    },
+    "knowledge": {
+      "mechanical": 14,
+      "electronics": 22,
+      "physics": 17,
+      "chemistry": 49,
+      "biology": 63,
+      "medicine": 86
+    },
+    "skills": {
+      "operationMonitoring": 52,
+      "equipmentMaintenance": 31,
+      "troubleshooting": 58,
+      "repairing": 26,
+      "qualityControl": 61,
+      "judgment": 64
+    },
+    "qualifications": [
+      "cmo"
+    ],
+    "blurb": "Left a station clinic for reasons she summarises as 'paperwork'. Keeps her own counsel and her own hours."
   }
 ]

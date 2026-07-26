@@ -301,6 +301,12 @@ export const HullDef = z.object({
   foodCapacityKg: z.number().positive(),
   propellantCapacityKg: z.number().positive(),
   sparesCapacity: z.number().positive(),
+  /**
+   * How many people can actually live aboard. The Kestrel draws six bunks for
+   * a crew of four, and that spare pair is the room to hire into -- a limit
+   * the drawing already stated before anything enforced it.
+   */
+  berths: z.number().int().positive(),
   rooms: z.array(z.string()),
   /**
    * The parts this hull is delivered with, by id.
@@ -332,12 +338,56 @@ export type HullDef = z.infer<typeof HullDef>
 export const Watch = z.enum(['A', 'B', 'C'])
 export type Watch = z.infer<typeof Watch>
 
+/**
+ * A guild. Design doc §6.1.
+ *
+ * "Ships don't fly free -- they fly *affiliated*." The guild is the seat the
+ * player occupies: it sets the hall they hire from, the culture the crew hold
+ * them to, and what standing is worth. M3 builds it as a system; §10.1's
+ * four-way opening choice is M6's job, so for now the desk is Wrightworks and
+ * the other three exist to have standing with.
+ */
+export const GuildDef = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** One line: what this guild *is*. */
+  identity: z.string(),
+  specialty: z.string(),
+  /** What it asks of you, which is the half people forget. */
+  culture: z.string(),
+  playsLike: z.string(),
+  homePortId: z.string(),
+  /**
+   * Wage floor, as a multiplier on a candidate's asking rate. Wrightworks
+   * bargains its people *up* -- "genuinely good for crew, costs money" -- and
+   * The Drift has no floor at all.
+   */
+  wageFloor: z.number().positive(),
+  /** Rest rules, as a cap on how hard a watch can be pushed. §6.1 culture. */
+  mandatoryRest: z.boolean(),
+})
+export type GuildDef = z.infer<typeof GuildDef>
+
 export const CrewDef = z.object({
   id: z.string(),
   name: z.string(),
   role: z.string(),
   age: z.number().int().positive(),
   watch: Watch,
+  /**
+   * Aboard from day one, or standing in a hiring hall waiting to be taken on.
+   * The four who come with the ship are not a special kind of person -- they
+   * are the same records with this flag set.
+   */
+  startsAboard: z.boolean().default(false),
+  /** Where this person can be hired, when they are not already aboard. */
+  hallPortId: z.string().optional(),
+  /**
+   * What they want per day, before any guild wage floor is applied. Crew are
+   * the largest running cost a desk has, which is what makes hiring a decision
+   * rather than a shopping trip.
+   */
+  wageCrPerDay: z.number().positive(),
   /**
    * Where they stand their watch when no work order has them elsewhere
    * (SV-8). The engineer lives in Machinery, the medic does his rounds from
@@ -596,6 +646,7 @@ export const ContractDef = z.object({
 export type ContractDef = z.infer<typeof ContractDef>
 
 export const ContentPack = z.object({
+  guilds: z.array(GuildDef),
   contracts: z.array(ContractDef),
   tuning: Tuning,
   rooms: z.array(RoomDef),

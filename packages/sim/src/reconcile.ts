@@ -17,6 +17,7 @@
  */
 import { getContract, getPort, priceAt } from '@solsyn/data'
 import { ALLOWANCE_KEYS, storesNow, type AllowanceKey } from './contracts.js'
+import { adjustStanding, guildForContract, STANDING_DELTA } from './guild.js'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { settle } from './resources.js'
@@ -81,6 +82,15 @@ export function reconcileArrival(state: SimState, at: GameTime): void {
   const allowanceCr = lines.reduce((sum, l) => sum + l.creditsCr, 0)
   const late = at > held.dueAt
   const payCr = Math.round(def.payCr * (late ? LATE_PAYMENT_FRACTION : 1))
+
+  // §6.1: standing moves on outcomes, not intentions.
+  adjustStanding(
+    state,
+    guildForContract(def.id),
+    late ? STANDING_DELTA.deliveredLate : STANDING_DELTA.delivered,
+    at,
+    late ? `${def.title} arrived late.` : `${def.title} delivered.`,
+  )
 
   post(state, at, payCr, `${def.title} delivered to ${port.name}`)
   post(

@@ -14,6 +14,8 @@ import {
   getCrewDef,
   getHull,
   getPart,
+  startingCrew,
+  STARTER_GUILD_ID,
   STARTER_HULL_ID,
   STARTER_PORT_ID,
   TUNE,
@@ -34,6 +36,7 @@ import { attendanceView } from './attendance.js'
 import { abandonContract, acceptContract } from './contracts.js'
 import { arrive, depart } from './voyage.js'
 import { purchaseHull } from './shipyard.js'
+import { dismissCrew, hireCrew, payWages } from './hiring.js'
 import { OPENING_BALANCE_CR, post } from './ledger.js'
 import { pushLog } from './log.js'
 import {
@@ -103,7 +106,8 @@ export function createWorld(seed: number, utcMs: number): SimState {
       tune: makeReservoir(TUNE.specTune, 0, 100, t0),
     }))
 
-  const crew: CrewState[] = content.crew.map((def) => ({
+  // Only the four who come with the ship; the rest are standing in halls.
+  const crew: CrewState[] = startingCrew().map((def) => ({
     id: def.id,
     defId: def.id,
     watch: def.watch,
@@ -158,6 +162,8 @@ export function createWorld(seed: number, utcMs: number): SimState {
     queue: [],
     nextSeq: 1,
     rngCounters: {},
+    guildId: STARTER_GUILD_ID,
+    standing: {},
     credits: OPENING_BALANCE_CR,
     ledger: [],
     log: [],
@@ -248,6 +254,11 @@ function applyEvent(state: SimState, event: SimEvent): void {
     }
 
     case 'DAY_ROLL': {
+      // Payroll on the day roll rather than as a rate: money is a stock, and
+      // only an event may move it (§6.2). A wage bill expressed per-second
+      // would have to be integrated during catch-up, which is exactly what the
+      // ledger is built to avoid.
+      payWages(state, event.at)
       writeDailyDispatch(state, event.at)
       scheduleAt(state, event.at + DAY, 'DAY_ROLL')
       break
@@ -400,6 +411,16 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
 
     case 'PURCHASE_HULL': {
       purchaseHull(state, command.hullId, at)
+      break
+    }
+
+    case 'HIRE_CREW': {
+      hireCrew(state, command.crewId, at)
+      break
+    }
+
+    case 'DISMISS_CREW': {
+      dismissCrew(state, command.crewId, at)
       break
     }
 

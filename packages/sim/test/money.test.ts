@@ -55,11 +55,31 @@ describe('the guild keeps a ledger', () => {
     expect(ledgerView(s).credits).toBeLessThan(0)
   })
 
-  it('survives a catch-up unchanged, because money is not a rate', () => {
-    let s = spend(world(), 30_000, 'Refit deposit')
-    const before = ledgerView(s).credits
-    s = advanceTo(s, 40 * DAY)
-    expect(ledgerView(s).credits).toBe(before)
+  it('moves only at events, so catch-up lands where live play would', () => {
+    // Money is a stock, not a rate. Wages *do* draw it down over time -- but
+    // only on the day roll, never by integration -- so fast-forwarding forty
+    // days in one jump must give exactly what forty separate days give. That
+    // equality is the property; "unchanged" stopped being it the moment there
+    // was a payroll.
+    const start = spend(world(), 30_000, 'Refit deposit')
+
+    const oneJump = advanceTo(start, 40 * DAY)
+
+    let stepped = start
+    for (let day = 1; day <= 40; day += 1) stepped = advanceTo(stepped, day * DAY)
+
+    expect(ledgerView(oneJump).credits).toBe(ledgerView(stepped).credits)
+    expect(ledgerView(oneJump).entries.length).toBe(ledgerView(stepped).entries.length)
+  })
+
+  it('draws the payroll down day by day, and says so in the books', () => {
+    const before = ledgerView(world()).credits
+    const after = advanceTo(world(), 10 * DAY)
+
+    expect(ledgerView(after).credits).toBeLessThan(before)
+    const wageEntries = ledgerView(after).entries.filter((e) => /wages/i.test(e.reason))
+    expect(wageEntries.length).toBe(10)
+    for (const entry of wageEntries) expect(entry.credits).toBeLessThan(0)
   })
 })
 

@@ -9,6 +9,38 @@ means here.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-26
+
+**M3 begins — guilds and crew hiring.** The four aboard used to be a fact of the
+world. They are now a decision with a running cost.
+
+### Added
+
+- **Four guilds** (§6.1), with standing tracked against *all* of them rather
+  than only your own, because delivering for the Institute is not neutral to the
+  Combine. Standing moves on outcomes — delivered, delivered late, abandoned —
+  and is banded into something a person would actually say. The desk is
+  Wrightworks; §10.1's four-way opening choice stays M6's job.
+- **A hiring hall at every port that has one.** Six new people in the registry,
+  standing where they stand: Wrightworks' home yard at Tranquillity carries the
+  deep bench §6.1 promises, Gateway the general trade. Wanting a particular
+  person is a reason to fly somewhere.
+- **Wages**, drawn on the day roll — an event, never a rate, because money is a
+  stock and catch-up must never integrate it. ~1,283 cr/day for four, about 8%
+  of a Luna round trip's net.
+- **Berths.** The Kestrel has drawn six bunks for a crew of four since M1
+  without anything enforcing it. Now that spare pair is the room to hire into.
+- **Severance** under a guild with a wage floor: the union card is worth
+  something on the way out as well as on the way in.
+
+### Changed
+
+- `content.crew` is the whole person registry now — everyone aboard *and*
+  everyone in a hall — so `startingCrew()` and `crewInHall()` say which is meant.
+- The money invariant changed shape. "Credits never move during catch-up" was
+  true until there was a payroll; the property that actually matters is that
+  forty days in one jump equals forty days one at a time.
+
 ## [0.4.1] — 2026-07-26
 
 ### Fixed
