@@ -53,7 +53,11 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir -p _site
-          cp -r docs/index.html docs/sw.js docs/img _site/
+          cp -r docs/index.html docs/changelog.html docs/sw.js docs/img _site/
+          # The mockups ship as the HTML they were pitched from, not as
+          # screenshots of it: the changelog links to them so a decision can be
+          # read in the form it was actually made in.
+          cp -r docs/mockups _site/
           cp -r apps/web/dist _site/play
           find _site -type f | sort | sed 's/^/  /'
 

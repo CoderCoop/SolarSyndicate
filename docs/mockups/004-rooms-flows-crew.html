@@ -1,0 +1,1428 @@
+<title>Rooms, not glyphs</title>
+<style>
+  :root {
+    --bg: #0b1015;
+    --bg-raised: #111a22;
+    --bg-sunken: #080d12;
+    --line: #1e2d3a;
+    --line-bright: #2c4256;
+    --ink: #c9d8e3;
+    --ink-dim: #7d95a8;
+    --ink-faint: #4e6373;
+    --cyan: #4fd1d9;
+    --amber: #e8a33d;
+    --red: #e5675f;
+    --green: #6fcf8f;
+    --blue: #6f9fe0;
+    --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* This is a pitch for an existing product with its own dark technical
+     palette, so it commits to that world rather than offering a light theme
+     that the game itself does not have. */
+  html { color-scheme: dark; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      linear-gradient(rgba(79, 209, 217, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79, 209, 217, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 56px 22px 100px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+
+  h1 {
+    margin: 0 0 18px;
+    font-size: clamp(30px, 6vw, 46px);
+    line-height: 1.06;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 25px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  p { margin: 0 0 15px; max-width: 66ch; }
+  .lede { font-size: 18px; color: var(--ink-dim); max-width: 62ch; }
+  strong { color: #e4eef5; font-weight: 600; }
+
+  section { margin-top: 66px; }
+
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--line-bright), transparent);
+    margin: 0 0 26px;
+  }
+
+  /* --- device frame: mockups shown at true phone width --- */
+  .stage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    align-items: flex-start;
+    margin: 26px 0 0;
+  }
+
+  .phone {
+    flex: 0 0 auto;
+    width: 358px;
+    max-width: 100%;
+    border: 1px solid var(--line-bright);
+    border-radius: 14px;
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+
+  .phone__bar {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 13px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-sunken);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .phone__bar b { color: var(--cyan); font-weight: 600; letter-spacing: 0.04em; }
+  .phone__bar span { margin-left: auto; }
+
+  .aside {
+    flex: 1 1 260px;
+    min-width: 250px;
+  }
+
+  .aside p { font-size: 14.5px; }
+
+  /* --- deck rows inside the phone --- */
+  .deckrow { border-bottom: 1px solid var(--line); }
+  .deckrow:last-child { border-bottom: 0; }
+
+  .deckrow__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px 5px;
+  }
+
+  .deckrow__n {
+    width: 20px; height: 20px;
+    display: grid; place-items: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    border: 1px solid var(--line-bright);
+    border-radius: 4px;
+  }
+
+  .deckrow__name { font-size: 14px; font-weight: 600; flex: 1; }
+
+  .deckrow__kw {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+
+  .deckrow svg { display: block; width: 100%; height: auto; }
+
+  /* --- shared svg vocabulary for the interiors --- */
+  .wall { fill: #0d151c; }
+  .rib { stroke: #16222c; stroke-width: 1; }
+  .tray { fill: #0a1219; stroke: var(--line); stroke-width: 0.8; }
+  .grate { stroke: #1a2833; stroke-width: 1; }
+  .floor { stroke: var(--line-bright); stroke-width: 1.2; }
+  .kit { fill: #101d26; stroke: #6f93ab; stroke-width: 1.1; stroke-linejoin: round; }
+  .kit-line { stroke: #6f93ab; stroke-width: 0.9; fill: none; stroke-linecap: round; }
+  .kit-faint { stroke: #40606f; stroke-width: 0.8; fill: none; }
+  .pipe { stroke: #3f6272; stroke-width: 1.6; fill: none; stroke-linecap: round; }
+  .warm { fill: rgba(232, 163, 61, 0.14); stroke: #c69256; stroke-width: 1.1; }
+  .warm-line { stroke: #c69256; stroke-width: 0.9; fill: none; }
+  .grow { fill: rgba(111, 207, 143, 0.3); stroke: none; }
+  .lamp { stroke: rgba(232, 163, 61, 0.6); stroke-width: 1.6; stroke-linecap: round; }
+  .hot { fill: rgba(232, 120, 61, 0.16); stroke: #cf8f6b; stroke-width: 1.1; }
+  .glow { fill: rgba(232, 120, 61, 0.5); }
+  .person { fill: #16242e; stroke: var(--cyan); stroke-width: 1.1; stroke-linejoin: round; }
+  .person-off { stroke: var(--amber); }
+  .person-sleep { stroke: var(--ink-faint); }
+  .tag {
+    font-family: var(--mono);
+    font-size: 6.5px;
+    letter-spacing: 0.08em;
+    fill: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  .tag-lit { fill: var(--cyan); }
+  .tag-bad { fill: var(--red); }
+  .hit { fill: transparent; cursor: pointer; }
+  .hit:hover + .halo, .hit:focus-visible + .halo { opacity: 1; }
+  .halo {
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 2.5;
+    opacity: 0;
+    transition: opacity 160ms ease;
+    pointer-events: none;
+  }
+
+  /* --- the detail card --- */
+  .card {
+    margin: 12px;
+    padding: 13px 14px 14px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--cyan);
+    border-radius: 9px;
+  }
+
+  .card__top { display: flex; align-items: baseline; gap: 8px; }
+  .card__name { font-size: 14.5px; font-weight: 600; flex: 1; }
+  .card__kw { font-family: var(--mono); font-size: 12.5px; color: var(--red); }
+
+  .bar { height: 4px; background: #16222c; border-radius: 2px; margin: 9px 0 5px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 2px; }
+
+  .card__meta {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+
+  .card__body { margin: 9px 0 0; font-size: 13px; color: var(--ink-dim); line-height: 1.5; }
+
+  .card__acts { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  .btn {
+    font: inherit;
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line-bright);
+    background: var(--bg-raised);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .btn--go { border-color: var(--cyan); color: var(--cyan); }
+
+  .chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--line-bright);
+    color: var(--ink-faint);
+  }
+  .chip--crit { border-color: #6b3b39; color: #c8817c; }
+
+  /* --- comparison table --- */
+  .tblwrap { overflow-x: auto; margin-top: 22px; }
+  table { border-collapse: collapse; width: 100%; min-width: 540px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .yes { color: var(--green); }
+  .no { color: var(--red); }
+
+  .verdict {
+    margin-top: 26px;
+    padding: 20px 22px;
+    border: 1px solid var(--cyan);
+    border-radius: 11px;
+    background: linear-gradient(180deg, rgba(79, 209, 217, 0.07), transparent);
+  }
+  .verdict h3 { color: var(--cyan); font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+  .verdict p:last-child { margin-bottom: 0; }
+
+  .note {
+    font-size: 13.5px;
+    color: var(--ink-faint);
+    border-left: 2px solid var(--line-bright);
+    padding-left: 14px;
+    margin: 20px 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Solar Syndicate · ship view, second pass</p>
+  <h1>Rooms, not glyphs</h1>
+  <p class="lede">
+    The first pass drew each component as an abstract mark. It was honest and
+    it generated from data — but a cylinder reads as <em>a cylinder</em>, not as
+    a CO₂ scrubber you could walk up to and service. Four things follow: rooms
+    that look like rooms, machines you can tap, the flow overlay replaced by a
+    real diagram covering every network, and a crew tab that shows the people.
+  </p>
+
+  <!-- ============================================================ -->
+  <section>
+    <p class="eyebrow">The problem, stated plainly</p>
+    <h2>Abstraction was doing the wrong job</h2>
+    <div class="rule"></div>
+    <p>
+      Glyphs were sized by importance and drawn as primitives, so a reactor and
+      a spares locker differed in scale but not in <em>kind</em>. Nothing gave
+      the room a floor, a ceiling, or a sense of how big a person is next to a
+      scrubber. And with no way to tap a specific machine, the drawing was a
+      decoration sitting above the list that did the real work.
+    </p>
+    <p>
+      Three fixes, in order of how much they matter: draw the room as a space
+      with equipment standing in it; put a human figure in that space so
+      everything has scale; make every machine a target you can hit.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <p class="eyebrow">Direction A</p>
+    <h2>Elevation</h2>
+    <div class="rule"></div>
+    <p>
+      The room seen side-on, as a technical elevation: back wall with structural
+      ribs, conduit tray at the ceiling, grated floor. Equipment stands on the
+      floor or hangs off the wall, drawn at its real proportions. A crew member
+      is a 1.7&nbsp;m silhouette, which sets the scale for everything else.
+    </p>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone__bar"><b>Ariadne</b> Kestrel-class <span>D6 04:12</span></div>
+
+        <!-- ---------------- Life Support ---------------- -->
+        <div class="deckrow">
+          <div class="deckrow__head">
+            <span class="deckrow__n">2</span>
+            <span class="deckrow__name">Life Support</span>
+            <span class="deckrow__kw">−9.9 kW</span>
+          </div>
+          <svg viewBox="0 0 340 152" role="img" aria-label="Life Support: three scrubber columns, hydroponics rack, water recycler. Mira Sandoval on watch.">
+            <rect class="wall" x="0" y="0" width="340" height="152"/>
+            <g class="rib">
+              <line x1="46" y1="10" x2="46" y2="140"/><line x1="112" y1="10" x2="112" y2="140"/>
+              <line x1="178" y1="10" x2="178" y2="140"/><line x1="244" y1="10" x2="244" y2="140"/>
+              <line x1="310" y1="10" x2="310" y2="140"/>
+            </g>
+            <!-- ceiling conduit tray -->
+            <rect class="tray" x="0" y="0" width="340" height="11"/>
+            <g class="kit-faint">
+              <line x1="0" y1="4" x2="340" y2="4"/><line x1="0" y1="7.5" x2="340" y2="7.5"/>
+            </g>
+            <!-- floor -->
+            <line class="floor" x1="0" y1="140" x2="340" y2="140"/>
+            <g class="grate">
+              <line x1="0" y1="146" x2="340" y2="146"/>
+              <line x1="14" y1="140" x2="14" y2="152"/><line x1="44" y1="140" x2="44" y2="152"/>
+              <line x1="74" y1="140" x2="74" y2="152"/><line x1="104" y1="140" x2="104" y2="152"/>
+              <line x1="134" y1="140" x2="134" y2="152"/><line x1="164" y1="140" x2="164" y2="152"/>
+              <line x1="194" y1="140" x2="194" y2="152"/><line x1="224" y1="140" x2="224" y2="152"/>
+              <line x1="254" y1="140" x2="254" y2="152"/><line x1="284" y1="140" x2="284" y2="152"/>
+              <line x1="314" y1="140" x2="314" y2="152"/>
+            </g>
+
+            <!-- CO2 scrubber: two amine beds, failed -->
+            <g>
+              <path class="pipe" d="M22 52 V11 M44 52 V11"/>
+              <rect class="kit" x="10" y="52" width="26" height="82" rx="3" style="stroke:#e5675f;fill:rgba(229,103,95,0.1)"/>
+              <rect class="kit" x="34" y="52" width="26" height="82" rx="3" style="stroke:#e5675f;fill:rgba(229,103,95,0.1)"/>
+              <g class="kit-line" style="stroke:#e5675f">
+                <line x1="12" y1="70" x2="34" y2="70"/><line x1="12" y1="86" x2="34" y2="86"/>
+                <line x1="12" y1="102" x2="34" y2="102"/>
+                <line x1="36" y1="70" x2="58" y2="70"/><line x1="36" y1="86" x2="58" y2="86"/>
+                <line x1="36" y1="102" x2="58" y2="102"/>
+              </g>
+              <rect class="kit" x="6" y="134" width="58" height="6" style="stroke:#e5675f"/>
+              <path d="M10 52 L60 134 M60 52 L10 134" stroke="#e5675f" stroke-width="1.6" fill="none"/>
+              <text class="tag tag-bad" x="35" y="48" text-anchor="middle">CO₂ SCRUBBER · FAILED</text>
+              <rect class="hit" x="4" y="44" width="62" height="98"/>
+              <rect class="halo" x="4" y="44" width="62" height="98" rx="4"/>
+            </g>
+
+            <!-- O2 electrolysis stack -->
+            <g>
+              <path class="pipe" d="M92 60 V11"/>
+              <rect class="kit" x="76" y="60" width="34" height="74" rx="2"/>
+              <g class="kit-line">
+                <line x1="80" y1="72" x2="106" y2="72"/><line x1="80" y1="84" x2="106" y2="84"/>
+                <line x1="80" y1="96" x2="106" y2="96"/><line x1="80" y1="108" x2="106" y2="108"/>
+              </g>
+              <circle class="kit-line" cx="93" cy="122" r="6"/>
+              <line class="kit-line" x1="93" y1="116" x2="93" y2="128"/>
+              <rect class="kit" x="72" y="134" width="42" height="6"/>
+              <text class="tag" x="93" y="56" text-anchor="middle">O₂ ELECTROLYSIS</text>
+              <rect class="hit" x="70" y="52" width="46" height="90"/>
+              <rect class="halo" x="70" y="52" width="46" height="90" rx="4"/>
+            </g>
+
+            <!-- Water recycler: wall-mounted with a pump wheel -->
+            <g>
+              <rect class="kit" x="124" y="66" width="44" height="46" rx="2"/>
+              <circle class="kit-line" cx="136" cy="89" r="8"/>
+              <line class="kit-line" x1="136" y1="81" x2="136" y2="97"/>
+              <line class="kit-line" x1="128" y1="89" x2="144" y2="89"/>
+              <g class="kit-line">
+                <line x1="150" y1="76" x2="164" y2="76"/><line x1="150" y1="84" x2="164" y2="84"/>
+                <line x1="150" y1="92" x2="164" y2="92"/>
+              </g>
+              <path class="pipe" d="M146 112 V132 H120"/>
+              <text class="tag" x="146" y="62" text-anchor="middle">WATER RECYCLER</text>
+              <rect class="hit" x="118" y="58" width="56" height="60"/>
+              <rect class="halo" x="118" y="58" width="56" height="60" rx="4"/>
+            </g>
+
+            <!-- Hydroponics rack: three lit shelves -->
+            <g>
+              <rect class="kit" x="234" y="44" width="98" height="90" rx="2"/>
+              <g>
+                <line class="lamp" x1="240" y1="54" x2="326" y2="54"/>
+                <rect class="grow" x="240" y="60" width="86" height="8"/>
+                <line class="lamp" x1="240" y1="82" x2="326" y2="82"/>
+                <rect class="grow" x="240" y="88" width="86" height="8"/>
+                <line class="lamp" x1="240" y1="110" x2="326" y2="110"/>
+                <rect class="grow" x="240" y="116" width="86" height="8"/>
+              </g>
+              <rect class="kit" x="230" y="134" width="106" height="6"/>
+              <text class="tag" x="283" y="40" text-anchor="middle">HYDROPONICS RACK</text>
+              <rect class="hit" x="228" y="32" width="110" height="110"/>
+              <rect class="halo" x="228" y="32" width="110" height="110" rx="4"/>
+            </g>
+
+            <!-- Sandoval, on watch at the recycler -->
+            <g>
+              <circle class="person" cx="196" cy="78" r="6"/>
+              <path class="person" d="M196 85 L188 96 L188 118 L192 118 L193 140 L199 140 L200 118 L204 118 L204 96 Z"/>
+              <path class="person" d="M188 99 L180 108" fill="none"/>
+              <text class="tag tag-lit" x="196" y="72" text-anchor="middle">SANDOVAL</text>
+              <rect class="hit" x="176" y="66" width="42" height="78"/>
+              <rect class="halo" x="176" y="66" width="42" height="78" rx="4"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- ---------------- Quarters ---------------- -->
+        <div class="deckrow">
+          <div class="deckrow__head">
+            <span class="deckrow__n">1</span>
+            <span class="deckrow__name">Quarters</span>
+            <span class="deckrow__kw">−2.6 kW</span>
+          </div>
+          <svg viewBox="0 0 340 132" role="img" aria-label="Crew quarters: six bunks, galley, table. Okonkwo asleep, Berg off watch.">
+            <rect class="wall" x="0" y="0" width="340" height="132"/>
+            <g class="rib">
+              <line x1="60" y1="10" x2="60" y2="120"/><line x1="150" y1="10" x2="150" y2="120"/>
+              <line x1="250" y1="10" x2="250" y2="120"/>
+            </g>
+            <rect class="tray" x="0" y="0" width="340" height="9"/>
+            <line class="floor" x1="0" y1="120" x2="340" y2="120"/>
+            <g class="grate">
+              <line x1="0" y1="126" x2="340" y2="126"/>
+              <line x1="20" y1="120" x2="20" y2="132"/><line x1="60" y1="120" x2="60" y2="132"/>
+              <line x1="100" y1="120" x2="100" y2="132"/><line x1="140" y1="120" x2="140" y2="132"/>
+              <line x1="180" y1="120" x2="180" y2="132"/><line x1="220" y1="120" x2="220" y2="132"/>
+              <line x1="260" y1="120" x2="260" y2="132"/><line x1="300" y1="120" x2="300" y2="132"/>
+            </g>
+
+            <!-- Six bunks, stacked two high in three columns. Two occupied. -->
+            <g>
+              <!-- occupied: Okonkwo asleep, lower left -->
+              <rect class="warm" x="10" y="76" width="66" height="30" rx="2"/>
+              <rect class="warm-line" x="13" y="80" width="12" height="22" fill="rgba(232,163,61,0.2)"/>
+              <path class="person person-sleep" d="M32 96 h34 a5 5 0 0 1 0 8 h-34 z"/>
+              <circle class="person person-sleep" cx="28" cy="100" r="4.5"/>
+              <text class="tag" x="43" y="72" text-anchor="middle">OKONKWO · ASLEEP</text>
+
+              <rect class="warm" x="10" y="42" width="66" height="30" rx="2"/>
+              <rect class="warm-line" x="13" y="46" width="12" height="22"/>
+
+              <rect class="warm" x="84" y="76" width="66" height="30" rx="2"/>
+              <rect class="warm-line" x="87" y="80" width="12" height="22"/>
+              <rect class="warm" x="84" y="42" width="66" height="30" rx="2"/>
+              <rect class="warm-line" x="87" y="46" width="12" height="22"/>
+
+              <rect class="warm" x="158" y="76" width="66" height="30" rx="2"/>
+              <rect class="warm-line" x="161" y="80" width="12" height="22"/>
+              <rect class="warm" x="158" y="42" width="66" height="30" rx="2"/>
+              <rect class="warm-line" x="161" y="46" width="12" height="22"/>
+              <text class="tag" x="191" y="38" text-anchor="middle">4 BUNKS FREE</text>
+              <rect class="hit" x="6" y="34" width="222" height="78"/>
+              <rect class="halo" x="6" y="34" width="222" height="78" rx="4"/>
+            </g>
+
+            <!-- Galley block + the one table, Berg off watch at it -->
+            <g>
+              <rect class="kit" x="240" y="52" width="46" height="30" rx="2"/>
+              <g class="kit-line">
+                <line x1="244" y1="60" x2="282" y2="60"/><line x1="244" y1="68" x2="282" y2="68"/>
+                <line x1="244" y1="76" x2="282" y2="76"/>
+              </g>
+              <text class="tag" x="263" y="48" text-anchor="middle">GALLEY</text>
+              <rect class="hit" x="236" y="42" width="54" height="46"/>
+              <rect class="halo" x="236" y="42" width="54" height="46" rx="4"/>
+            </g>
+            <g>
+              <line class="warm-line" x1="240" y1="102" x2="330" y2="102" stroke-width="2.4"/>
+              <line class="warm-line" x1="252" y1="102" x2="252" y2="120"/>
+              <line class="warm-line" x1="318" y1="102" x2="318" y2="120"/>
+              <circle class="person person-off" cx="300" cy="82" r="6"/>
+              <path class="person person-off" d="M300 89 L292 99 L292 102 L308 102 L308 99 Z"/>
+              <path class="person person-off" d="M294 102 L294 120 M306 102 L306 120" fill="none"/>
+              <text class="tag" x="300" y="76" text-anchor="middle">BERG · OFF</text>
+              <rect class="hit" x="284" y="70" width="34" height="56"/>
+              <rect class="halo" x="284" y="70" width="34" height="56" rx="4"/>
+            </g>
+          </svg>
+        </div>
+
+        <!-- ---------------- Reactor ---------------- -->
+        <div class="deckrow">
+          <div class="deckrow__head">
+            <span class="deckrow__n">5</span>
+            <span class="deckrow__name">Reactor</span>
+            <span class="deckrow__kw">+24.9 kW</span>
+          </div>
+          <svg viewBox="0 0 340 128" role="img" aria-label="Reactor deck: Beacon-4 fission plant behind its shadow shield, fold-out solar wing stowed.">
+            <rect class="wall" x="0" y="0" width="340" height="128"/>
+            <g class="rib"><line x1="70" y1="8" x2="70" y2="116"/><line x1="270" y1="8" x2="270" y2="116"/></g>
+            <rect class="tray" x="0" y="0" width="340" height="9"/>
+            <line class="floor" x1="0" y1="116" x2="340" y2="116"/>
+            <g class="grate">
+              <line x1="0" y1="122" x2="340" y2="122"/>
+              <line x1="30" y1="116" x2="30" y2="128"/><line x1="80" y1="116" x2="80" y2="128"/>
+              <line x1="130" y1="116" x2="130" y2="128"/><line x1="180" y1="116" x2="180" y2="128"/>
+              <line x1="230" y1="116" x2="230" y2="128"/><line x1="280" y1="116" x2="280" y2="128"/>
+              <line x1="330" y1="116" x2="330" y2="128"/>
+            </g>
+
+            <!-- Shadow shield: the wedge that makes the rest of the ship habitable -->
+            <g>
+              <path class="kit" d="M24 30 H150 L136 62 H38 Z" style="fill:#16222c"/>
+              <g class="kit-faint">
+                <line x1="34" y1="38" x2="142" y2="38"/><line x1="36" y1="46" x2="140" y2="46"/>
+                <line x1="38" y1="54" x2="138" y2="54"/>
+              </g>
+              <text class="tag" x="87" y="26" text-anchor="middle">SHADOW SHIELD</text>
+              <rect class="hit" x="20" y="20" width="136" height="48"/>
+              <rect class="halo" x="20" y="20" width="136" height="48" rx="4"/>
+            </g>
+
+            <!-- Beacon-4 core -->
+            <g>
+              <rect class="hot" x="46" y="66" width="82" height="46" rx="4"/>
+              <circle class="glow" cx="87" cy="89" r="12"/>
+              <circle class="kit-line" cx="87" cy="89" r="17" style="stroke:#cf8f6b"/>
+              <path class="pipe" d="M128 78 H176 V116" style="stroke:#cf8f6b"/>
+              <rect class="kit" x="42" y="112" width="90" height="4" style="stroke:#cf8f6b"/>
+              <text class="tag" x="87" y="126" text-anchor="middle" style="fill:#cf8f6b">BEACON-4 · 79%</text>
+              <rect class="hit" x="38" y="62" width="98" height="56"/>
+              <rect class="halo" x="38" y="62" width="98" height="56" rx="4"/>
+            </g>
+
+            <!-- Fold-out solar wing, stowed against the hull -->
+            <g>
+              <rect class="kit" x="230" y="42" width="18" height="66" rx="2"/>
+              <g class="kit-line">
+                <line x1="252" y1="46" x2="252" y2="104"/><line x1="262" y1="46" x2="262" y2="104"/>
+                <line x1="272" y1="46" x2="272" y2="104"/><line x1="282" y1="46" x2="282" y2="104"/>
+                <line x1="292" y1="46" x2="292" y2="104"/><line x1="302" y1="46" x2="302" y2="104"/>
+              </g>
+              <rect class="kit" x="248" y="42" width="58" height="66" rx="1"/>
+              <text class="tag" x="268" y="38" text-anchor="middle">SOLAR WING · STOWED</text>
+              <rect class="hit" x="226" y="32" width="86" height="82"/>
+              <rect class="halo" x="226" y="32" width="86" height="82" rx="4"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="aside">
+        <h3>What changed</h3>
+        <p>
+          Every machine has a <strong>plinth on the floor</strong> and pipework
+          going somewhere. The scrubber is visibly two amine beds, not a
+          cylinder. The reactor sits behind a wedge labelled as the shadow
+          shield, which is the thing §3.1 says decides the whole deck layout.
+        </p>
+        <p>
+          Sandoval is a person standing at the recycler at roughly the right
+          height. Okonkwo is asleep <em>in a bunk</em>, drawn lying down;
+          Berg is off watch at the table. Activity reads from posture before
+          you get to colour.
+        </p>
+        <p>
+          <strong>Hover any machine</strong> to see the tap target. Every
+          station, every crew member, and the bunk block are all hittable.
+        </p>
+        <h3 style="margin-top:20px">The cost</h3>
+        <p>
+          Roughly twice the first pass. Still generated: each part supplies a
+          <em>fitting</em> (floor-standing, wall-mounted, rack) and a shape
+          routine. The room supplies wall, floor and ceiling. New parts still
+          land on the ship without an art commission.
+        </p>
+      </div>
+    </div>
+
+    <p class="note">
+      Decks are now ~130–150&nbsp;px on a phone rather than ~50. Seven of them
+      is about three screens of scrolling — which you said you wanted, and
+      which is what buys the room to draw anything at all.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <p class="eyebrow">Direction B</p>
+    <h2>Dimetric</h2>
+    <div class="rule"></div>
+    <p>
+      The same room with a floor plane in projection, so equipment has a top
+      and a side. More object-like, more game-like — and, being honest about
+      it, the option I would argue against.
+    </p>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone__bar"><b>Ariadne</b> Kestrel-class <span>D6 04:12</span></div>
+        <div class="deckrow">
+          <div class="deckrow__head">
+            <span class="deckrow__n">2</span>
+            <span class="deckrow__name">Life Support</span>
+            <span class="deckrow__kw">−9.9 kW</span>
+          </div>
+          <svg viewBox="0 0 340 152" role="img" aria-label="Life Support drawn in dimetric projection.">
+            <rect class="wall" x="0" y="0" width="340" height="152"/>
+            <!-- floor plane -->
+            <path d="M0 108 L64 78 H340 V152 H0 Z" fill="#0a1219" stroke="none"/>
+            <g class="grate" opacity="0.7">
+              <path d="M0 108 L64 78" fill="none"/>
+              <path d="M0 122 L64 92" fill="none"/><path d="M0 136 L64 106" fill="none"/>
+              <line x1="64" y1="78" x2="340" y2="78"/>
+              <line x1="120" y1="78" x2="56" y2="152"/><line x1="200" y1="78" x2="136" y2="152"/>
+              <line x1="280" y1="78" x2="216" y2="152"/>
+            </g>
+            <line class="floor" x1="0" y1="108" x2="64" y2="78"/>
+            <line class="floor" x1="64" y1="78" x2="340" y2="78"/>
+
+            <!-- scrubber, boxy with a visible top face -->
+            <g>
+              <path class="kit" d="M40 46 L62 36 L96 36 L96 44 L74 54 L40 54 Z" style="fill:#16242e"/>
+              <path class="kit" d="M40 54 V116 H74 V54 Z"/>
+              <path class="kit" d="M74 54 L96 44 V106 L74 116 Z" style="fill:#0c161d"/>
+              <g class="kit-line">
+                <line x1="44" y1="66" x2="70" y2="66"/><line x1="44" y1="80" x2="70" y2="80"/>
+                <line x1="44" y1="94" x2="70" y2="94"/>
+              </g>
+              <text class="tag" x="66" y="32" text-anchor="middle">CO₂ SCRUBBER</text>
+              <path class="hit" d="M40 36 H96 V116 H40 Z"/>
+              <rect class="halo" x="38" y="34" width="60" height="84" rx="4"/>
+            </g>
+
+            <!-- hydroponics as a rack seen at an angle -->
+            <g>
+              <path class="kit" d="M150 44 L180 30 L306 30 L306 40 L276 54 L150 54 Z" style="fill:#16242e"/>
+              <path class="kit" d="M150 54 V112 H276 V54 Z"/>
+              <path class="kit" d="M276 54 L306 40 V98 L276 112 Z" style="fill:#0c161d"/>
+              <g>
+                <line class="lamp" x1="156" y1="62" x2="270" y2="62"/>
+                <rect class="grow" x="156" y="66" width="114" height="7"/>
+                <line class="lamp" x1="156" y1="86" x2="270" y2="86"/>
+                <rect class="grow" x="156" y="90" width="114" height="7"/>
+              </g>
+              <text class="tag" x="228" y="26" text-anchor="middle">HYDROPONICS RACK</text>
+              <path class="hit" d="M150 30 H306 V112 H150 Z"/>
+              <rect class="halo" x="148" y="28" width="160" height="86" rx="4"/>
+            </g>
+
+            <!-- person, now needing a projected footprint to sit right -->
+            <g>
+              <ellipse cx="116" cy="130" rx="11" ry="4" fill="rgba(79,209,217,0.12)" stroke="none"/>
+              <circle class="person" cx="116" cy="94" r="6"/>
+              <path class="person" d="M116 101 L108 112 L108 128 L113 128 L114 130 L120 130 L120 112 Z"/>
+              <text class="tag tag-lit" x="116" y="88" text-anchor="middle">SANDOVAL</text>
+              <rect class="hit" x="100" y="82" width="34" height="54"/>
+              <rect class="halo" x="100" y="82" width="34" height="54" rx="4"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="aside">
+        <h3>Why I'd pass</h3>
+        <p>
+          Projection eats horizontal space — the same four machines no longer
+          fit across 358&nbsp;px, and the two that do are pushed apart by their
+          own depth. On a phone that means either fewer things visible or a
+          horizontal scroll, and horizontal scroll inside a vertical stack is a
+          bad trade.
+        </p>
+        <p>
+          It also makes every shape three faces instead of one. That triples the
+          drawing work per part and makes overlap ordering something you have to
+          think about each time you add a component — exactly the kind of
+          per-part attention the schematic approach was chosen to avoid.
+        </p>
+        <p>
+          It does look more like a game. If that is worth the above to you, say
+          so and I will build it — but it should be a deliberate trade, not a
+          default.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <p class="eyebrow">Tapping a station</p>
+    <h2>Detail comes to you</h2>
+    <div class="rule"></div>
+    <p>
+      Today, tapping a deck expands a list of every part in it and you go
+      hunting for the one you meant. Instead, tapping <em>the machine</em>
+      opens that machine, in place, directly beneath the room — so the thing
+      you touched and the thing you are reading are visibly connected.
+    </p>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone__bar"><b>Ariadne</b> Kestrel-class <span>D6 04:12</span></div>
+        <div class="deckrow">
+          <div class="deckrow__head">
+            <span class="deckrow__n">2</span>
+            <span class="deckrow__name">Life Support</span>
+            <span class="deckrow__kw">−9.9 kW</span>
+          </div>
+          <svg viewBox="0 0 340 92" role="img" aria-label="The scrubber selected within Life Support.">
+            <rect class="wall" x="0" y="0" width="340" height="92"/>
+            <rect class="tray" x="0" y="0" width="340" height="8"/>
+            <line class="floor" x1="0" y1="80" x2="340" y2="80"/>
+            <g class="grate">
+              <line x1="0" y1="86" x2="340" y2="86"/>
+              <line x1="30" y1="80" x2="30" y2="92"/><line x1="90" y1="80" x2="90" y2="92"/>
+              <line x1="150" y1="80" x2="150" y2="92"/><line x1="210" y1="80" x2="210" y2="92"/>
+              <line x1="270" y1="80" x2="270" y2="92"/><line x1="330" y1="80" x2="330" y2="92"/>
+            </g>
+            <!-- selected scrubber, held lit -->
+            <g>
+              <rect x="6" y="18" width="62" height="60" rx="4" fill="rgba(229,103,95,0.08)" stroke="#e5675f" stroke-width="1.4" stroke-dasharray="3 2.5"/>
+              <rect class="kit" x="12" y="24" width="22" height="50" rx="2" style="stroke:#e5675f;fill:rgba(229,103,95,0.1)"/>
+              <rect class="kit" x="36" y="24" width="22" height="50" rx="2" style="stroke:#e5675f;fill:rgba(229,103,95,0.1)"/>
+              <path d="M12 24 L58 74 M58 24 L12 74" stroke="#e5675f" stroke-width="1.4" fill="none"/>
+              <rect class="kit" x="8" y="74" width="52" height="5" style="stroke:#e5675f"/>
+            </g>
+            <g opacity="0.42">
+              <rect class="kit" x="90" y="30" width="30" height="44" rx="2"/>
+              <rect class="kit" x="86" y="74" width="38" height="5"/>
+              <rect class="kit" x="150" y="36" width="40" height="32" rx="2"/>
+              <rect class="kit" x="230" y="26" width="94" height="48" rx="2"/>
+              <line class="lamp" x1="236" y1="34" x2="318" y2="34"/>
+              <rect class="grow" x="236" y="38" width="82" height="7"/>
+              <line class="lamp" x1="236" y1="54" x2="318" y2="54"/>
+              <rect class="grow" x="236" y="58" width="82" height="7"/>
+              <circle class="person" cx="206" cy="46" r="5"/>
+              <path class="person" d="M206 52 L200 60 L200 80 L212 80 L212 60 Z"/>
+            </g>
+          </svg>
+
+          <div class="card">
+            <div class="card__top">
+              <span class="card__name">CO₂ Scrubber</span>
+              <span class="card__kw">−1.2 kW</span>
+            </div>
+            <div class="bar"><i style="width:19%;background:var(--red)"></i></div>
+            <div class="card__meta">19% critical · failed · amine bed 2</div>
+            <p class="card__body">
+              Amine-bed scrubber, ISS CDRA lineage. Removes roughly 1&nbsp;kg of
+              CO₂ per crew per day, and wears faster than anything else aboard.
+            </p>
+            <div class="chips">
+              <span class="chip chip--crit">critical</span>
+              <span class="chip">not switchable</span>
+              <span class="chip">2 spares</span>
+            </div>
+            <div class="card__acts">
+              <button class="btn btn--go">Order repair · 13 h</button>
+              <button class="btn">Show in flows</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <h3>Three things it fixes</h3>
+        <p>
+          <strong>You touched the thing you meant.</strong> No scanning a list
+          of four to find the scrubber you were already looking at.
+        </p>
+        <p>
+          <strong>The failure is where the failure is.</strong> The struck-out
+          machine and the red condition bar are ten pixels apart, not one
+          screen apart.
+        </p>
+        <p>
+          <strong>It has somewhere to grow.</strong> "Show in flows" jumps to
+          this part in the flow diagram. Later: service history, the crew member
+          who last touched it, what it will cost to replace.
+        </p>
+        <p>
+          The deck-level list stays reachable — tapping the deck header still
+          expands everything, which is what you want when you are auditing
+          rather than fixing.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <p class="eyebrow">The overlay question</p>
+    <h2>Split the flows out</h2>
+    <div class="rule"></div>
+    <p>
+      You are right, and the reason is structural rather than cosmetic. Three
+      parallel lines in a 12-unit margin can encode <em>how much</em> passes
+      each deck, and nothing else. They cannot show what connects to what,
+      because there is no room to route an edge sideways — so every link goes
+      to the same place and the picture answers a question nobody asked.
+    </p>
+    <p>
+      Topology is the whole point of a flow view. It needs its own canvas.
+    </p>
+
+    <p>
+      And if it is going to be a flow view, it should be <strong>every</strong>
+      network — not just power. The Life tab already lists what the ship
+      tracks; the flow view should be the same list, seen as connections
+      instead of levels. One channel per gauge, plus power, which lives in the
+      status bar rather than on Life.
+    </p>
+
+    <div class="tblwrap" style="margin-bottom:26px">
+      <table>
+        <thead>
+          <tr><th>Life gauge</th><th>Flow channel</th><th>What the diagram adds that a bar cannot</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>— <span style="font-weight:400;color:var(--ink-faint)">(status bar)</span></td><td>Power kW</td><td>Which loads to shed, ranked; the battery as a buffer, not a source</td></tr>
+          <tr><td>Cabin temperature</td><td>Heat kW</td><td>Every watt of draw reappearing as heat the radiators must reject</td></tr>
+          <tr><td>Cabin CO₂</td><td>CO₂ kg/day</td><td>Crew producing against scrubbers plus hydroponics removing</td></tr>
+          <tr><td>Oxygen</td><td>O₂ kg/day</td><td>Electrolysis and hydroponics against four people breathing</td></tr>
+          <tr><td>Water</td><td>Water kg/day</td><td><strong>The recycle loop</strong> — 97% closure is an edge, not a level</td></tr>
+          <tr><td>Food</td><td>Food kg/day</td><td>How much of the diet the rack grows versus the stores</td></tr>
+          <tr><td>Propellant</td><td>Propellant kg</td><td>Tanks against a planned burn — the one channel that is a budget</td></tr>
+          <tr><td>Spares</td><td>Spares</td><td>Which open work orders are competing for the same locker</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone__bar"><b>Flows</b> power <span>−5.1 kW · 1d 9h</span></div>
+        <div style="display:flex;gap:5px;overflow-x:auto;padding:9px 11px;border-bottom:1px solid var(--line);background:var(--bg-sunken)">
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--cyan);color:var(--cyan);background:rgba(79,209,217,.1)">Power</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Heat</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">CO₂</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">O₂</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Water</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Food</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Prop</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Spares</span>
+        </div>
+        <svg viewBox="0 0 340 400" role="img" aria-label="Power flow diagram: sources at top, bus, consumers below, sized by draw.">
+          <defs>
+            <marker id="ar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L8 4 L0 8 Z" fill="#4fd1d9"/>
+            </marker>
+            <marker id="ar-r" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L8 4 L0 8 Z" fill="#e5675f"/>
+            </marker>
+          </defs>
+
+          <!-- sources -->
+          <g>
+            <rect x="16" y="14" width="128" height="40" rx="6" fill="rgba(232,120,61,0.1)" stroke="#cf8f6b" stroke-width="1.2"/>
+            <text x="80" y="32" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="#e0a184">BEACON-4</text>
+            <text x="80" y="46" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="#e0a184">+22.0 kW</text>
+          </g>
+          <g>
+            <rect x="164" y="14" width="112" height="40" rx="6" fill="rgba(79,209,217,0.08)" stroke="#4a8a95" stroke-width="1.2"/>
+            <text x="220" y="32" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="#7fc4cc">SOLAR WING</text>
+            <text x="220" y="46" text-anchor="middle" font-family="var(--mono)" font-size="12" fill="#7fc4cc">+2.9 kW</text>
+          </g>
+
+          <path d="M80 54 V78" stroke="#cf8f6b" stroke-width="7" fill="none" marker-end="url(#ar)"/>
+          <path d="M220 54 V70 H130" stroke="#4a8a95" stroke-width="2.4" fill="none"/>
+
+          <!-- the bus -->
+          <rect x="16" y="84" width="308" height="26" rx="4" fill="#0f1a22" stroke="var(--cyan)" stroke-width="1.3"/>
+          <text x="26" y="101" font-family="var(--mono)" font-size="10.5" fill="var(--cyan)">MAIN BUS</text>
+          <text x="314" y="101" text-anchor="end" font-family="var(--mono)" font-size="11.5" fill="var(--red)">−5.1 kW</text>
+
+          <!-- battery, drawn to the side because it buffers rather than consumes -->
+          <path d="M300 110 V132" stroke="#e5675f" stroke-width="3.4" fill="none" marker-end="url(#ar-r)"/>
+          <g>
+            <rect x="236" y="136" width="88" height="36" rx="6" fill="rgba(229,103,95,0.08)" stroke="#a05c58" stroke-width="1.2"/>
+            <text x="280" y="152" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="#d69590">BATTERY 84%</text>
+            <text x="280" y="165" text-anchor="middle" font-family="var(--mono)" font-size="10.5" fill="#d69590">draining</text>
+          </g>
+
+          <!-- consumers, bar width = draw -->
+          <g font-family="var(--mono)" font-size="10">
+            <!-- NTR preheat -->
+            <path d="M48 110 V150" stroke="#4fd1d9" stroke-width="6.2" fill="none" marker-end="url(#ar)"/>
+            <rect x="16" y="156" width="196" height="30" rx="5" fill="#101d26" stroke="var(--line-bright)"/>
+            <rect x="16" y="156" width="6" height="30" rx="2" fill="#4fd1d9"/>
+            <text x="32" y="169" fill="var(--ink)">NTR Preheat</text>
+            <text x="32" y="181" fill="var(--ink-faint)" font-size="9">Engines · low priority</text>
+            <text x="204" y="175" text-anchor="end" fill="var(--cyan)" font-size="12">−14.0</text>
+
+            <!-- hydroponics -->
+            <path d="M48 186 V204" stroke="#4fd1d9" stroke-width="2.6" fill="none" marker-end="url(#ar)"/>
+            <rect x="16" y="210" width="196" height="30" rx="5" fill="#101d26" stroke="var(--line-bright)"/>
+            <rect x="16" y="210" width="6" height="30" rx="2" fill="#6fcf8f"/>
+            <text x="32" y="223" fill="var(--ink)">Hydroponics Rack</text>
+            <text x="32" y="235" fill="var(--ink-faint)" font-size="9">Life Support · low</text>
+            <text x="204" y="229" text-anchor="end" fill="var(--cyan)" font-size="12">−4.2</text>
+
+            <!-- electrolysis -->
+            <path d="M48 240 V258" stroke="#4fd1d9" stroke-width="2.3" fill="none" marker-end="url(#ar)"/>
+            <rect x="16" y="264" width="196" height="30" rx="5" fill="#101d26" stroke="var(--line-bright)"/>
+            <rect x="16" y="264" width="6" height="30" rx="2" fill="#e5675f"/>
+            <text x="32" y="277" fill="var(--ink)">O₂ Electrolysis</text>
+            <text x="32" y="289" fill="var(--ink-faint)" font-size="9">Life Support · critical</text>
+            <text x="204" y="283" text-anchor="end" fill="var(--cyan)" font-size="12">−3.6</text>
+
+            <!-- habitation -->
+            <path d="M48 294 V312" stroke="#4fd1d9" stroke-width="1.9" fill="none" marker-end="url(#ar)"/>
+            <rect x="16" y="318" width="196" height="30" rx="5" fill="#101d26" stroke="var(--line-bright)"/>
+            <rect x="16" y="318" width="6" height="30" rx="2" fill="#e8a33d"/>
+            <text x="32" y="331" fill="var(--ink)">Habitation Systems</text>
+            <text x="32" y="343" fill="var(--ink-faint)" font-size="9">Quarters · normal</text>
+            <text x="204" y="337" text-anchor="end" fill="var(--cyan)" font-size="12">−2.6</text>
+
+            <text x="16" y="368" fill="var(--ink-faint)" font-size="9.5">+ 5 more drawing −4.6 kW total</text>
+            <text x="16" y="386" fill="var(--ink-faint)" font-size="9.5">tap any node to open it on the ship</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="aside">
+        <h3>What a standalone view can do</h3>
+        <p>
+          <strong>Rank by draw.</strong> The biggest consumer is at the top and
+          the link into it is the thickest. Finding what to switch off is one
+          glance, not a survey of seven decks.
+        </p>
+        <p>
+          <strong>Show the buffer honestly.</strong> The battery sits off to the
+          side with an arrow pointing <em>into</em> it or out, because it is
+          neither a source nor a load — it is the thing absorbing the
+          difference. The margin overlay had nowhere to put that.
+        </p>
+        <p>
+          <strong>Name names.</strong> Nodes are parts, not decks. "NTR Preheat
+          is eating your reactor" is a sentence the overlay could never form,
+          because it only ever knew per-deck totals.
+        </p>
+        <p>
+          <strong>Switch channel.</strong> Power, heat, water are three tabs on
+          one diagram rather than three colours competing in one margin.
+        </p>
+        <p>
+          And it links both ways: a node taps through to the machine on the
+          ship, and the machine's card has "Show in flows".
+        </p>
+      </div>
+    </div>
+
+    <p class="note">
+      Cost of removing the overlay: nothing is lost. Per-deck magnitude is
+      already printed in every deck header as a kW figure, which is the only
+      thing the overlay was successfully communicating.
+    </p>
+
+    <h3 style="margin-top:44px;font-size:20px">Why this is worth doing: water</h3>
+    <p>
+      Power is a fan-out, which a ranked list would almost handle. Water is a
+      <strong>loop</strong> — the recycler returns 97% of what the crew and the
+      electrolysis unit spend, and the tank only drains by the 3% that escapes
+      plus whatever the hydroponics locks up in plants. The Life tab reports
+      that as "86.1% loop closure", a number with no visible cause.
+    </p>
+    <p>
+      A diagram makes the cause the shape of the picture. Switch the recycler
+      off and the return edge disappears; the tank drain jumps from a trickle
+      to the full gross draw, and the three-week clock in its blurb becomes
+      something you can see starting.
+    </p>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone__bar"><b>Flows</b> water <span>−1.4 kg/day net</span></div>
+        <div style="display:flex;gap:5px;overflow-x:auto;padding:9px 11px;border-bottom:1px solid var(--line);background:var(--bg-sunken)">
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Power</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Heat</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">CO₂</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">O₂</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--blue);color:var(--blue);background:rgba(111,159,224,.12)">Water</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Food</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Prop</span>
+          <span style="flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">Spares</span>
+        </div>
+
+        <svg viewBox="0 0 340 330" role="img" aria-label="Water flow: tank supplies crew, electrolysis and hydroponics; the recycler returns 97 percent to the tank; losses and plant uptake drain 1.4 kg per day.">
+          <defs>
+            <marker id="wa" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L8 4 L0 8 Z" fill="#6f9fe0"/>
+            </marker>
+            <marker id="wa-dim" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L8 4 L0 8 Z" fill="#4e6373"/>
+            </marker>
+          </defs>
+
+          <!-- tank -->
+          <rect x="16" y="14" width="120" height="44" rx="6" fill="rgba(111,159,224,0.1)" stroke="var(--blue)" stroke-width="1.3"/>
+          <text x="76" y="31" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="#9dbdea">TANK</text>
+          <text x="76" y="46" text-anchor="middle" font-family="var(--mono)" font-size="12.5" fill="#9dbdea">792 kg</text>
+
+          <!-- distribution down the left -->
+          <path d="M76 58 V78" stroke="#6f9fe0" stroke-width="5.5" fill="none" marker-end="url(#wa)"/>
+          <text x="86" y="73" font-family="var(--mono)" font-size="9" fill="#7d95a8">20.6 kg/day gross</text>
+
+          <!-- consumers -->
+          <g font-family="var(--mono)" font-size="10">
+            <rect x="16" y="84" width="132" height="32" rx="5" fill="#101d26" stroke="var(--line-bright)"/>
+            <rect x="16" y="84" width="5" height="32" rx="2" fill="#6f9fe0"/>
+            <text x="30" y="97" fill="var(--ink)" font-size="11.5">Crew ×4</text>
+            <text x="30" y="109" fill="var(--ink-faint)" font-size="8.5">drinking, hygiene</text>
+            <text x="140" y="104" text-anchor="end" fill="#9dbdea" font-size="11.5">14.0</text>
+
+            <rect x="16" y="124" width="132" height="32" rx="5" fill="#101d26" stroke="var(--line-bright)"/>
+            <rect x="16" y="124" width="5" height="32" rx="2" fill="#e5675f"/>
+            <text x="30" y="137" fill="var(--ink)" font-size="11.5">O₂ Electrolysis</text>
+            <text x="30" y="149" fill="var(--ink-faint)" font-size="8.5">split for breathing O₂</text>
+            <text x="140" y="144" text-anchor="end" fill="#9dbdea" font-size="11.5">4.6</text>
+
+            <rect x="16" y="164" width="132" height="32" rx="5" fill="#101d26" stroke="var(--line-bright)"/>
+            <rect x="16" y="164" width="5" height="32" rx="2" fill="#6fcf8f"/>
+            <text x="30" y="177" fill="var(--ink)" font-size="11.5">Hydroponics</text>
+            <text x="30" y="189" fill="var(--ink-faint)" font-size="8.5">locked into plants</text>
+            <text x="140" y="184" text-anchor="end" fill="#9dbdea" font-size="11.5">2.0</text>
+          </g>
+
+          <!-- grey water gathers and goes to the recycler -->
+          <path d="M82 116 V124 M82 156 V164" stroke="#3f6272" stroke-width="1.4" fill="none"/>
+          <path d="M148 100 H176 V210 H150" stroke="#6f9fe0" stroke-width="4" fill="none" marker-end="url(#wa)"/>
+          <path d="M148 140 H176" stroke="#6f9fe0" stroke-width="2.4" fill="none"/>
+          <text x="182" y="150" font-family="var(--mono)" font-size="9" fill="#7d95a8">grey</text>
+          <text x="182" y="161" font-family="var(--mono)" font-size="9" fill="#7d95a8">water</text>
+
+          <!-- recycler -->
+          <rect x="30" y="196" width="120" height="42" rx="6" fill="rgba(111,159,224,0.08)" stroke="var(--blue)" stroke-width="1.3"/>
+          <text x="90" y="212" text-anchor="middle" font-family="var(--mono)" font-size="9.5" fill="#9dbdea">WATER RECYCLER</text>
+          <text x="90" y="228" text-anchor="middle" font-family="var(--mono)" font-size="11.5" fill="#9dbdea">97% closure · 68%</text>
+
+          <!-- THE RETURN EDGE: up the left margin, back into the tank -->
+          <path d="M30 217 H10 V26 H16" stroke="#6f9fe0" stroke-width="5" fill="none" marker-end="url(#wa)" stroke-dasharray="7 4"/>
+          <text x="14" y="128" font-family="var(--mono)" font-size="9" fill="#9dbdea" transform="rotate(-90 14 128)" text-anchor="middle">RECOVERED 18.1 kg/day</text>
+
+          <!-- losses -->
+          <path d="M150 226 H196" stroke="#4e6373" stroke-width="1.8" fill="none" marker-end="url(#wa-dim)"/>
+          <text x="202" y="223" font-family="var(--mono)" font-size="9" fill="#4e6373">vented 0.6</text>
+          <text x="202" y="234" font-family="var(--mono)" font-size="9" fill="#4e6373">brine 0.8</text>
+
+          <!-- the balance -->
+          <rect x="16" y="258" width="308" height="54" rx="6" fill="#0f1a22" stroke="var(--line-bright)"/>
+          <text x="28" y="277" font-family="var(--mono)" font-size="9.5" letter-spacing="0.12em" fill="var(--ink-faint)">NET</text>
+          <text x="28" y="295" font-family="var(--mono)" font-size="13" fill="#9dbdea">−1.4 kg/day · 566 days of tank</text>
+          <text x="28" y="307" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">recycler offline → −20.6/day → 38 days</text>
+          <text x="316" y="291" text-anchor="end" font-family="var(--mono)" font-size="22" fill="var(--green)">86%</text>
+          <text x="316" y="304" text-anchor="end" font-family="var(--mono)" font-size="8.5" fill="var(--ink-faint)">EFFECTIVE CLOSURE</text>
+        </svg>
+      </div>
+
+      <div class="aside">
+        <h3>The number gets a cause</h3>
+        <p>
+          "86.1% loop closure" on the Life tab is the recycler's 97% diluted by
+          the 2&nbsp;kg/day the hydroponics rack locks into plants — which is
+          not a loss at all, it is food. You cannot tell that from a gauge. You
+          can see it here, because the plant edge visibly leaves the loop.
+        </p>
+        <p>
+          The footer states the counterfactual outright: <strong>566 days of
+          tank now, 38 days with the recycler offline</strong>. That is the same
+          arithmetic the sim already does, said in the place where the decision
+          gets made.
+        </p>
+        <h3 style="margin-top:20px">Consistent grammar</h3>
+        <p>
+          Every channel uses the same shapes: <strong>sources</strong> at the
+          top, <strong>consumers</strong> ranked by magnitude, a
+          <strong>buffer</strong> off to one side, <strong>returns</strong> as a
+          dashed edge, and a net footer with the horizon in days. Learn it once
+          on power and every other channel reads for free.
+        </p>
+        <p>
+          Propellant is the exception worth calling out: its footer is a budget
+          against a planned burn rather than a rate, because "kg/day" is
+          meaningless for a tank that only empties during a manoeuvre.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <p class="eyebrow">The crew tab</p>
+    <h2>A, B and C are watches</h2>
+    <div class="rule"></div>
+    <p>
+      The three letters are the watch bill: three eight-hour shifts covering the
+      day. That is currently explained in a <code>title</code> tooltip, which on
+      a phone is explained to nobody. And of five skills and six attributes the
+      simulation tracks, the roster shows exactly one number — mechanics —
+      because M1 only used one.
+    </p>
+    <p>
+      Both are fixed the same way: show the clock, and show the person.
+    </p>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone__bar"><b>Crew</b> 4 aboard <span>D6 04:12</span></div>
+
+        <div style="padding:12px">
+          <!-- ---- one crew member, expanded ---- -->
+          <div style="border:1px solid var(--line-bright);border-radius:10px;background:var(--bg-sunken);overflow:hidden">
+
+            <div style="display:flex;align-items:center;gap:11px;padding:13px 13px 11px">
+              <span style="flex:none;width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--cyan);border-radius:50%;font-family:var(--mono);font-size:12px;color:var(--cyan)">DO</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column">
+                <strong style="font-size:15px">Dolores Okonkwo</strong>
+                <span style="font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint)">Chief Engineer · 51 yrs</span>
+              </span>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-align:right;line-height:1.35">ASLEEP<br><span style="color:var(--ink-dim)">Quarters</span></span>
+            </div>
+
+            <!-- The 24-hour watch strip. This is the whole answer to "what is B?" -->
+            <div style="padding:0 13px 4px">
+              <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--ink-faint);margin-bottom:4px">
+                <span>B WATCH</span><span>08:00 – 16:00</span>
+              </div>
+              <svg viewBox="0 0 314 30" style="display:block;width:100%;height:auto" role="img" aria-label="Okonkwo's day: asleep until 08:00, on watch 08:00 to 16:00, off watch 16:00 to 24:00. It is now 04:12.">
+                <!-- asleep 00-08 -->
+                <rect x="0" y="4" width="104.6" height="15" rx="2" fill="#141d25" stroke="#2c4256" stroke-width="0.8"/>
+                <text x="52" y="15" text-anchor="middle" font-family="var(--mono)" font-size="7.5" fill="#4e6373">ASLEEP</text>
+                <!-- on watch 08-16 -->
+                <rect x="104.6" y="4" width="104.6" height="15" rx="2" fill="rgba(79,209,217,0.16)" stroke="var(--cyan)" stroke-width="0.9"/>
+                <text x="157" y="15" text-anchor="middle" font-family="var(--mono)" font-size="7.5" fill="var(--cyan)">ON WATCH</text>
+                <!-- off 16-24 -->
+                <rect x="209.2" y="4" width="104.6" height="15" rx="2" fill="rgba(232,163,61,0.12)" stroke="#8a6634" stroke-width="0.8"/>
+                <text x="261" y="15" text-anchor="middle" font-family="var(--mono)" font-size="7.5" fill="#c69256">OFF</text>
+                <!-- now marker at 04:12 -->
+                <line x1="55" y1="0" x2="55" y2="23" stroke="#fff" stroke-width="1.3"/>
+                <path d="M51 0 H59 L55 4 Z" fill="#fff"/>
+                <text x="55" y="30" text-anchor="middle" font-family="var(--mono)" font-size="7" fill="#c9d8e3">04:12</text>
+                <g font-family="var(--mono)" font-size="6.5" fill="#4e6373">
+                  <text x="106" y="30">08</text><text x="211" y="30">16</text><text x="306" y="30">24</text>
+                </g>
+              </svg>
+            </div>
+
+            <p style="margin:8px 13px 0;font-size:12.5px;color:var(--ink-dim);font-style:italic;line-height:1.5">
+              Learned the trade on Belt salvage. Believes every failure announced
+              itself weeks earlier and nobody was listening.
+            </p>
+
+            <!-- Skills: five bars, best one called out -->
+            <div style="padding:13px 13px 0">
+              <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px">Skills · grow with use</div>
+              <div style="display:grid;gap:6px">
+                <div style="display:grid;grid-template-columns:74px 1fr 26px;align-items:center;gap:9px;font-size:12px">
+                  <span style="color:var(--cyan)">Mechanics</span>
+                  <span class="bar" style="margin:0"><i style="width:71%;background:var(--cyan)"></i></span>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--cyan);text-align:right">71</span>
+                </div>
+                <div style="display:grid;grid-template-columns:74px 1fr 26px;align-items:center;gap:9px;font-size:12px">
+                  <span style="color:var(--ink-dim)">Life support</span>
+                  <span class="bar" style="margin:0"><i style="width:34%;background:#41707c"></i></span>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-align:right">34</span>
+                </div>
+                <div style="display:grid;grid-template-columns:74px 1fr 26px;align-items:center;gap:9px;font-size:12px">
+                  <span style="color:var(--ink-dim)">Leadership</span>
+                  <span class="bar" style="margin:0"><i style="width:30%;background:#41707c"></i></span>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-align:right">30</span>
+                </div>
+                <div style="display:grid;grid-template-columns:74px 1fr 26px;align-items:center;gap:9px;font-size:12px">
+                  <span style="color:var(--ink-dim)">Piloting</span>
+                  <span class="bar" style="margin:0"><i style="width:15%;background:#41707c"></i></span>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-align:right">15</span>
+                </div>
+                <div style="display:grid;grid-template-columns:74px 1fr 26px;align-items:center;gap:9px;font-size:12px">
+                  <span style="color:var(--ink-dim)">Medicine</span>
+                  <span class="bar" style="margin:0"><i style="width:8%;background:#41707c"></i></span>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-align:right">8</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attributes: slow-changing, so pips rather than bars -->
+            <div style="padding:14px 13px 0">
+              <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px">Attributes · slow to change</div>
+              <svg viewBox="0 0 314 74" style="display:block;width:100%;height:auto" role="img" aria-label="Strength 6, dexterity 7, endurance 6, intellect 8, perception 7, resolve 6, each out of ten.">
+                <g font-family="var(--mono)" font-size="8" fill="#7d95a8">
+                  <text x="0" y="12">STR</text><text x="0" y="34">DEX</text><text x="0" y="56">END</text>
+                  <text x="164" y="12">INT</text><text x="164" y="34">PER</text><text x="164" y="56">RES</text>
+                </g>
+                <g>
+                  <!-- STR 6 -->
+                  <g>
+                    <rect x="30" y="5" width="98" height="8" rx="4" fill="#141d25"/>
+                    <rect x="30" y="5" width="58.8" height="8" rx="4" fill="#4a7d8a"/>
+                  </g>
+                  <g>
+                    <rect x="30" y="27" width="98" height="8" rx="4" fill="#141d25"/>
+                    <rect x="30" y="27" width="68.6" height="8" rx="4" fill="#4a7d8a"/>
+                  </g>
+                  <g>
+                    <rect x="30" y="49" width="98" height="8" rx="4" fill="#141d25"/>
+                    <rect x="30" y="49" width="58.8" height="8" rx="4" fill="#4a7d8a"/>
+                  </g>
+                  <g>
+                    <rect x="194" y="5" width="98" height="8" rx="4" fill="#141d25"/>
+                    <rect x="194" y="5" width="78.4" height="8" rx="4" fill="var(--cyan)"/>
+                  </g>
+                  <g>
+                    <rect x="194" y="27" width="98" height="8" rx="4" fill="#141d25"/>
+                    <rect x="194" y="27" width="68.6" height="8" rx="4" fill="#4a7d8a"/>
+                  </g>
+                  <g>
+                    <rect x="194" y="49" width="98" height="8" rx="4" fill="#141d25"/>
+                    <rect x="194" y="49" width="58.8" height="8" rx="4" fill="#4a7d8a"/>
+                  </g>
+                </g>
+                <g font-family="var(--mono)" font-size="9" fill="#c9d8e3">
+                  <text x="134" y="13">6</text><text x="134" y="35">7</text><text x="134" y="57">6</text>
+                  <text x="298" y="13" fill="var(--cyan)">8</text><text x="298" y="35">7</text><text x="298" y="57">6</text>
+                </g>
+              </svg>
+            </div>
+
+            <!-- Condition + assignment -->
+            <div style="padding:14px 13px 0">
+              <div style="display:grid;grid-template-columns:74px 1fr 34px;align-items:center;gap:9px;font-size:12px;margin-bottom:6px">
+                <span style="color:var(--ink-dim)">Health</span>
+                <span class="bar" style="margin:0"><i style="width:92%;background:var(--green)"></i></span>
+                <span style="font-family:var(--mono);font-size:11px;text-align:right">92</span>
+              </div>
+              <div style="display:grid;grid-template-columns:74px 1fr 34px;align-items:center;gap:9px;font-size:12px">
+                <span style="color:var(--ink-dim)">Fatigue</span>
+                <span class="bar" style="margin:0"><i style="width:47%;background:var(--amber)"></i></span>
+                <span style="font-family:var(--mono);font-size:11px;text-align:right">47</span>
+              </div>
+            </div>
+
+            <div style="margin:13px;padding:10px 12px;border:1px solid var(--line-bright);border-radius:7px;background:var(--bg-raised)">
+              <div style="font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px">Current assignment</div>
+              <div style="font-size:13px;color:var(--ink)">Repairing <strong style="color:var(--cyan)">CO₂ Scrubber</strong> — resumes 08:00</div>
+              <div style="font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:4px">9.4 of 26 h done · 71 mechanics → 1.05 h/h</div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:9px;padding:0 13px 13px">
+              <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)">Move to</span>
+              <div style="display:flex;gap:5px">
+                <span style="font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">A</span>
+                <span style="font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:5px;border:1px solid var(--cyan);color:var(--cyan);background:rgba(79,209,217,.1)">B</span>
+                <span style="font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-faint)">C</span>
+              </div>
+              <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-faint)">00 · 08 · 16</span>
+            </div>
+          </div>
+
+          <!-- ---- the other three, collapsed ---- -->
+          <div style="margin-top:10px;display:grid;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg-sunken)">
+              <span style="flex:none;width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--cyan);border-radius:50%;font-family:var(--mono);font-size:10px;color:var(--cyan)">IB</span>
+              <span style="flex:1;min-width:0">
+                <span style="display:block;font-size:13.5px;font-weight:600">Ines Ballard</span>
+                <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)">Captain · A watch · bridge</span>
+              </span>
+              <span style="font-family:var(--mono);font-size:10.5px;color:var(--cyan);text-align:right">ON WATCH<br><span style="color:var(--ink-faint)">88% eff.</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg-sunken)">
+              <span style="flex:none;width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--amber);border-radius:50%;font-family:var(--mono);font-size:10px;color:var(--amber)">MS</span>
+              <span style="flex:1;min-width:0">
+                <span style="display:block;font-size:13.5px;font-weight:600">Mira Sandoval</span>
+                <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)">Life Support Tech · C watch</span>
+              </span>
+              <span style="font-family:var(--mono);font-size:10.5px;color:var(--amber);text-align:right">OFF<br><span style="color:var(--ink-faint)">on at 16:00</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg-sunken)">
+              <span style="flex:none;width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--ink-faint);border-radius:50%;font-family:var(--mono);font-size:10px;color:var(--ink-faint)">TB</span>
+              <span style="flex:1;min-width:0">
+                <span style="display:block;font-size:13.5px;font-weight:600">Tomas Berg</span>
+                <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)">Medic · A watch · quarters</span>
+              </span>
+              <span style="font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);text-align:right">ASLEEP<br><span style="color:var(--ink-faint)">up at 08:00</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <h3>The watch strip does the explaining</h3>
+        <p>
+          One 24-hour bar per person: eight asleep, eight on, eight off, with a
+          marker for the current time. "B watch" stops being a letter and
+          becomes <em>the block that is lit</em>. You can see at a glance that
+          nobody covers 04:00 except the A watch, which is the actual decision
+          the bill is asking you to make.
+        </p>
+        <h3 style="margin-top:20px">Skills vs attributes</h3>
+        <p>
+          They are different things and should not look alike. <strong>Skills</strong>
+          run 0–100 and grow with use, so they get bars. <strong>Attributes</strong>
+          run 1–10 and barely move, so they get a compact grid, sorted so the
+          standout value is visible without reading all six.
+        </p>
+        <h3 style="margin-top:20px">Assignment, spelled out</h3>
+        <p>
+          Not just "Repairing CO₂ Scrubber" but how far in, how long left, and
+          <em>why this person is fast at it</em> — 71 mechanics turning into
+          1.05 labour-hours per hour. That is the coupling §4.2 promises, made
+          visible instead of implied.
+        </p>
+        <h3 style="margin-top:20px">One open, three folded</h3>
+        <p>
+          Four full cards will not fit a phone, and six will not fit anything.
+          One expanded at a time, the rest as a row each: name, watch, where
+          they are, what they are doing.
+        </p>
+      </div>
+    </div>
+
+    <p class="note">
+      This needs the sim to publish what it already knows: <code>CrewView</code>
+      currently exposes <code>mechanics</code> and nothing else of the stat
+      block. Widening it to all five skills and all six attributes is a
+      selector change, not a simulation change.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <p class="eyebrow">Side by side</p>
+    <h2>The trade</h2>
+    <div class="rule"></div>
+    <div class="tblwrap">
+      <table>
+        <thead>
+          <tr><th>&nbsp;</th><th>A · Elevation</th><th>B · Dimetric</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Reads as a room</td>
+            <td class="yes">Yes — floor, ceiling, human scale</td>
+            <td class="yes">Yes, and more object-like</td>
+          </tr>
+          <tr>
+            <td>Fits 358 px</td>
+            <td class="yes">Four machines plus a person</td>
+            <td class="no">Two, before depth pushes them apart</td>
+          </tr>
+          <tr>
+            <td>Per new part</td>
+            <td>One shape routine, one fitting</td>
+            <td class="no">Three faces plus overlap ordering</td>
+          </tr>
+          <tr>
+            <td>Crew posture</td>
+            <td class="yes">Standing, seated, lying in a bunk</td>
+            <td>Same, plus a ground shadow to sit right</td>
+          </tr>
+          <tr>
+            <td>Build</td>
+            <td>~2 days including the detail card</td>
+            <td class="no">~4–5, and slower thereafter</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="verdict">
+      <h3>Recommendation</h3>
+      <p>
+        <strong>A · Elevation, with tap-to-open station cards, and the flow
+        diagram split out into its own view.</strong>
+      </p>
+      <p>
+        Elevation gets you rooms that look like rooms while keeping the property
+        that made the first pass worth building — the picture comes out of the
+        same JSON as the simulation, so the ship can keep growing without an
+        artist in the loop. Dimetric buys atmosphere and costs the phone
+        viewport, which on a portrait mobile game is the wrong thing to spend.
+      </p>
+      <p>
+        The flow overlay goes away entirely. It becomes its own tab with
+        <strong>eight channels — one per Life gauge, plus power</strong> — a
+        real diagram with named nodes, ranked by magnitude, showing returns and
+        buffers that a bar gauge structurally cannot, and linked both ways to
+        the machines on the ship.
+      </p>
+      <p>
+        The Crew tab gets the same treatment: a 24-hour watch strip that makes
+        A/B/C self-explanatory, all five skills and all six attributes, and the
+        current assignment with its arithmetic shown.
+      </p>
+      <p style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:14.5px;color:var(--ink-dim)">
+        Roughly four days of work across three specs: room interiors and station
+        cards, the flow tab, and the crew tab. They are independent — say if you
+        want them in a different order, or one of them first to see how it lands.
+      </p>
+    </div>
+  </section>
+</div>

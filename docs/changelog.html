@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog — Solar Syndicate</title>
+<meta name="description" content="How Solar Syndicate has changed over time: what shipped, what it looked like, and why each decision went the way it did.">
+<link rel="icon" href="play/favicon.svg">
+<style>
+  :root{
+    --bg:#0b1015; --raised:#111a22; --sunken:#080d12;
+    --line:#1e2d3a; --line2:#2c4256;
+    --ink:#c9d8e3; --dim:#7d95a8; --faint:#4e6373;
+    --cyan:#4fd1d9; --amber:#e8a33d; --red:#e5675f; --green:#6fcf8f;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(rgba(79,209,217,.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(79,209,217,.03) 1px,transparent 1px);
+    background-size:32px 32px; background-attachment:fixed;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.25;letter-spacing:.01em}
+  p{margin:0 0 16px}
+  a{color:var(--cyan)}
+  code{font-family:var(--mono);font-size:.88em;
+    background:var(--sunken);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  .lede{font-size:18px;color:var(--dim)}
+  .muted{color:var(--faint);font-size:14px}
+
+  header{padding:64px 0 34px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 14px}
+  header h1{font-size:clamp(32px,6vw,46px);margin:0 0 14px}
+  header .lede{max-width:62ch}
+
+  nav.site{padding:16px 0;border-bottom:1px solid var(--line);font-size:15px}
+  nav.site a{margin-right:20px;text-decoration:none;color:var(--dim)}
+  nav.site a:hover{color:var(--cyan)}
+  nav.site a[aria-current]{color:var(--cyan)}
+
+  /*
+   * The spine. Entries hang off a single vertical rule so the thing reads as
+   * one continuous history rather than a stack of unrelated cards. It
+   * collapses on narrow screens, where a 20px gutter is 6% of the viewport.
+   */
+  .log{padding:20px 0 40px}
+  .entry{position:relative;padding:38px 0 10px 34px;border-left:1px solid var(--line)}
+  .entry:last-child{border-left-color:transparent}
+  .entry::before{
+    content:"";position:absolute;left:-5px;top:47px;width:9px;height:9px;
+    border-radius:50%;background:var(--bg);border:1px solid var(--line2);
+  }
+  .entry--ship::before{border-color:var(--green);background:rgba(111,207,143,.25)}
+  .entry--plan::before{border-color:var(--amber);background:rgba(232,163,61,.2)}
+
+  .stamp{
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);margin:0 0 8px;
+  }
+  .stamp b{color:var(--cyan);font-weight:600}
+  .stamp .pr{color:var(--dim)}
+  .entry h2{font-size:24px;margin:0 0 10px}
+  .entry > p{max-width:68ch}
+
+  .state{
+    display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line2);
+    color:var(--faint);
+  }
+  .state--shipped{color:var(--green);border-color:rgba(111,207,143,.45)}
+  .state--planned{color:var(--amber);border-color:rgba(232,163,61,.45)}
+
+  figure{margin:22px 0 0}
+  figure img{width:100%;height:auto;display:block;border:1px solid var(--line2);
+    border-radius:10px;background:var(--sunken)}
+  figcaption{font-size:13.5px;color:var(--faint);margin-top:9px;max-width:64ch}
+  .shots{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-top:22px}
+  .shots figure{margin:0}
+  .narrow{max-width:400px}
+
+  /* A decision: what was chosen, and what it was chosen *over*. */
+  .decision{
+    margin:22px 0 0;padding:16px 18px;border-radius:10px;
+    background:var(--raised);border:1px solid var(--line);border-left:2px solid var(--cyan);
+  }
+  .decision h3{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;
+    color:var(--cyan);margin:0 0 8px;font-weight:600;
+  }
+  .decision p{margin:0 0 10px;font-size:15px}
+  .decision p:last-child{margin-bottom:0}
+  .decision .against{color:var(--faint);font-size:14px}
+
+  .bug{border-left-color:var(--red)}
+  .bug h3{color:var(--red)}
+
+  ul{margin:0 0 16px;padding-left:20px;max-width:66ch}
+  li{margin-bottom:7px}
+
+  footer{padding:40px 0 64px;color:var(--faint);font-size:14px;border-top:1px solid var(--line)}
+  footer a{color:var(--dim)}
+
+  @media (max-width:560px){
+    .entry{padding-left:20px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Solar Syndicate</p>
+    <h1>Changelog</h1>
+    <p class="lede">
+      What shipped, what it looked like, and why each decision went the way it
+      did — including the options that were rejected, which are usually the more
+      interesting half. Newest first.
+    </p>
+  </div>
+</header>
+
+<nav class="site">
+  <div class="wrap">
+    <a href="./">Overview</a>
+    <a href="changelog.html" aria-current="page">Changelog</a>
+    <a href="play/">Play</a>
+    <a href="https://github.com/CoderCoop/SolarSyndicate">GitHub</a>
+  </div>
+</nav>
+
+<div class="wrap log">
+
+  <!-- ============================================================ -->
+  <article class="entry entry--plan">
+    <p class="stamp"><b>Spec 004</b> <span>Rooms, flows and people</span> <span class="state state--planned">approved · building</span></p>
+    <h2>Rooms that look like rooms</h2>
+    <p>
+      The schematic drew every component as an abstract mark. It generated
+      cleanly from data and it was legible — but a cylinder reads as a cylinder,
+      not as a CO₂ scrubber you could walk up to and service. Three things
+      followed from that, and one gameplay problem sat behind all of them.
+    </p>
+
+    <div class="shots">
+      <figure>
+        <img src="img/mockup-004-elevation.png" alt="Mockup: Life Support, Quarters and the Reactor deck drawn as interior elevations with equipment standing on a grated floor and crew at human scale.">
+        <figcaption><b>Chosen — Elevation.</b> Back wall, ceiling conduit, grated
+        floor. The scrubber is visibly two amine beds on a plinth. A crew figure
+        is 1.7&nbsp;m, which sets the scale for everything else.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/mockup-004-dimetric.png" alt="Mockup: the same room drawn in dimetric projection, with equipment showing a top face and a side face.">
+        <figcaption><b>Rejected — Dimetric.</b> More object-like, and it eats the
+        viewport: four machines no longer fit across a phone, and every part
+        becomes three faces with overlap ordering to resolve.</figcaption>
+      </figure>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · elevation over dimetric</h3>
+      <p>
+        Projection looks more like a game and costs horizontal space. On a
+        portrait mobile game that is the wrong trade — the same four machines
+        stop fitting, and the per-part drawing cost roughly triples.
+      </p>
+      <p class="against">Rejected: dimetric projection, and a full-perspective interior.</p>
+    </div>
+
+    <div class="shots">
+      <figure>
+        <img src="img/mockup-004-station-card.png" alt="Mockup: tapping the failed scrubber opens a detail card beneath the room showing condition, draw, blurb and a repair action.">
+        <figcaption>Tapping a machine opens <em>that machine</em>, held highlighted
+        above its card — instead of expanding a list of four and making you find
+        the one you were already looking at.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/mockup-004-flows-water.png" alt="Mockup: the water flow channel, showing the tank feeding crew, electrolysis and hydroponics, with a dashed return edge from the recycler.">
+        <figcaption>Water is a <em>loop</em>. The Life tab says "86.1% loop
+        closure" and gives no cause; here the 2&nbsp;kg/day the hydroponics locks
+        into plants visibly leaves the circuit.</figcaption>
+      </figure>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · the flow overlay is deleted, not fixed</h3>
+      <p>
+        Three parallel lines in a 12-unit margin can encode how much passes each
+        deck and nothing else, because there is nowhere to route an edge
+        sideways. Flow views exist to show what connects to what. It becomes its
+        own view with <strong>one channel per Life gauge, plus power</strong> —
+        eight in total — with named nodes, ranked consumers, buffers off to one
+        side, and returns drawn as returns.
+      </p>
+      <p class="against">
+        Nothing is lost: per-deck magnitude was already printed in every deck
+        header, which was the only thing the overlay communicated successfully.
+      </p>
+    </div>
+
+    <figure class="narrow">
+      <img src="img/mockup-004-crew.png" alt="Mockup: a crew card showing a 24-hour watch strip, five skill bars, six attributes, and the current assignment with its labour arithmetic.">
+      <figcaption>A 24-hour strip per person — eight asleep, eight on, eight off,
+      with a marker at the current time. "B watch" stops being a letter and
+      becomes the block that is lit.</figcaption>
+    </figure>
+
+    <div class="decision">
+      <h3>Decision · crew must be present to matter</h3>
+      <p>
+        The design says equipment <em>and crew</em> determine how well the
+        networks run. Equipment already did — condition derates output on a
+        0.62–1.0 curve. Crew did not: the life-support bonus capped at
+        <strong>+1.5 percentage points</strong> of closure and read the best
+        skill <em>aboard</em>, so a technician asleep in her bunk improved the
+        water loop exactly as much as one standing at the recycler.
+      </p>
+      <p>
+        Now a crew member contributes only while <strong>on watch and stationed
+        in that system's room</strong>, scaled by their current effectiveness so
+        fatigue and bad air feed back into it. Upgrade tiers raise the
+        <em>base</em>; crew raise the <em>multiplier</em> — so a superb
+        technician cannot substitute for a worn-out recycler, and a new recycler
+        still runs better tended.
+      </p>
+      <p class="against">
+        Constraint kept: efficiency changes only at moments the simulation
+        already re-resolves, so offline catch-up stays bit-identical.
+      </p>
+    </div>
+
+    <p class="muted" style="margin-top:22px">
+      <a href="mockups/004-rooms-flows-crew.html">Full mockup</a> ·
+      <a href="https://github.com/CoderCoop/SolarSyndicate/blob/main/specs/004-rooms-flows-crew/spec.md">Spec 004</a>
+    </p>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>Fix</b> <span class="pr">#15</span> <span class="state state--shipped">shipped</span></p>
+    <h2>The flow figure disagreed with the simulation</h2>
+    <div class="decision bug">
+      <h3>Bug · a link that was not the number it depicted</h3>
+      <p>
+        <code>roomViews</code> scaled water use by part condition.
+        <code>lifeBalance</code> does not — and deliberately: a worn electrolysis
+        unit drinks the same water and returns <em>less oxygen</em> for it. That
+        is the inefficiency. Scaling both ends would hold efficiency constant and
+        leave nothing for maintenance or a better unit to improve.
+      </p>
+      <p>
+        So the drawn figure and the spent figure disagreed whenever a part was
+        off full condition, which on a thirty-one-year-old hauler is always. Two
+        tests now lock the selector to the simulation rather than to a constant.
+      </p>
+    </div>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>Spec 003</b> <span class="pr">#14</span> <span class="state state--shipped">shipped</span></p>
+    <h2>The ship you can see</h2>
+    <p>
+      Before this, the ship was a list of collapsible rows. Everything the
+      simulation knew was <em>reachable</em> — tap a deck, read the parts — but
+      nothing was <em>visible</em>. You could not glance at the Ariadne and see
+      that three of four crew were asleep.
+    </p>
+
+    <div class="shots">
+      <figure>
+        <img src="img/ship-schematic.png" alt="The shipped cross-section: seven decks drawn from content data, with lettered crew markers on the deck each person is on.">
+        <figcaption>Shipped. Decks generated from <code>rooms.json</code> and
+        <code>parts.json</code>; crew markers on the deck each person is
+        actually on.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/ship-flow-overlay.png" alt="The same ship with the flow overlay on, showing power, heat and water as three channels in the right margin.">
+        <figcaption>The flow overlay, since replaced. Ballard has walked from the
+        bridge down to Life Support because she picked up the scrubber
+        job — the crew-location rule working.</figcaption>
+      </figure>
+    </div>
+
+    <p>Three directions were mocked up before any production code was written:</p>
+
+    <div class="shots">
+      <figure>
+        <img src="img/mockup-003-schematic.png" alt="Mockup: blueprint line-art schematic of the deck stack.">
+        <figcaption><b>Chosen — Schematic.</b> Generated from data.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/mockup-003-cutaway.png" alt="Mockup: illustrated cutaway with warm interiors and crew drawn as figures.">
+        <figcaption><b>Rejected — Cutaway.</b> Read best of the three.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/mockup-003-flow.png" alt="Mockup: the ship as a node graph with animated power, heat and water flows.">
+        <figcaption><b>Deferred — Flow.</b> Returned in 004 as its own view.</figcaption>
+      </figure>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · data-driven art over better-looking art</h3>
+      <p>
+        The cutaway looked best. It was rejected because art does not come out of
+        JSON: every new component would have become an art commission, quietly
+        turning the content pipeline into an art pipeline. What the cutaway
+        <em>was</em> right about is colour as meaning — warm where people rest,
+        green where things grow, red where something failed — and that was kept.
+      </p>
+      <p class="against">Rejected: illustrated cutaway. Deferred: flow as a competing view.</p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · crew locations are derived, never stored</h3>
+      <p>
+        A marker's deck comes from activity, work order and declared station. No
+        field was added to the saved state, so there is no migration, no new
+        determinism surface, and the picture cannot drift out of agreement with
+        the roster — because there is nothing to keep in sync.
+      </p>
+    </div>
+
+    <p class="muted" style="margin-top:22px">
+      <a href="mockups/003-ship-view-directions.html">Full mockup</a> ·
+      <a href="https://github.com/CoderCoop/SolarSyndicate/blob/main/specs/003-ship-view/spec.md">Spec 003</a>
+    </p>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>M2 groundwork</b> <span class="pr">#13</span> <span class="state state--shipped">shipped</span></p>
+    <h2>Orbits, transfers and the first four ports</h2>
+    <p>
+      Bodies travel circular coplanar orbits at their real radii and periods, so
+      a position is a closed-form function of time and catch-up never has to
+      integrate anything. Transfers are Hohmann conics.
+    </p>
+    <div class="decision">
+      <h3>Decision · numbers you can check against a textbook</h3>
+      <p>
+        Earth to Mars comes out at <strong>5,594&nbsp;m/s over 258.9 days</strong>,
+        against published figures of ~5.6&nbsp;km/s and ~259 days. The Earth–Mars
+        synodic period lands at ~780 days, and the departure phase angle at ~44°.
+        Fourteen tests assert those rather than asserting whatever the code
+        happens to produce.
+      </p>
+      <p class="against">
+        Not modelled, and stated rather than hidden: inclination, eccentricity,
+        n-body perturbation, continuous low thrust.
+      </p>
+    </div>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>Site</b> <span class="pr">#12</span> <span class="state state--shipped">shipped</span></p>
+    <h2>The homepage was being hijacked by the game</h2>
+    <div class="decision bug">
+      <h3>Bug · a stale service worker outliving its deployment</h3>
+      <p>
+        The site root served the game instead of the project page. The deploy was
+        correct — the artifact contained the right file at the right path. An
+        earlier build of the game had registered a service worker at the
+        <em>domain root</em> rather than under <code>/play/</code>, and it went on
+        intercepting navigation and serving its own cache.
+      </p>
+      <p>
+        Fixed with a self-destructing worker at the root that unregisters the old
+        one and clears its caches. It has to stay deployed: deleting it would let
+        any still-cached copy resume.
+      </p>
+    </div>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>M1</b> <span class="state state--shipped">shipped</span></p>
+    <h2>The living ship</h2>
+    <p>
+      Five coupled resource networks, wear and failure, work orders, and four
+      crew on a watch bill. A failed scrubber raises cabin CO₂, which lowers crew
+      effectiveness, which slows the repair on the scrubber.
+    </p>
+
+    <div class="shots">
+      <figure>
+        <img src="img/ship-tended.png" alt="The ship in good order: power in surplus, all systems nominal.">
+        <figcaption>Tended.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/ship-neglected.png" alt="The same ship after eight hours away with the engines drawing more than the reactor makes: brownout, loads shed.">
+        <figcaption>The same ship, eight hours later, after being left drawing more than it made.</figcaption>
+      </figure>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · the ship may shed loads, but never kill anyone unattended</h3>
+      <p>
+        Left in deficit, the ship browns out and sheds loads on its own authority
+        to hold the critical bus — and tells you what it did when you come back.
+        What it will not do is switch off its own scrubber to save power. No
+        crew member dies without foreshadowing and a decision you were given the
+        chance to make.
+      </p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · levels are derived, never accumulated</h3>
+      <p>
+        Reservoirs are <code>(value, rate, since)</code> and anchors move only
+        where rates change. Advancing a month in one jump is bit-identical to
+        advancing it in a thousand steps, which is what makes offline catch-up
+        run the same code path as live play instead of an approximation of it.
+      </p>
+      <p class="against">
+        Rejected: a tick loop with a catch-up fast-forward — two code paths that
+        would drift.
+      </p>
+    </div>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>M0</b> <span class="state state--shipped">shipped</span></p>
+    <h2>A world that keeps running</h2>
+    <p>
+      Event-driven simulation, seeded PRNG, command-sourced saves, and time that
+      passes at 24× — one real hour is one game day — whether or not the app is
+      open.
+    </p>
+
+    <figure class="narrow">
+      <img src="img/away-report.png" alt="The return screen: how long you were gone, and the worst news first.">
+      <figcaption>What the ship tells you on your return. Worst news leads.</figcaption>
+    </figure>
+
+    <div class="decision">
+      <h3>Decision · the player is an institution, not a person</h3>
+      <p>
+        There is no point-of-view character. You are a nameless representative of
+        your guild, working an operations desk. The captain is an NPC with her own
+        judgement, which is what makes light-lag a mechanic rather than an
+        annoyance: at Ceres your orders are twenty minutes stale, and somebody
+        aboard has to decide without you.
+      </p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · permadeath, and ageing</h3>
+      <p>
+        Crew age, take other berths, settle down on a station, and die. They are
+        not a renewable resource. This is the reason the fair-play rules exist in
+        the shape they do — a game that can kill people while you sleep has to be
+        very careful about what it does while you sleep.
+      </p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · the simulation never reads the clock</h3>
+      <p>
+        <code>Math.random</code>, <code>Date.now</code> and <code>new Date</code>
+        are lint errors inside the simulation package. Randomness comes from a
+        seeded generator; wall-clock time is always passed in. That is what keeps
+        cloud save and a shared universe open later, and it is enforced by the
+        build rather than by discipline.
+      </p>
+    </div>
+  </article>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Solar Syndicate is a work in progress, built in the open.</p>
+    <p><a href="./">Overview</a> ·
+       <a href="play/">Play</a> ·
+       <a href="https://github.com/CoderCoop/SolarSyndicate">GitHub</a> ·
+       <a href="https://github.com/CoderCoop/SolarSyndicate/blob/main/docs/design.md">Design notes</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -11,7 +11,8 @@ are binding: a spec that violates one is wrong even if it is otherwise good.
 | Spec | Milestone | Status |
 | --- | --- | --- |
 | [`002-travel-and-contracts`](002-travel-and-contracts/spec.md) | M2 | Draft, awaiting approval |
-| [`003-ship-view`](003-ship-view/spec.md) | — (presentation) | Implemented |
+| [`003-ship-view`](003-ship-view/spec.md) | — (presentation) | Implemented; superseded in part by 004 |
+| [`004-rooms-flows-crew`](004-rooms-flows-crew/spec.md) | — (presentation + §4.2) | Approved, in progress |
 
 ## M0 and M1 have no spec
 
