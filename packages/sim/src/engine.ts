@@ -30,6 +30,7 @@ import {
   updateActivities,
 } from './crew.js'
 import { attendanceView } from './attendance.js'
+import { OPENING_BALANCE_CR, post } from './ledger.js'
 import { pushLog } from './log.js'
 import {
   lifeBalance,
@@ -145,6 +146,8 @@ export function createWorld(seed: number, utcMs: number): SimState {
     queue: [],
     nextSeq: 1,
     rngCounters: {},
+    credits: OPENING_BALANCE_CR,
+    ledger: [],
     log: [],
   }
 
@@ -354,6 +357,12 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
 
     case 'CANCEL_WORK_ORDER': {
       if (cancelWorkOrder(state, command.workOrderId, at)) resolveAll(state, at)
+      break
+    }
+
+    case 'SPEND': {
+      // TR-21: never refused. The desk can be overdrawn; it cannot be stopped.
+      post(state, at, -command.credits, command.reason)
       break
     }
 

@@ -6,10 +6,11 @@
  * both the save format and (eventually) the wire format.
  */
 import type { Watch } from '@solsyn/data'
+import type { LedgerEntry } from './ledger.js'
 import type { GameTime } from './time.js'
 
 /** Bump when the shape changes; add a migration in persistence. §8.3 */
-export const SIM_STATE_VERSION = 3
+export const SIM_STATE_VERSION = 4
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -182,6 +183,10 @@ export interface SimState {
   nextSeq: number
   /** Per-stream PRNG counters. §7.2 */
   rngCounters: Record<string, number>
+  /** The desk's balance, in credits. May be negative (TR-21). */
+  credits: number
+  /** What moved it, newest first. */
+  ledger: LedgerEntry[]
   /** Bounded ring of recent dispatches, newest last. */
   log: LogEntry[]
 }
@@ -197,6 +202,11 @@ export type Command =
   | { kind: 'QUEUE_WORK_ORDER'; partId: string; orderKind: WorkOrderKind }
   | { kind: 'CANCEL_WORK_ORDER'; workOrderId: string }
   | { kind: 'SET_CREW_WATCH'; crewId: string; watch: Watch }
+  /**
+   * Move money. Negative credits receive rather than spend. Never refused --
+   * TR-21: a shortfall comes out of the balance, it does not block anything.
+   */
+  | { kind: 'SPEND'; credits: number; reason: string }
 
 /** A command with the game time it was issued at. */
 export interface TimedCommand {

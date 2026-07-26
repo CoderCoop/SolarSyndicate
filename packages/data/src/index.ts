@@ -19,6 +19,7 @@ import {
   type HullDef,
   type PartDef,
   type PortDef,
+  type PortPrices,
   type RoomDef,
 } from './schemas.js'
 
@@ -91,6 +92,11 @@ export function upgradesFor(partDefId: string): PartDef[] {
 /** Parts installed in a room, in stable definition order. */
 export function partsForRoom(roomId: string): PartDef[] {
   return content.parts.filter((p) => p.roomId === roomId)
+}
+
+/** What a port charges for a unit of a consumable (spec 002 TR-19). */
+export function priceAt(portId: string, key: keyof PortPrices): number {
+  return getPort(portId).prices[key]
 }
 
 /** Attendance coefficients (spec 004 RF-38). Balance is a JSON edit. */
