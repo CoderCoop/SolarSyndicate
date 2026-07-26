@@ -1,0 +1,83 @@
+name: Release
+
+# Tag whatever version main is claiming.
+#
+# CLAUDE.md says tags belong on main *after* the squash merge, never on a
+# feature branch: squashing creates a new commit, so a tag pushed from the
+# branch would point at history that never lands on main. That leaves the
+# tagging step to be done by hand at exactly the moment it is easiest to
+# forget -- and a work session cannot do it anyway, because the sandbox's git
+# proxy refuses tag pushes and the GitHub tooling it has is read-only for tags.
+#
+# So CI does it. The version in package.json is the single source of truth;
+# this only ever *reflects* it. Bumping the version is still a deliberate,
+# reviewed change in a pull request.
+
+on:
+  push:
+    branches: [main]
+    paths: ['package.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag the version in package.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read the version
+        id: v
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      # Re-running a workflow, or a merge that touched package.json without
+      # changing the version, must not fail the build.
+      - name: Skip if the tag already exists
+        id: check
+        run: |
+          if git rev-parse "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v${{ steps.v.outputs.version }} is already tagged; nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The section of CHANGELOG.md for this version becomes the release body,
+      # so the notes are the ones written alongside the change rather than a
+      # list of commit subjects.
+      - name: Extract the changelog section
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          awk -v ver="## [${{ steps.v.outputs.version }}]" '
+            index($0, ver) == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "No CHANGELOG.md section for ${{ steps.v.outputs.version }}." >&2
+            exit 1
+          fi
+          cat notes.md
+
+      - name: Tag and release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.v.outputs.version }}" -m "v${{ steps.v.outputs.version }}"
+          git push origin "v${{ steps.v.outputs.version }}"
+          gh release create "v${{ steps.v.outputs.version }}" \
+            --title "v${{ steps.v.outputs.version }}" \
+            --notes-file notes.md \
+            $([ "${{ startsWith(steps.v.outputs.version, '0.') }}" = "true" ] && echo --prerelease)
