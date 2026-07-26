@@ -25,10 +25,27 @@
  * over or a work order moves, both of which already re-resolve the world, so
  * offline catch-up stays bit-identical (constitution VI, RF-31).
  */
-import { ATTENDANCE, getCrewDef, getRoom } from '@solsyn/data'
+import { ATTENDANCE, getCrewDef, getRoom, type RoomDef } from '@solsyn/data'
 import { crewEffectiveness, crewRoomId } from './crew.js'
 import type { GameTime } from './time.js'
 import type { CrewState, SimState } from './types.js'
+
+/**
+ * How well someone's knowledge matches what a room needs. 0-1.
+ *
+ * Weighted across domains rather than keyed to one skill, because the engine
+ * room is genuinely part mechanical and part physics -- and saying so in data
+ * beats inventing a "nuclear engineering" skill that nothing else uses.
+ */
+export function knowledgeMatch(def: ReturnType<typeof getCrewDef>, room: RoomDef): number {
+  let total = 0
+  let weighted = 0
+  for (const { domain, weight } of room.needs) {
+    total += weight
+    weighted += (def.knowledge[domain] / 100) * weight
+  }
+  return total > 0 ? weighted / total : 0
+}
 
 export interface Attendance {
   /** Is anyone on watch in this room at all? */
@@ -41,15 +58,17 @@ export interface Attendance {
   quality: number
   /** Who is being counted, for the UI to name. */
   crewId?: string
+  /** Do they hold this system's endorsement? */
+  certified?: boolean
 }
 
 const NOBODY: Attendance = { attended: false, quality: 0 }
 
 /** A room's attendance right now. */
 export function attendanceFor(state: SimState, roomId: string, t: GameTime): Attendance {
-  const room = state.ship.rooms.find((r) => r.id === roomId)
-  if (!room) return NOBODY
-  const skillName = getRoom(room.defId).tendedBySkill
+  const roomState = state.ship.rooms.find((r) => r.id === roomId)
+  if (!roomState) return NOBODY
+  const room = getRoom(roomState.defId)
 
   let best: Attendance = NOBODY
   for (const crew of state.crew) {
@@ -58,10 +77,24 @@ export function attendanceFor(state: SimState, roomId: string, t: GameTime): Att
     if (crew.activity !== 'watch') continue
     if (crewRoomId(state, crew) !== roomId) continue
 
-    const skill = getCrewDef(crew.defId).skills[skillName] / 100
-    const quality = skill * crewEffectiveness(state, crew, t)
+    const def = getCrewDef(crew.defId)
+    // Keeping a system in adjustment is Operation Monitoring, applied through
+    // what you actually understand about it -- O*NET's own definition is
+    // "watching gauges, dials, or other indicators to make sure a machine is
+    // working properly", which is exactly this.
+    const monitoring = def.skills.operationMonitoring / 100
+    const match = knowledgeMatch(def, room)
+    const certified =
+      !room.qualification || def.qualifications.includes(room.qualification)
+
+    const quality =
+      monitoring *
+      match *
+      (certified ? 1 : ATTENDANCE.uncertifiedPenalty) *
+      crewEffectiveness(state, crew, t)
+
     if (!best.attended || quality > best.quality) {
-      best = { attended: true, quality, crewId: crew.id }
+      best = { attended: true, quality, crewId: crew.id, certified }
     }
   }
   return best

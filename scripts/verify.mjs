@@ -215,6 +215,40 @@ check(
   doings.join(' | '),
 )
 
+// --- the crew tab (RF-21 to RF-26) ------------------------------------------
+const stripLabels = await page.$$eval('.watchstrip__seg', (els) => els.map((e) => e.textContent))
+check(
+  'a watch is explained as a day, not as a letter (RF-21)',
+  stripLabels.includes('On watch') && stripLabels.includes('Off') && stripLabels.includes('Asleep'),
+  stripLabels.join(' · '),
+)
+check('with a marker at the current hour', await page.isVisible('.watchstrip__now'))
+
+const blocks = await page.$$eval('.statblock__title', (els) =>
+  els.map((e) => e.textContent?.trim().split(' ')[0]),
+)
+check(
+  'skills, knowledge and attributes are shown separately (RF-22, RF-23)',
+  ['Skills', 'Knowledge', 'Attributes'].every((b) => blocks.includes(b)),
+  blocks.join(' / '),
+)
+
+const skillNames = await page.$$eval('.statblock .statrow__label', (els) =>
+  els.map((e) => e.textContent),
+)
+check(
+  'skills are the O*NET technical cluster',
+  ['Monitoring', 'Maintenance', 'Diagnosis', 'Repair', 'Inspection'].every((n) =>
+    skillNames.includes(n),
+  ),
+  skillNames.slice(0, 6).join(', '),
+)
+
+const quals = await page.$$eval('.qual', (els) => els.map((e) => e.textContent))
+check('endorsements are named by their real system (RF-26)', quals.length > 0, quals.join(' '))
+
+await page.screenshot({ path: join(SHOTS, '10-crew-detail.png'), fullPage: true })
+
 check('the work order appears with an owner and a duration', await page.isVisible('.orders'))
 const eta = await page.textContent('.order__eta')
 check('the job has an honest completion estimate', /to go$/.test(eta?.trim() ?? ''), eta?.trim() ?? '')
@@ -300,6 +334,63 @@ check('the flow overlay is gone (RF-13)', (await page.$$('.flowtoggle, .flow__ch
 // RF-5, RF-8: people are drawn in the room and are targets.
 const figures = await page.$$('.schema .person')
 check('crew are drawn in their rooms as figures (RF-5)', figures.length === 4, `${figures.length} aboard`)
+
+// --- the flow view (RF-13 to RF-20) -----------------------------------------
+await page.click('.tabs__btn:has-text("Flows")')
+await page.waitForSelector('.chans')
+
+const chanLabels = await page.$$eval('.chans__btn', (els) => els.map((e) => e.textContent))
+check(
+  'one channel per Life gauge, plus power (RF-14)',
+  chanLabels.length === 8 && chanLabels[0] === 'Power',
+  chanLabels.join(' / '),
+)
+
+const powerRoles = await page.$$eval('.fgroup__label', (els) => els.map((e) => e.textContent))
+check(
+  'every channel uses the same grammar (RF-15)',
+  powerRoles.includes('in') && powerRoles.includes('out') && powerRoles.includes('buffer'),
+  powerRoles.join(' · '),
+)
+
+const powerNames = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+check(
+  'nodes are named parts, not decks (RF-16)',
+  powerNames.includes('Beacon-4 Fission Plant') && powerNames.includes('O2 Electrolysis Unit'),
+  powerNames.slice(0, 3).join(', '),
+)
+
+// The crew are a node wherever they are actually a load -- which is the air and
+// the stores, not the electrical bus.
+await tap(page, '.chans__btn:has-text("O₂")')
+const o2Names = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+check(
+  'and the crew are a node where the crew are a load',
+  o2Names.some((n) => n?.startsWith('Crew')),
+  o2Names.join(', '),
+)
+
+await tap(page, '.chans__btn:has-text("Water")')
+await page.waitForSelector('.fnode--return')
+const returnName = await page.textContent('.fnode--return .fnode__name')
+check('the water loop is drawn as a loop (RF-17)', /Recycler/.test(returnName ?? ''), returnName ?? '')
+
+const whatIf = await page.textContent('.flowch__what-if')
+check(
+  'and states what happens without it (RF-18)',
+  /Recycler offline: .* days of tank\./.test(whatIf ?? ''),
+  whatIf?.trim() ?? '',
+)
+
+await page.screenshot({ path: join(SHOTS, '09-flows.png'), fullPage: true })
+
+await tap(page, '.chans__btn:has-text("Propellant")')
+const propFoot = await page.textContent('.flowch__foot')
+check(
+  'propellant is a budget, not a rate (RF-19)',
+  /budget, not a rate/.test(propFoot ?? ''),
+  propFoot?.trim() ?? '',
+)
 
 await page.click('.tabs__btn:has-text("Life")')
 await page.waitForSelector('.gauges')

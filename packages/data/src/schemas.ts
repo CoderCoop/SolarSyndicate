@@ -84,9 +84,78 @@ export const FixtureDef = z.object({
 })
 export type FixtureDef = z.infer<typeof FixtureDef>
 
-/** The five skills, as a value rather than only a shape. */
-export const SkillName = z.enum(['mechanics', 'lifeSupport', 'medicine', 'piloting', 'leadership'])
+/**
+ * Knowledge domains. Design doc §4.1.
+ *
+ * Taken from the O*NET Content Model (US Department of Labor), which separates
+ * *Knowledge* -- organised bodies of fact, slow to acquire and broadly
+ * transferable -- from *Skills*, which are developed capacities applied across
+ * jobs. These six are its Mathematics-and-Science, Engineering-and-Technology
+ * and Health-Services domains, narrowed to the ones a ship of this size
+ * actually turns on.
+ *
+ * Note what is NOT here: "life support" is not a body of knowledge, it is a
+ * *system*. Someone who runs it well knows biology and chemistry, monitors
+ * well, and is certificated on that system -- three separate things, which is
+ * why one skill called "lifeSupport" always read oddly.
+ */
+export const KnowledgeDomain = z.enum([
+  'mechanical', // O*NET: machines and tools, their designs, uses, repair
+  'electronics', // O*NET: Computers and Electronics
+  'physics', // covers reactor and propulsion physics
+  'chemistry', // covers amine beds, electrolysis, propellant
+  'biology', // covers hydroponics and closed-loop ecology
+  'medicine', // O*NET: Medicine and Dentistry
+])
+export type KnowledgeDomain = z.infer<typeof KnowledgeDomain>
+
+/**
+ * Skills. Design doc §4.2.
+ *
+ * The Technical cluster of O*NET's Cross-Functional skills, verbatim, plus one
+ * Systems-cluster entry for command. These were not chosen to fit the game and
+ * then justified: O*NET defines Operation Monitoring as "watching gauges,
+ * dials, or other indicators to make sure a machine is working properly",
+ * which is the tune mechanic (spec 004 RF-36) described by an occupational
+ * taxonomist decades before this ship existed.
+ *
+ * The split between them is the point. Keeping a system sweet, spotting that
+ * something is wrong, and putting it right are three different competences,
+ * and a crew member can be good at one and poor at another.
+ */
+export const SkillName = z.enum([
+  'operationMonitoring', // watching indicators to catch drift -> tune
+  'equipmentMaintenance', // routine servicing, and knowing when it is due
+  'troubleshooting', // determining the cause of a fault
+  'repairing', // putting it right with the tools to hand
+  'qualityControl', // testing and inspection
+  'judgment', // O*NET: Judgment and Decision Making -> autonomy under light-lag
+])
 export type SkillName = z.infer<typeof SkillName>
+
+/**
+ * System qualifications. Design doc §4.4.
+ *
+ * Modelled on STCW -- the IMO convention under which a mariner holds a
+ * Certificate of Competency plus *endorsements*, and watchkeeping itself is a
+ * certificated function -- and on ISS crew training, which is organised by
+ * system rather than by trade. The names are the real ISS ones, because they
+ * are already the right vocabulary for what these are.
+ *
+ * Knowledge and skill are continuous and everyone has some. A qualification is
+ * binary and most people have none: it is what makes a particular hire worth
+ * chasing (§4.4).
+ */
+export const Qualification = z.enum([
+  'eclss', // Environmental Control and Life Support System
+  'eps', // Electrical Power System
+  'tcs', // Thermal Control System
+  'prop', // Propulsion
+  'gnc', // Guidance, Navigation and Control
+  'eva', // Extravehicular Activity
+  'cmo', // Crew Medical Officer -- a real assigned ISS role
+])
+export type Qualification = z.infer<typeof Qualification>
 
 export const RoomDef = z.object({
   id: z.string(),
@@ -103,11 +172,16 @@ export const RoomDef = z.object({
   deckHeightM: z.number().positive().max(8),
   fixtures: z.array(FixtureDef).default([]),
   /**
-   * Which skill counts as tending this room (spec 004 RF-27). A hand on watch
-   * here contributes at this skill; anyone else's expertise is irrelevant to
-   * this deck no matter how good they are.
+   * What it takes to tend this room (spec 004 RF-27, §4.2).
+   *
+   * A weighted knowledge requirement rather than a single skill: the engine
+   * room is part mechanical and part physics, and saying so in data beats
+   * inventing a "nuclear engineering" skill nobody else ever uses. Weights
+   * need not sum to one; they are normalised on read.
    */
-  tendedBySkill: SkillName,
+  needs: z.array(z.object({ domain: KnowledgeDomain, weight: z.number().positive() })).min(1),
+  /** The system endorsement that certifies someone for this deck, if any. */
+  qualification: Qualification.optional(),
   blurb: z.string(),
 })
 export type RoomDef = z.infer<typeof RoomDef>
@@ -230,14 +304,29 @@ export const CrewDef = z.object({
     perception: z.number().int().min(1).max(10),
     resolve: z.number().int().min(1).max(10),
   }),
-  /** 0-100, grows with use (§4.1). M1 exercises mechanics and lifeSupport. */
-  skills: z.object({
-    mechanics: z.number().min(0).max(100).default(0),
-    lifeSupport: z.number().min(0).max(100).default(0),
+  /**
+   * What they know, 0-100 per domain. Slow to move (§4.1), and the thing a
+   * career is made of.
+   */
+  knowledge: z.object({
+    mechanical: z.number().min(0).max(100).default(0),
+    electronics: z.number().min(0).max(100).default(0),
+    physics: z.number().min(0).max(100).default(0),
+    chemistry: z.number().min(0).max(100).default(0),
+    biology: z.number().min(0).max(100).default(0),
     medicine: z.number().min(0).max(100).default(0),
-    piloting: z.number().min(0).max(100).default(0),
-    leadership: z.number().min(0).max(100).default(0),
   }),
+  /** What they can do with it, 0-100. Grows with use (§4.1, §4.2). */
+  skills: z.object({
+    operationMonitoring: z.number().min(0).max(100).default(0),
+    equipmentMaintenance: z.number().min(0).max(100).default(0),
+    troubleshooting: z.number().min(0).max(100).default(0),
+    repairing: z.number().min(0).max(100).default(0),
+    qualityControl: z.number().min(0).max(100).default(0),
+    judgment: z.number().min(0).max(100).default(0),
+  }),
+  /** Endorsements held. Binary, and most crew hold none (§4.4). */
+  qualifications: z.array(Qualification).default([]),
   blurb: z.string(),
 })
 export type CrewDef = z.infer<typeof CrewDef>
@@ -289,6 +378,12 @@ export const AttendanceTuning = z.object({
    * and always recoverable with a work order.
    */
   wearScaleUnattended: z.number().positive(),
+  /**
+   * What an uncertificated hand is worth on a system that wants an
+   * endorsement (§4.4). Not zero: a competent engineer without the ticket
+   * still helps. Not one, or the endorsement would be decoration.
+   */
+  uncertifiedPenalty: z.number().min(0).max(1),
 })
 export type AttendanceTuning = z.infer<typeof AttendanceTuning>
 

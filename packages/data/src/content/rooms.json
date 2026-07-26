@@ -16,7 +16,17 @@
         }
       }
     ],
-    "tendedBySkill": "piloting",
+    "needs": [
+      {
+        "domain": "electronics",
+        "weight": 2
+      },
+      {
+        "domain": "physics",
+        "weight": 1
+      }
+    ],
+    "qualification": "gnc",
     "blurb": "Helm, comms, and the sensor mast. Two acceleration couches, one of them usually occupied."
   },
   {
@@ -45,7 +55,17 @@
         }
       }
     ],
-    "tendedBySkill": "medicine",
+    "needs": [
+      {
+        "domain": "medicine",
+        "weight": 2
+      },
+      {
+        "domain": "biology",
+        "weight": 1
+      }
+    ],
+    "qualification": "cmo",
     "blurb": "Six bunks, a galley, and the only table on the ship."
   },
   {
@@ -55,7 +75,21 @@
     "deck": 2,
     "deckHeightM": 2.6,
     "fixtures": [],
-    "tendedBySkill": "lifeSupport",
+    "needs": [
+      {
+        "domain": "chemistry",
+        "weight": 2
+      },
+      {
+        "domain": "biology",
+        "weight": 2
+      },
+      {
+        "domain": "mechanical",
+        "weight": 1
+      }
+    ],
+    "qualification": "eclss",
     "blurb": "Scrubbers, recyclers, and a hydroponics rack that smells faintly of wet soil."
   },
   {
@@ -75,7 +109,12 @@
         }
       }
     ],
-    "tendedBySkill": "mechanics",
+    "needs": [
+      {
+        "domain": "mechanical",
+        "weight": 1
+      }
+    ],
     "blurb": "Four modular bays. Empty, which is the problem."
   },
   {
@@ -95,7 +134,17 @@
         }
       }
     ],
-    "tendedBySkill": "mechanics",
+    "needs": [
+      {
+        "domain": "mechanical",
+        "weight": 3
+      },
+      {
+        "domain": "electronics",
+        "weight": 1
+      }
+    ],
+    "qualification": "tcs",
     "blurb": "Workshop, spares lockers, battery bank, and the thermal loop pumps."
   },
   {
@@ -105,7 +154,21 @@
     "deck": 5,
     "deckHeightM": 2.6,
     "fixtures": [],
-    "tendedBySkill": "mechanics",
+    "needs": [
+      {
+        "domain": "physics",
+        "weight": 2
+      },
+      {
+        "domain": "mechanical",
+        "weight": 2
+      },
+      {
+        "domain": "electronics",
+        "weight": 1
+      }
+    ],
+    "qualification": "eps",
     "blurb": "Shielded fission plant. The shadow shield is why the tanks sit where they do."
   },
   {
@@ -115,7 +178,21 @@
     "deck": 6,
     "deckHeightM": 2.4,
     "fixtures": [],
-    "tendedBySkill": "mechanics",
+    "needs": [
+      {
+        "domain": "physics",
+        "weight": 2
+      },
+      {
+        "domain": "mechanical",
+        "weight": 2
+      },
+      {
+        "domain": "chemistry",
+        "weight": 1
+      }
+    ],
+    "qualification": "prop",
     "blurb": "Nuclear thermal cluster, cold. Preheating takes hours and a great deal of power."
   }
 ]

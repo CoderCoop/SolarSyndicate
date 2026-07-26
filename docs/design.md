@@ -224,25 +224,67 @@ drive, continuous thrust *is* your gravity, which the vertical deck layout refle
 
 ### 4.2 Skills → ship effects (the contract with the player)
 
-Every station derives a small set of multipliers from assigned crew (skill 60% /
-relevant stat 30% / condition-morale 10%). Examples of the mapping we hold ourselves
-to — **crew quality must be legible in the numbers the player already watches**:
+**The taxonomy is borrowed, not invented (decided, spec 004).** Three layers,
+each taken from a real classification, because a made-up skill list produces
+made-up questions like "what does the *life support* skill mean?"
 
-- **Captain** (Leadership/Resolve): quality of autonomous decisions when you're
-  unreachable (§4.6), crew morale floor, dispute resolution, work-order throughput
-  across the whole ship, and how faithfully your intent survives contact with
-  reality.
-- **Pilot** at helm: −5…15% delta-v cost on maneuvers (finer burns), tighter
-  arrival windows, docking incident rate.
-- **Astrogator**: unlocks better transfer solutions (see §5.2), +scan resolution.
-- **Mechanic**: engine efficiency +0–10%, wear rate −0–30%, faster work orders,
-  mod quality.
-- **Medic**: heal rate, radiation mitigation, micro-g decay reduction.
-- **Life Support tech**: loop closure % (directly extends range), hydroponics yield.
-- **Negotiator** (at port): contract pay ±10%, market spreads, fee waivers.
+**Knowledge** — six domains from the [O\*NET Content
+Model](https://www.onetcenter.org/content.html), the US Department of Labor's
+occupational taxonomy, which separates *Knowledge* (organised bodies of fact,
+slow to acquire, broadly transferable) from *Skills* (developed capacities
+applied across jobs). Ours are its Mathematics-and-Science,
+Engineering-and-Technology and Health-Services domains, narrowed to what a ship
+this size turns on: **Mechanical, Electronics, Physics, Chemistry, Biology,
+Medicine**.
 
-Because you're remote, these multipliers are the *only* way crew quality reaches
-you — you never fly a better line yourself. Hiring is the skill ceiling of the game.
+Note what is not there. "Life support" is not a body of knowledge, it is a
+*system*. Someone who runs it well knows chemistry and biology, monitors well,
+and is certificated on that system — three separate things, which is why one
+skill by that name always read oddly.
+
+**Skills** — O\*NET's Cross-Functional *Technical* cluster, verbatim, plus one
+Systems-cluster entry for command:
+
+| Skill | O\*NET's definition | What it drives here |
+|---|---|---|
+| Operation Monitoring | "Watching gauges, dials, or other indicators to make sure a machine is working properly" | **tune** (§3.3) |
+| Equipment Maintenance | "Performing routine maintenance and determining when and what kind of maintenance is needed" | service orders |
+| Troubleshooting | "Determining causes of operating errors and deciding what to do about it" | diagnosis |
+| Repairing | "Repairing machines or systems using the needed tools" | repair orders |
+| Quality Control Analysis | "Conducting tests and inspections to evaluate quality or performance" | inspection |
+| Judgment and Decision Making | weighing costs and benefits of potential actions | autonomy under light-lag (§4.6) |
+
+These were not picked to fit the game and justified afterwards. Operation
+Monitoring is defined that way in a taxonomy that predates this project by
+decades, and it describes the tune mechanic almost word for word. The split is
+the point: keeping a system sweet, spotting that something is wrong, and
+putting it right are three different competences, and a crew member can be
+excellent at one and poor at another.
+
+**Qualifications** — endorsements, modelled on
+[STCW](https://www.imo.org/en/OurWork/HumanElement/Pages/STCW-Conv-LINK.aspx),
+the IMO convention under which a mariner holds a Certificate of Competency plus
+*endorsements* and watchkeeping itself is a certificated function; and on ISS
+crew training, which is organised by **system** rather than by trade. The names
+are the real ISS ones because they are already the right vocabulary: **ECLSS**
+(Environmental Control and Life Support), **EPS** (Electrical Power), **TCS**
+(Thermal Control), **PROP**, **GNC** (Guidance, Navigation and Control),
+**EVA**, and **CMO** (Crew Medical Officer — a real assigned ISS role).
+
+Knowledge and skill are continuous and everyone has some. A qualification is
+binary and most people have none: it is what makes a particular hire worth
+chasing (§4.4). An uncertificated hand is discounted rather than refused — a
+competent engineer without the ticket still helps, or a short-handed ship would
+be unplayable.
+
+**How a room asks for people.** A room declares a *weighted knowledge
+requirement* and, usually, the endorsement that certifies you for it. The
+engine room is part physics and part mechanical; saying so in data beats
+inventing a "nuclear engineering" skill that nothing else uses. Adding nuance
+is a JSON edit.
+
+Because you're remote, these are the *only* way crew quality reaches you — you
+never fly a better line yourself. Hiring is the skill ceiling of the game.
 
 **Attendance (decided, spec 004).** A multiplier only applies while that person
 is **on watch and stationed in the room the system is in** — by the watch bill or

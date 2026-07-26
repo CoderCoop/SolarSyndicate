@@ -4,14 +4,15 @@
     "closureBonusMax": 0.03,
     "wearScaleSkilled": 0.55,
     "wearScaleUnskilled": 1.0,
-    "wearScaleUnattended": 1.15
+    "wearScaleUnattended": 1.15,
+    "uncertifiedPenalty": 0.55
   },
   "tune": {
     "specTune": 60,
     "outputAtZeroTune": 0.86,
     "outputAtFullTune": 1.08,
     "decayPerDayUnattended": 1.5,
-    "gainPerDayPerQuality": 6.0,
+    "gainPerDayPerQuality": 10.0,
     "ceilingUnskilled": 30,
     "ceilingSkilled": 100
   }
