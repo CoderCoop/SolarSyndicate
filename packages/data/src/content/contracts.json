@@ -10,13 +10,32 @@
     "cargoKg": 4200,
     "deadlineDays": 12,
     "allowance": {
-      "water": 23.5,
-      "o2": 7.3,
-      "food": 90.7,
-      "propellant": 3600,
-      "spares": 3
+      "water": 22,
+      "o2": 5,
+      "food": 38,
+      "propellant": 7700,
+      "spares": 2
     },
     "blurb": "Machine tools and bar stock. Short, dull, and the Local gives it to hulls it does not yet trust."
+  },
+  {
+    "id": "contract.gateway.castings",
+    "title": "Yard castings back to Gateway",
+    "client": "Tranquillity Yards",
+    "fromPortId": "port.tranquillity",
+    "toPortId": "port.gateway",
+    "payCr": 61000,
+    "abandonCr": 8000,
+    "cargoKg": 3600,
+    "deadlineDays": 12,
+    "allowance": {
+      "water": 22,
+      "o2": 5,
+      "food": 38,
+      "propellant": 8100,
+      "spares": 2
+    },
+    "blurb": "Finished castings and a crate of rejected ones going back for credit. The yard would rather not keep either."
   },
   {
     "id": "contract.phobos.survey",
@@ -27,15 +46,34 @@
     "payCr": 386000,
     "abandonCr": 52000,
     "cargoKg": 9800,
-    "deadlineDays": 96,
+    "deadlineDays": 300,
     "allowance": {
-      "water": 188.2,
-      "o2": 58.1,
-      "food": 725.8,
-      "propellant": 14800,
+      "water": 340,
+      "o2": 46,
+      "food": 1960,
+      "propellant": 36400,
       "spares": 11
     },
     "blurb": "Instruments in crated foam, and a note asking that the crates not be stacked. The window is the window; miss it and the next is two years out."
+  },
+  {
+    "id": "contract.gateway.cores",
+    "title": "Survey returns to Gateway",
+    "client": "Areographic Office",
+    "fromPortId": "port.phobos",
+    "toPortId": "port.gateway",
+    "payCr": 298000,
+    "abandonCr": 42000,
+    "cargoKg": 6400,
+    "deadlineDays": 300,
+    "allowance": {
+      "water": 340,
+      "o2": 46,
+      "food": 1960,
+      "propellant": 33500,
+      "spares": 11
+    },
+    "blurb": "Core samples, spent instruments and eleven crates nobody will explain. The Office wants all of it and will not say which part matters."
   },
   {
     "id": "contract.ceres.medical",
@@ -46,12 +84,12 @@
     "payCr": 612000,
     "abandonCr": 96000,
     "cargoKg": 6400,
-    "deadlineDays": 168,
+    "deadlineDays": 540,
     "allowance": {
-      "water": 329.3,
-      "o2": 101.6,
-      "food": 1270.1,
-      "propellant": 19200,
+      "water": 615,
+      "o2": 82,
+      "food": 3580,
+      "propellant": 44300,
       "spares": 16
     },
     "blurb": "Refrigerated, insured, and expected. Belt Mutual has a long memory for hulls that arrive late and a longer one for hulls that arrive warm."
@@ -65,12 +103,12 @@
     "payCr": 548000,
     "abandonCr": 84000,
     "cargoKg": 15600,
-    "deadlineDays": 172,
+    "deadlineDays": 540,
     "allowance": {
-      "water": 337.1,
-      "o2": 104.0,
-      "food": 1300.3,
-      "propellant": 17400,
+      "water": 615,
+      "o2": 82,
+      "food": 3580,
+      "propellant": 51100,
       "spares": 14
     },
     "blurb": "Sixteen tonnes of finished billet, and every kilo of it is delta-v you have to pay for."
@@ -84,13 +122,13 @@
     "payCr": 214000,
     "abandonCr": 31000,
     "cargoKg": 5100,
-    "deadlineDays": 74,
+    "deadlineDays": 650,
     "allowance": {
-      "water": 145.0,
-      "o2": 44.8,
-      "food": 559.4,
-      "propellant": 9600,
-      "spares": 8
+      "water": 745,
+      "o2": 99,
+      "food": 4340,
+      "propellant": 33800,
+      "spares": 19
     },
     "blurb": "Ration packs and filter cartridges. Nobody on Phobos will thank you, but they will notice if it does not come."
   }

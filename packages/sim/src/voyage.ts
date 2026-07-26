@@ -18,6 +18,7 @@
  */
 import { getContract, getHull, getPort } from '@solsyn/data'
 import { pushLog } from './log.js'
+import { reconcileArrival } from './reconcile.js'
 import { propellantForDeltaV, stretchedTransfer } from './orbits.js'
 import { levelAt, settle } from './resources.js'
 import { DAY, formatDuration, type GameTime } from './time.js'
@@ -210,6 +211,8 @@ export function arrive(state: SimState, at: GameTime): void {
   state.voyage = undefined
 
   pushLog(state, at, 'info', `Berthed at ${getPort(voyage.toPortId).name}.`)
+  // Berthed first, so the books settle at the arrival port's prices (TR-19).
+  reconcileArrival(state, at)
 }
 
 export interface VoyageView extends VoyageState {

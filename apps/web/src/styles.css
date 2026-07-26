@@ -2280,3 +2280,425 @@ button {
   font-size: 11px;
   color: var(--cyan);
 }
+
+/* ------------------------------------------------------------------ port */
+
+/*
+ * The commercial loop: berth, board, astrogator, voyage, settlement, books.
+ * Money is the one number in the game that is not a rate, so it is set in
+ * tabular figures throughout -- columns of credits have to line up to be
+ * comparable at a glance, which is the whole point of showing them together.
+ */
+
+.berth__name {
+  margin: 0;
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.berth__blurb {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+/* board */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.offer {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  padding: var(--pad);
+}
+
+.offer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.offer__title {
+  margin: 0;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.offer__client {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.offer__pay {
+  flex: none;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--amber);
+}
+
+.offer__blurb {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+.offer__terms {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.offer__terms li {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-sunken);
+}
+
+.offer__terms span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.offer__terms strong {
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.offer__terms .is-bad {
+  color: var(--red);
+}
+
+.offer__accept {
+  margin-top: 14px;
+  width: 100%;
+}
+
+/* allowance (TR-20) */
+
+.allowance {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px dashed var(--line-bright);
+  border-radius: 8px;
+}
+
+.allowance__title {
+  margin: 0 0 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+}
+
+.allowance__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+  gap: 8px;
+}
+
+.allowance__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.allowance__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.allowance__value {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+
+/* astrogator (TR-3b) */
+
+.options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  padding: var(--pad);
+}
+
+.option.is-late {
+  border-left-color: var(--amber);
+}
+
+.option.is-blocked {
+  border-left-color: var(--line-bright);
+  opacity: 0.72;
+}
+
+.option__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.option__label {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.option__dv {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--cyan);
+}
+
+.option__figures {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.option__figures li {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option__figures span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.option__figures strong {
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.option__figures .is-bad {
+  color: var(--amber);
+}
+
+.option__go {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.option__why {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--amber);
+}
+
+/* under way */
+
+.voyage__legs {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.voyage__track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.voyage__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--amber));
+  transition: width 400ms linear;
+}
+
+/* settlement */
+
+.settle__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settle__row {
+  display: grid;
+  grid-template-columns: auto 1fr 62px;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: var(--bg-raised);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.settle__row--head {
+  background: none;
+  padding-bottom: 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.settle__key {
+  color: var(--ink);
+}
+
+.settle__against {
+  text-align: right;
+  color: var(--ink-dim);
+  font-size: 12px;
+}
+
+.settle__cr {
+  text-align: right;
+}
+
+.settle__row.is-under .settle__cr {
+  color: var(--green);
+}
+
+.settle__row.is-over .settle__cr {
+  color: var(--red);
+}
+
+.settle__totals {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settle__totals li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.settle__totals strong {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.settle__totals .is-good {
+  color: var(--green);
+}
+
+.settle__totals .is-bad {
+  color: var(--red);
+}
+
+.settle__total {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.settle__total strong {
+  font-size: 16px;
+  color: var(--amber);
+}
+
+/* books */
+
+.books__balance {
+  margin: 0;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.books__balance.is-overdrawn {
+  color: var(--red);
+}
+
+.books__list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.books__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg-raised);
+  font-size: 12px;
+}
+
+.books__reason {
+  color: var(--ink-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.books__amount {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.books__amount.is-credit {
+  color: var(--green);
+}
+
+.books__amount.is-debit {
+  color: var(--ink-faint);
+}

@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react'
 import {
+  activeContract,
   chartView,
+  contractBoard,
   crewViews,
   flowChannels,
+  lastSettlement,
+  ledgerView,
   lifeSupportView,
   powerView,
   recentLog,
   roomViews,
+  transferOptions,
+  voyageView,
   workOrderViews,
 } from '@solsyn/sim'
 import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
 import { Flows } from './components/Flows.js'
+import { Port } from './components/Port.js'
 import { StarChart } from './components/StarChart.js'
 import { LifeSupport } from './components/LifeSupport.js'
 import { ShipViewport } from './components/ShipViewport.js'
@@ -20,10 +27,11 @@ import { StatusBar } from './components/StatusBar.js'
 import { WorkOrders } from './components/WorkOrders.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
-type Tab = 'ship' | 'chart' | 'flows' | 'life' | 'crew' | 'log'
+type Tab = 'ship' | 'port' | 'chart' | 'flows' | 'life' | 'crew' | 'log'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ship', label: 'Ship' },
+  { id: 'port', label: 'Port' },
   { id: 'chart', label: 'Chart' },
   { id: 'flows', label: 'Flows' },
   { id: 'life', label: 'Life' },
@@ -72,7 +80,23 @@ export function App() {
   const orders = workOrderViews(state)
   const channels = flowChannels(state)
   const chart = chartView(state)
+  const ledger = ledgerView(state)
+  const board = contractBoard(state)
+  const active = activeContract(state)
+  const options = transferOptions(state)
+  const voyage = voyageView(state)
+  const settlement = lastSettlement(state)
   const brokenCount = state.ship.parts.filter((p) => p.broken).length
+
+  // The Port tab is where the only timed decision in the game lives, so the
+  // nav says when it wants attention: work on offer, or a deadline running.
+  const portBadge = state.ship.docked
+    ? active
+      ? `${Math.max(0, Math.ceil(active.daysRemaining))}d`
+      : board.length > 0
+        ? String(board.length)
+        : undefined
+    : undefined
 
   return (
     <div className="app">
@@ -89,6 +113,7 @@ export function App() {
           >
             {t.label}
             {t.id === 'ship' && brokenCount > 0 && <span className="tabs__dot" />}
+            {t.id === 'port' && portBadge && <span className="tabs__count">{portBadge}</span>}
             {t.id === 'crew' && orders.length > 0 && <span className="tabs__count">{orders.length}</span>}
           </button>
         ))}
@@ -131,6 +156,22 @@ export function App() {
           </>
         )}
 
+        {tab === 'port' && (
+          <Port
+            ledger={ledger}
+            board={board}
+            active={active}
+            options={options}
+            voyage={voyage}
+            settlement={settlement}
+            portId={state.ship.portId}
+            docked={state.ship.docked}
+            onAccept={(contractId) => dispatch({ kind: 'ACCEPT_CONTRACT', contractId })}
+            onAbandon={() => dispatch({ kind: 'ABANDON_CONTRACT' })}
+            onDepart={(optionId) => dispatch({ kind: 'DEPART', optionId })}
+          />
+        )}
+
         {tab === 'chart' && <StarChart chart={chart} />}
 
         {tab === 'flows' && <Flows channels={channels} />}
@@ -155,8 +196,9 @@ export function App() {
 
         <footer className="app__footer">
           <p className="app__milestone">
-            M1 — the living ship. Five resource networks, wear and failure, work orders, four
-            crew on a watch bill. No travel, no missions, no guilds yet.
+            M2 — the ship goes somewhere. Contracts with a stated resupply allowance, real
+            transfer orbits, and books that settle on arrival: efficiency now has a price.
+            No guilds or crew hiring yet.
           </p>
           <button type="button" className="button button--quiet" onClick={() => void resetWorld()}>
             Scuttle and start over

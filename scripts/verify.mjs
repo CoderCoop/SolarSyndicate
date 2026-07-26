@@ -353,6 +353,73 @@ check('and its port highlighted', await page.isVisible('.chart__body.is-current'
 
 await page.screenshot({ path: join(SHOTS, '11-chart.png'), fullPage: true })
 
+// --- the port: board, allowance, astrogator (TR-3b, TR-16, TR-20) -----------
+await page.click('.tabs__btn:has-text("Port")')
+await page.waitForSelector('.berth__name')
+
+check(
+  'the port tab names the berth the ship is actually at',
+  (await page.textContent('.berth__name'))?.includes('Gateway') === true,
+  (await page.textContent('.berth__name'))?.trim() ?? '',
+)
+
+const offers = await page.$$('.offer')
+check('the board offers work', offers.length > 0, `${offers.length} on offer`)
+
+// TR-20: the allowance is answerable when choosing, not discovered on arrival.
+const allowanceBlocks = await page.$$('.offer .allowance')
+check(
+  'every offer states its resupply allowance up front (TR-20)',
+  allowanceBlocks.length === offers.length,
+  `${allowanceBlocks.length}/${offers.length}`,
+)
+
+const allowanceLabels = await page.$$eval('.offer:first-child .allowance__label', (els) =>
+  els.map((e) => e.textContent),
+)
+check(
+  'the allowance is itemised by store, not a single number',
+  allowanceLabels.length === 5,
+  allowanceLabels.join(' · '),
+)
+
+const balance = await page.textContent('.books__balance')
+check('the books show a balance', /cr$/.test(balance?.trim() ?? ''), balance?.trim() ?? '')
+
+await page.screenshot({ path: join(SHOTS, '12-board.png'), fullPage: true })
+
+await tap(page, '.offer:first-child .offer__accept')
+await page.waitForSelector('.options')
+
+check('accepting a run takes the board off the table', (await page.$$('.offer__accept')).length === 0)
+
+const optionLabels = await page.$$eval('.option__label', (els) => els.map((e) => e.textContent))
+check('the astrogator works up more than one trajectory', optionLabels.length === 3, optionLabels.join(' · '))
+
+// TR-3b: an option the ship cannot fly is shown with the reason, not hidden.
+const blocked = await page.$$('.option.is-blocked')
+check('an unflyable option is shown, not dropped (TR-3b)', blocked.length > 0, `${blocked.length} blocked`)
+if (blocked.length > 0) {
+  const why = await page.textContent('.option.is-blocked .option__why')
+  check('and says what it is short of, in tonnes', /t more/.test(why ?? ''), why?.trim() ?? '')
+  check(
+    'with no way to fly it anyway',
+    (await page.$$('.option.is-blocked .option__go')).length === 0,
+  )
+}
+
+await page.screenshot({ path: join(SHOTS, '13-astrogator.png'), fullPage: true })
+
+// Walking away costs money and never the ship (TR-21).
+const balanceBefore = await page.textContent('.books__balance')
+await tap(page, '.panel:has(.allowance) .button--quiet')
+await page.waitForSelector('.offer')
+check(
+  'abandoning a run puts the board back and charges for it (TR-21)',
+  (await page.textContent('.books__balance')) !== balanceBefore,
+  `${balanceBefore?.trim()} -> ${(await page.textContent('.books__balance'))?.trim()}`,
+)
+
 // --- the flow view (RF-13 to RF-20) -----------------------------------------
 await page.click('.tabs__btn:has-text("Flows")')
 await page.waitForSelector('.chans')
@@ -551,6 +618,89 @@ check(
 )
 
 check('no errors during catch-up', awayErrors.length === 0, awayErrors.slice(0, 2).join(' | '))
+
+// ---------------------------------------------------------------------------
+// A run, flown and settled (TR-17 to TR-21) -- the milestone end to end.
+//
+// The Gateway-to-Tranquillity crossing is five days, which at 24x is five real
+// hours. So this is the same trick as the catch-up pass: cast off, walk away,
+// and come back to a berthed ship with its books closed.
+// ---------------------------------------------------------------------------
+console.log('\n  -- a run, flown and settled --')
+
+const voyageCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+await voyageCtx.clock.install({ time: new Date(Date.UTC(2200, 7, 1, 9, 0, 0)) })
+
+const v1 = await voyageCtx.newPage()
+const voyageErrors = []
+v1.on('pageerror', (e) => voyageErrors.push(String(e)))
+await v1.goto(base, { waitUntil: 'networkidle' })
+await v1.waitForSelector('.ship')
+
+await v1.click('.tabs__btn:has-text("Port")')
+await v1.waitForSelector('.offer')
+await tap(v1, '.offer:first-child .offer__accept')
+await v1.waitForSelector('.option__go')
+
+// Cheapest flyable trajectory: the first option that is not blocked.
+await tap(v1, '.option:not(.is-blocked) .option__go')
+await v1.waitForSelector('.voyage__track')
+// The fill is zero-width at t=0, so ask the meter what it reads rather than
+// whether a bar of no width happens to be visible.
+check(
+  'casting off puts the ship under way',
+  (await v1.getAttribute('.voyage__track', 'aria-valuenow')) === '0',
+  (await v1.getAttribute('.voyage__track', 'aria-valuenow')) ?? '',
+)
+
+const legs = await v1.textContent('.voyage__legs')
+check('and names both ends of the crossing', /→/.test(legs ?? ''), legs?.trim() ?? '')
+
+await v1.screenshot({ path: join(SHOTS, '14-under-way.png'), fullPage: true })
+await v1.close()
+
+// Long enough for the five-day crossing to complete while the app is shut.
+await voyageCtx.clock.fastForward('06:00:00')
+
+const v2 = await voyageCtx.newPage()
+v2.on('pageerror', (e) => voyageErrors.push(String(e)))
+await v2.goto(base, { waitUntil: 'networkidle' })
+await v2.waitForSelector('.ship')
+if (await v2.isVisible('.away')) await v2.click('.away .button')
+
+await v2.click('.tabs__btn:has-text("Port")')
+await v2.waitForSelector('.settle__list')
+
+const berth = await v2.textContent('.berth__name')
+check('the ship arrived and is berthed at the far end', /Tranquillity/.test(berth ?? ''), berth?.trim() ?? '')
+
+const settleRows = await v2.$$('.settle__row:not(.settle__row--head)')
+check(
+  'the settlement is shown line by line, not as one number',
+  settleRows.length === 5,
+  `${settleRows.length} lines`,
+)
+
+const overUnder = await v2.$$eval('.settle__row.is-under, .settle__row.is-over', (els) => els.length)
+check('every line reads as under or over its allowance', overUnder === settleRows.length, `${overUnder}`)
+
+const totals = await v2.$$eval('.settle__totals li span', (els) => els.map((e) => e.textContent))
+check(
+  'payment and allowance are settled separately, then totalled',
+  totals.length === 3 && /worth/.test(totals[2] ?? ''),
+  totals.join(' · '),
+)
+
+check(
+  'the settlement says it was priced where the ship arrived (TR-19)',
+  /where the ship actually arrived/.test((await v2.textContent('.settle .panel__note')) ?? ''),
+)
+
+// TR-21: however the run went, the desk can take the next job.
+check('and the board is open again', (await v2.$$('.offer__accept')).length > 0)
+check('no errors flying the run', voyageErrors.length === 0, voyageErrors.slice(0, 2).join(' | '))
+
+await v2.screenshot({ path: join(SHOTS, '15-settled.png'), fullPage: true })
 
 await browser.close()
 server.close()

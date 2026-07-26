@@ -596,6 +596,20 @@ you). It's a mid-game story beat, not a menu toggle — and it's the one time th
   of overtime; Wrightworks questions every hour of *unpaid* overtime).
 - **Money sinks** (what makes income meaningful): wages, propellant, spares,
   port/berth fees, part purchases, insurance, guild dues, hazard pay, death benefits.
+- **The resupply allowance** — the mechanism that gives efficiency a price. Every
+  contract states, *before it is accepted*, what the guild has budgeted for the
+  crossing: so many kg of water, O2, food, propellant, spares. On arrival the ship's
+  actual consumption is measured against it and the difference settled at the
+  **arrival** port's prices. Come in under and the balance is paid back; go over and
+  it is billed. This is what finally counts loop closure, tune, attendance and
+  upgrade tiers — all of which had been moving numbers that nothing scored.
+  The signal scales with voyage length: on a five-day Earth-system hop the water
+  line is worth tens of credits against a five-figure payment, and the money is
+  really in the spares line (wear avoided). It only bites on long crossings.
+- **Every port that can be arrived at must offer work back out.** A one-way board
+  strands the ship commercially even though it is berthed, fuelled and crewed —
+  the same failure as a mechanical strand, which §7.4 forbids. Enforced by test
+  rather than by care.
 - **Progression**: budget buys parts; *standing and rank* gate which parts/hulls/
   ports are even purchasable. Both are needed — pure cash grind can't shortcut
   guild play.
