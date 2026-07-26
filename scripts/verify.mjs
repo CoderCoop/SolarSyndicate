@@ -301,6 +301,63 @@ check('the flow overlay is gone (RF-13)', (await page.$$('.flowtoggle, .flow__ch
 const figures = await page.$$('.schema .person')
 check('crew are drawn in their rooms as figures (RF-5)', figures.length === 4, `${figures.length} aboard`)
 
+// --- the flow view (RF-13 to RF-20) -----------------------------------------
+await page.click('.tabs__btn:has-text("Flows")')
+await page.waitForSelector('.chans')
+
+const chanLabels = await page.$$eval('.chans__btn', (els) => els.map((e) => e.textContent))
+check(
+  'one channel per Life gauge, plus power (RF-14)',
+  chanLabels.length === 8 && chanLabels[0] === 'Power',
+  chanLabels.join(' / '),
+)
+
+const powerRoles = await page.$$eval('.fgroup__label', (els) => els.map((e) => e.textContent))
+check(
+  'every channel uses the same grammar (RF-15)',
+  powerRoles.includes('in') && powerRoles.includes('out') && powerRoles.includes('buffer'),
+  powerRoles.join(' · '),
+)
+
+const powerNames = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+check(
+  'nodes are named parts, not decks (RF-16)',
+  powerNames.includes('Beacon-4 Fission Plant') && powerNames.includes('O2 Electrolysis Unit'),
+  powerNames.slice(0, 3).join(', '),
+)
+
+// The crew are a node wherever they are actually a load -- which is the air and
+// the stores, not the electrical bus.
+await tap(page, '.chans__btn:has-text("O₂")')
+const o2Names = await page.$$eval('.fnode__name', (els) => els.map((e) => e.textContent))
+check(
+  'and the crew are a node where the crew are a load',
+  o2Names.some((n) => n?.startsWith('Crew')),
+  o2Names.join(', '),
+)
+
+await tap(page, '.chans__btn:has-text("Water")')
+await page.waitForSelector('.fnode--return')
+const returnName = await page.textContent('.fnode--return .fnode__name')
+check('the water loop is drawn as a loop (RF-17)', /Recycler/.test(returnName ?? ''), returnName ?? '')
+
+const whatIf = await page.textContent('.flowch__what-if')
+check(
+  'and states what happens without it (RF-18)',
+  /Recycler offline: .* days of tank\./.test(whatIf ?? ''),
+  whatIf?.trim() ?? '',
+)
+
+await page.screenshot({ path: join(SHOTS, '09-flows.png'), fullPage: true })
+
+await tap(page, '.chans__btn:has-text("Propellant")')
+const propFoot = await page.textContent('.flowch__foot')
+check(
+  'propellant is a budget, not a rate (RF-19)',
+  /budget, not a rate/.test(propFoot ?? ''),
+  propFoot?.trim() ?? '',
+)
+
 await page.click('.tabs__btn:has-text("Life")')
 await page.waitForSelector('.gauges')
 const gaugeLabels = await page.$$eval('.gauge-row__label', (els) => els.map((e) => e.textContent))

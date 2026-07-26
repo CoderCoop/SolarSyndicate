@@ -785,6 +785,276 @@ button {
   font-style: italic;
 }
 
+
+/* ------------------------------------------------------------------- flows */
+/*
+ * Spec 004. One channel per Life gauge, plus power. A trunk down the left with
+ * each node branching off it -- the thing the margin overlay could not draw,
+ * because a twelve-unit strip has nowhere to route an edge sideways.
+ */
+
+.chans {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 10px;
+  scrollbar-width: none;
+}
+
+.chans::-webkit-scrollbar {
+  display: none;
+}
+
+.chans__btn {
+  flex: none;
+  padding: 5px 11px;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chans__btn.is-on {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, var(--bg-raised));
+}
+
+.flowch__level {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.flowch__level-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.flowch__level-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.flowch__level-cap {
+  color: var(--ink-faint);
+}
+
+.flowch__level-track {
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 3px;
+  background: #16222c;
+  overflow: hidden;
+}
+
+.flowch__level-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--cyan);
+  transition: width 700ms ease;
+}
+
+/* The trunk: one continuous rule the whole channel hangs off. */
+.fnodes {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+
+.fnodes::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, var(--cyan), color-mix(in srgb, var(--cyan) 25%, transparent));
+}
+
+.fgroup {
+  list-style: none;
+}
+
+.fgroup__label {
+  margin: 12px 0 5px -18px;
+  padding-left: 18px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.fgroup__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fnode {
+  position: relative;
+  padding: 7px 0;
+}
+
+.fnode__branch {
+  position: absolute;
+  left: -13px;
+  top: 18px;
+  width: 11px;
+  height: 1px;
+  background: var(--line-bright);
+}
+
+.fnode__top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13.5px;
+}
+
+.fnode__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.fnode__value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+.fnode__track {
+  height: 4px;
+  margin: 5px 0 4px;
+  border-radius: 2px;
+  background: #131f28;
+  overflow: hidden;
+}
+
+.fnode__bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cyan);
+  transition: width 600ms ease;
+}
+
+.fnode__where {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+.fnode__note {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Role colours are semantic, and the group headings say the same thing in
+   words -- colour never carries it alone. */
+.fnode--source .fnode__bar {
+  background: var(--green);
+}
+.fnode--source .fnode__value {
+  color: var(--green);
+}
+
+.fnode--return .fnode__bar {
+  background: #6f9fe0;
+}
+.fnode--return .fnode__value {
+  color: #6f9fe0;
+}
+
+.fnode--consumer .fnode__bar {
+  background: var(--amber);
+}
+.fnode--consumer .fnode__value {
+  color: var(--amber);
+}
+
+.fnode--buffer .fnode__bar {
+  background: var(--ink-faint);
+}
+
+.fnode.is-idle {
+  opacity: 0.45;
+}
+
+.fnode.is-idle .fnode__bar {
+  background: var(--ink-faint);
+}
+
+.flowch__net {
+  margin-top: 16px;
+  padding: 12px 13px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line-bright);
+  border-radius: 9px;
+}
+
+.flowch__net.is-negative {
+  border-color: color-mix(in srgb, var(--amber) 55%, var(--line-bright));
+}
+
+.flowch__net-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.flowch__net-label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.flowch__net-value {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.flowch__net.is-negative .flowch__net-value {
+  color: var(--amber);
+}
+
+.flowch__net-horizon {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+.flowch__foot {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+.flowch__what-if {
+  margin: 7px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--amber);
+}
+
 /* -------------------------------------------------------------------- parts */
 
 .parts {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   crewViews,
+  flowChannels,
   lifeSupportView,
   powerView,
   recentLog,
@@ -10,16 +11,18 @@ import {
 import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
+import { Flows } from './components/Flows.js'
 import { LifeSupport } from './components/LifeSupport.js'
 import { ShipViewport } from './components/ShipViewport.js'
 import { StatusBar } from './components/StatusBar.js'
 import { WorkOrders } from './components/WorkOrders.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
-type Tab = 'ship' | 'life' | 'crew' | 'log'
+type Tab = 'ship' | 'flows' | 'life' | 'crew' | 'log'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ship', label: 'Ship' },
+  { id: 'flows', label: 'Flows' },
   { id: 'life', label: 'Life' },
   { id: 'crew', label: 'Crew' },
   { id: 'log', label: 'Log' },
@@ -64,6 +67,7 @@ export function App() {
   const rooms = roomViews(state)
   const crew = crewViews(state)
   const orders = workOrderViews(state)
+  const channels = flowChannels(state)
   const brokenCount = state.ship.parts.filter((p) => p.broken).length
 
   return (
@@ -122,6 +126,8 @@ export function App() {
             )}
           </>
         )}
+
+        {tab === 'flows' && <Flows channels={channels} />}
 
         {tab === 'life' && <LifeSupport life={life} />}
 
