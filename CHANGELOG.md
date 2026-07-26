@@ -9,6 +9,28 @@ means here.
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-26
+
+A minor by the stated rule: it changes what the player can reach. Mars.
+
+### Added
+
+- **A second hull, and a yard to buy it from.** The Albatross-class long-hauler
+  — 110 t of tank against the Kestrel's 32, and stores for a 259-day crossing —
+  sold at Tranquillity, priced as a difference against a trade-in. Mars is now
+  reachable, on minimum energy only; the faster ellipses stay blocked, so the
+  window still costs something. The Belt stays out of reach, which leaves
+  somewhere to go.
+- She is delivered at her nameplate — full condition, spec tune — so the tuning
+  work done on the old ship does not come along. Stated on the purchase card
+  rather than discovered afterwards.
+
+### Changed
+
+- Interplanetary allowances re-derived against the Albatross, since those runs
+  can only be flown in one. Cislunar allowances stay sized for a Kestrel, so a
+  big ship on a small job overruns — which is correct.
+
 ## [0.3.1] — 2026-07-26
 
 A patch by the stated rule: new surfaces, no gameplay capability changed.

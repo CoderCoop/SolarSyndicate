@@ -95,6 +95,10 @@ const TOPICS: { section: string; items: Topic[] }[] = [
         a: 'Because sharing a parent body does not make two ports neighbours. Gateway is 400 km up; Tranquillity is in lunar orbit, 384,400 km out. A minimum-energy transfer between those two orbits really does take about five days — the route strip prints both distances.',
       },
       {
+        q: 'How do I get to Mars?',
+        a: 'You buy a bigger ship. The Kestrel carries 32 t of propellant and 91 days of food; a Mars crossing is 259 days and wants 103 t. The yard at Tranquillity sells the Albatross, priced as a difference against trading in your current hull — and she reaches Mars on the slow trajectory only, so the window still costs you something.',
+      },
+      {
         q: 'What happens if I miss a deadline, or run out of money?',
         a: 'Late delivery pays less. An overrun is billed. The balance can go negative. None of it strands you: the ship stays berthed, crewed and able to take the next job. Consequences here are financial, never a wall.',
       },

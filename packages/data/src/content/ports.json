@@ -28,7 +28,10 @@
     "escapeDeltaVMs": 1870,
     "orbitRadiusKm": 384400,
     "moon": "Luna",
-    "blurb": "Lunar orbit. Cheaper to leave than Earth, and the only yard in the inner system that will look at a Kestrel without laughing."
+    "blurb": "Lunar orbit. Cheaper to leave than Earth, and the only yard in the inner system that will look at a Kestrel without laughing.",
+    "sellsHullIds": [
+      "hull.albatross"
+    ]
   },
   {
     "id": "port.phobos",

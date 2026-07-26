@@ -526,6 +526,11 @@ check(
   `${balanceBefore?.trim()} -> ${(await page.textContent('.books__balance'))?.trim()}`,
 )
 
+// --- the yard: the Kestrel's replacement (§5.2, §10.2) ----------------------
+// Gateway has no yard, which is the point -- buying a ship is a reason to fly
+// somewhere rather than a catalogue at every berth.
+check('no yard at a berth without one', (await page.$$('.hull')).length === 0)
+
 // --- the flow view (RF-13 to RF-20) -----------------------------------------
 await page.click('.tabs__btn:has-text("Flows")')
 await page.waitForSelector('.chans')

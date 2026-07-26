@@ -33,6 +33,7 @@ import {
 import { attendanceView } from './attendance.js'
 import { abandonContract, acceptContract } from './contracts.js'
 import { arrive, depart } from './voyage.js'
+import { purchaseHull } from './shipyard.js'
 import { OPENING_BALANCE_CR, post } from './ledger.js'
 import { pushLog } from './log.js'
 import {
@@ -394,6 +395,11 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
         scheduleAt(state, state.voyage!.arrivesAt, 'ARRIVE')
         resolveAll(state, at)
       }
+      break
+    }
+
+    case 'PURCHASE_HULL': {
+      purchaseHull(state, command.hullId, at)
       break
     }
 
