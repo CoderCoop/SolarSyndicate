@@ -15,5 +15,10 @@
     "gainPerDayPerQuality": 10.0,
     "ceilingUnskilled": 30,
     "ceilingSkilled": 100
+  },
+  "survey": {
+    "scrapFloor": 0.35,
+    "conditionWeight": 0.8,
+    "brokenDeduction": 0.06
   }
 }

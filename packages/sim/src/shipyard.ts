@@ -25,12 +25,84 @@
  * rather than discovered — the alternative, carrying parts across, would make
  * a hull change free in every way that matters.
  */
-import { content, getHull, getPart, getPort, TUNE } from '@solsyn/data'
+import { content, getHull, getPart, getPort, SURVEY, TUNE } from '@solsyn/data'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { makeReservoir, levelAt } from './resources.js'
 import { type GameTime } from './time.js'
 import { RESOURCE_KEYS, type PartState, type SimState } from './types.js'
+
+/**
+ * What a yard sees when it walks the ship. Design doc §6.2.
+ *
+ * The trade-in is the one place the *state* of the ship turns into money, and
+ * it exists because without it neglect was free at settlement: skipping repairs
+ * banked the unspent spares budget, and the wrecked ship it produced cost
+ * nothing on the books.
+ *
+ * Wear dominates, because that is what a surveyor can measure. Tune counts for
+ * the rest -- a yard can tell a ship that has been watched from one that has
+ * merely been run, and it is worth saying so, but it is not what sets the
+ * price. A failed system is deducted twice over: once through the condition it
+ * lost on the way down, and once again because it has to be replaced before
+ * anyone else will fly her.
+ */
+export interface Survey {
+  /** Mean condition across every installed system, 0-100. */
+  conditionPct: number
+  /** Mean tune, 0-100. */
+  tunePct: number
+  brokenCount: number
+  /** Fraction of book value this ship actually fetches. */
+  factor: number
+  /** Book value at nameplate, before the survey. */
+  bookValueCr: number
+  /** What the yard will actually allow. */
+  tradeInCr: number
+  /** The sentence a surveyor would say, for the card. */
+  verdict: string
+}
+
+/** Walk the ship and price it. */
+export function surveyShip(state: SimState, at: GameTime): Survey {
+  const hull = getHull(state.ship.hullId)
+  const parts = state.ship.parts
+  const n = Math.max(1, parts.length)
+
+  const conditionPct = parts.reduce((sum, p) => sum + levelAt(p.condition, at), 0) / n
+  const tunePct = parts.reduce((sum, p) => sum + levelAt(p.tune, at), 0) / n
+  const brokenCount = parts.filter((p) => p.broken).length
+
+  const kept =
+    SURVEY.conditionWeight * (conditionPct / 100) +
+    (1 - SURVEY.conditionWeight) * (tunePct / 100)
+  const raw =
+    SURVEY.scrapFloor +
+    (1 - SURVEY.scrapFloor) * kept -
+    SURVEY.brokenDeduction * brokenCount
+  // Even a wreck is worth its metal, and no yard pays over book for a used hull.
+  const factor = Math.max(SURVEY.scrapFloor, Math.min(1, raw))
+
+  return {
+    conditionPct,
+    tunePct,
+    brokenCount,
+    factor,
+    bookValueCr: hull.bookValueCr,
+    tradeInCr: Math.round(hull.bookValueCr * factor),
+    verdict: verdictFor(factor, brokenCount),
+  }
+}
+
+function verdictFor(factor: number, broken: number): string {
+  if (broken > 0) {
+    return `${broken} failed system${broken === 1 ? '' : 's'} to make good before anyone else will fly her.`
+  }
+  if (factor >= 0.95) return 'Barely a mark on her. The yard has no argument to make.'
+  if (factor >= 0.8) return 'Honest wear, well kept. The surveyor finds nothing to lean on.'
+  if (factor >= 0.6) return 'She has been worked. Every hour of deferred servicing is in this number.'
+  return 'Run into the ground. The yard is buying metal, not a ship.'
+}
 
 export interface HullOffer {
   id: string
@@ -39,8 +111,10 @@ export interface HullOffer {
   blurb: string
   /** List price, before anything is allowed for the ship you are standing in. */
   priceCr: number
-  /** What the yard allows for the current hull. */
+  /** What the yard allows for the current hull, after surveying it. */
   tradeInCr: number
+  /** Why it allows that, so the number is never a bare assertion. */
+  survey: Survey
   /** What actually leaves the account: price minus trade-in. */
   netCr: number
   affordable: boolean
@@ -63,13 +137,14 @@ export interface HullOffer {
 export function shipyardOffers(state: SimState): HullOffer[] {
   if (!state.ship.docked) return []
   const port = getPort(state.ship.portId)
-  const current = getHull(state.ship.hullId)
+  const survey = surveyShip(state, state.now)
+  const currentHull = getHull(state.ship.hullId)
 
   return port.sellsHullIds
     .filter((id) => id !== state.ship.hullId)
     .map((id) => {
       const hull = getHull(id)
-      const netCr = hull.priceCr - current.tradeInCr
+      const netCr = hull.priceCr - survey.tradeInCr
       const affordable = state.credits >= netCr && !state.contract
 
       return {
@@ -78,7 +153,8 @@ export function shipyardOffers(state: SimState): HullOffer[] {
         className: hull.className,
         blurb: hull.blurb,
         priceCr: hull.priceCr,
-        tradeInCr: current.tradeInCr,
+        tradeInCr: survey.tradeInCr,
+        survey,
         netCr,
         affordable,
         ...(affordable
@@ -89,10 +165,10 @@ export function shipyardOffers(state: SimState): HullOffer[] {
                 : `Short by ${(netCr - state.credits).toLocaleString()} cr.`,
             }),
         compare: {
-          dryMassKg: [current.dryMassKg, hull.dryMassKg],
-          propellantCapacityKg: [current.propellantCapacityKg, hull.propellantCapacityKg],
-          foodCapacityKg: [current.foodCapacityKg, hull.foodCapacityKg],
-          waterCapacityKg: [current.waterCapacityKg, hull.waterCapacityKg],
+          dryMassKg: [currentHull.dryMassKg, hull.dryMassKg],
+          propellantCapacityKg: [currentHull.propellantCapacityKg, hull.propellantCapacityKg],
+          foodCapacityKg: [currentHull.foodCapacityKg, hull.foodCapacityKg],
+          waterCapacityKg: [currentHull.waterCapacityKg, hull.waterCapacityKg],
         },
       }
     })

@@ -99,6 +99,10 @@ const TOPICS: { section: string; items: Topic[] }[] = [
         a: 'You buy a bigger ship. The Kestrel carries 32 t of propellant and 91 days of food; a Mars crossing is 259 days and wants 103 t. The yard at Tranquillity sells the Albatross, priced as a difference against trading in your current hull — and she reaches Mars on the slow trajectory only, so the window still costs you something.',
       },
       {
+        q: 'Does it matter if I let the ship go?',
+        a: 'Yes, and it costs money at the yard. A trade-in is book value scaled by what a surveyor finds — mean condition mostly, tune a little, and a deduction for every failed system that has to be made good before anyone else will fly her. Skipping repairs banks the unspent maintenance budget on the allowance, and loses several times that on the ship itself.',
+      },
+      {
         q: 'What happens if I miss a deadline, or run out of money?',
         a: 'Late delivery pays less. An overrun is billed. The balance can go negative. None of it strands you: the ship stays berthed, crewed and able to take the next job. Consequences here are financial, never a wall.',
       },
