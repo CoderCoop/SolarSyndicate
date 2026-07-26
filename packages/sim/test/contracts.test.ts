@@ -46,6 +46,19 @@ describe('the board offers work from where the ship actually is', () => {
     for (const c of content.contracts) expect(c.toPortId).not.toBe(c.fromPortId)
   })
 
+  it('offers work back out of every port a run can end at', () => {
+    // The dead end this caught: every flyable contract went one way, and the
+    // only crossing the Kestrel could actually make ended at a port with an
+    // empty board. Arriving somewhere you cannot leave is the commercial form
+    // of stranding the ship, which TR-21 forbids as firmly as the mechanical
+    // form. A port that can be arrived at must offer at least one way out.
+    const arrivals = new Set(content.contracts.map((c) => c.toPortId))
+    for (const portId of arrivals) {
+      const out = content.contracts.filter((c) => c.fromPortId === portId)
+      expect(out.length, `nothing departs ${portId}`).toBeGreaterThan(0)
+    }
+  })
+
   it('keeps contracts in data, not in code', () => {
     expect(content.contracts.length).toBeGreaterThan(2)
     for (const c of content.contracts) {

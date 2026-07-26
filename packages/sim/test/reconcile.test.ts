@@ -16,6 +16,7 @@ import {
   activeContract,
   advanceTo,
   applyCommand,
+  contractBoard,
   createWorld,
   ledgerView,
   lastSettlement,
@@ -134,6 +135,54 @@ describe('the allowance is what makes efficiency worth money', () => {
     const neglected = ledgerView(fly(neglectedStart)).credits
 
     expect(tended).toBeGreaterThan(neglected)
+  })
+})
+
+describe('the ship can get home again', () => {
+  it('finds work on the board at the far end', () => {
+    // The dead end this exists to prevent: the only crossing the Kestrel can
+    // fly used to end at a port with nothing on offer, which strands the ship
+    // commercially even though it is berthed and fuelled.
+    const board = contractBoard(fly())
+    expect(board.length).toBeGreaterThan(0)
+    for (const c of board) expect(c.fromPortId).toBe('port.tranquillity')
+  })
+
+  it('flies the return leg and settles it at the home port', () => {
+    let s = fly()
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.gateway.castings' },
+    })
+    const option = transferOptions(s)
+      .filter((o) => o.feasible)
+      .sort((a, b) => a.deltaVMs - b.deltaVMs)[0]!
+    s = applyCommand(s, { at: s.now, command: { kind: 'DEPART', optionId: option.id } })
+    s = advanceTo(s, s.voyage!.arrivesAt + 60)
+
+    expect(s.ship.portId).toBe('port.gateway')
+    const settlement = lastSettlement(s)!
+    expect(settlement.contractId).toBe('contract.gateway.castings')
+    // Settled at Gateway's prices, not the ones it departed under.
+    const water = settlement.lines.find((l) => l.key === 'water')!
+    expect(water.unitCr).toBeCloseTo(priceAt('port.gateway', 'water'), 6)
+  })
+
+  it('leaves the round trip in profit, run competently', () => {
+    // Both legs together must clear the opening balance, or the Earth-system
+    // loop is a treadmill rather than a living.
+    let s = fly()
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.gateway.castings' },
+    })
+    const option = transferOptions(s)
+      .filter((o) => o.feasible)
+      .sort((a, b) => a.deltaVMs - b.deltaVMs)[0]!
+    s = applyCommand(s, { at: s.now, command: { kind: 'DEPART', optionId: option.id } })
+    s = advanceTo(s, s.voyage!.arrivesAt + 60)
+
+    expect(ledgerView(s).credits).toBeGreaterThan(ledgerView(world()).credits)
   })
 })
 

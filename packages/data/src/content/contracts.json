@@ -19,6 +19,25 @@
     "blurb": "Machine tools and bar stock. Short, dull, and the Local gives it to hulls it does not yet trust."
   },
   {
+    "id": "contract.gateway.castings",
+    "title": "Yard castings back to Gateway",
+    "client": "Tranquillity Yards",
+    "fromPortId": "port.tranquillity",
+    "toPortId": "port.gateway",
+    "payCr": 61000,
+    "abandonCr": 8000,
+    "cargoKg": 3600,
+    "deadlineDays": 12,
+    "allowance": {
+      "water": 22,
+      "o2": 5,
+      "food": 38,
+      "propellant": 8100,
+      "spares": 2
+    },
+    "blurb": "Finished castings and a crate of rejected ones going back for credit. The yard would rather not keep either."
+  },
+  {
     "id": "contract.phobos.survey",
     "title": "Survey gear to Phobos",
     "client": "Areographic Office",
@@ -36,6 +55,25 @@
       "spares": 11
     },
     "blurb": "Instruments in crated foam, and a note asking that the crates not be stacked. The window is the window; miss it and the next is two years out."
+  },
+  {
+    "id": "contract.gateway.cores",
+    "title": "Survey returns to Gateway",
+    "client": "Areographic Office",
+    "fromPortId": "port.phobos",
+    "toPortId": "port.gateway",
+    "payCr": 298000,
+    "abandonCr": 42000,
+    "cargoKg": 6400,
+    "deadlineDays": 300,
+    "allowance": {
+      "water": 340,
+      "o2": 46,
+      "food": 1960,
+      "propellant": 33500,
+      "spares": 11
+    },
+    "blurb": "Core samples, spent instruments and eleven crates nobody will explain. The Office wants all of it and will not say which part matters."
   },
   {
     "id": "contract.ceres.medical",
