@@ -32,6 +32,7 @@ import {
 } from './crew.js'
 import { attendanceView } from './attendance.js'
 import { abandonContract, acceptContract } from './contracts.js'
+import { arrive, depart } from './voyage.js'
 import { OPENING_BALANCE_CR, post } from './ledger.js'
 import { pushLog } from './log.js'
 import {
@@ -133,7 +134,11 @@ export function createWorld(seed: number, utcMs: number): SimState {
         co2: makeReservoir(0.52, 0, 6, t0),
         water: makeReservoir(hull.waterCapacityKg * 0.88, 0, hull.waterCapacityKg, t0),
         food: makeReservoir(hull.foodCapacityKg * 0.74, 0, hull.foodCapacityKg, t0),
-        propellant: makeReservoir(hull.propellantCapacityKg * 0.41, 0, hull.propellantCapacityKg, t0),
+        // Fuelled for the opening contract with room to choose how to fly it.
+        // At 0.41 the ship could not make its own first run, which is the
+        // "opening budget" number spec 002 left to playtesting -- and a desk
+        // that cannot take the job it is given is not a starting position.
+        propellant: makeReservoir(hull.propellantCapacityKg * 0.62, 0, hull.propellantCapacityKg, t0),
         spares: makeReservoir(21, 0, hull.sparesCapacity, t0),
       },
       portId: STARTER_PORT_ID,
@@ -230,6 +235,12 @@ function applyEvent(state: SimState, event: SimEvent): void {
       updateActivities(state, event.at)
       resolveAll(state, event.at)
       scheduleAt(state, nextShiftBoundary(event.at + 1), 'SHIFT_CHANGE')
+      break
+    }
+
+    case 'ARRIVE': {
+      arrive(state, event.at)
+      resolveAll(state, event.at)
       break
     }
 
@@ -373,6 +384,14 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
     case 'ABANDON_CONTRACT': {
       abandonContract(state, at)
       resolveAll(state, at)
+      break
+    }
+
+    case 'DEPART': {
+      if (depart(state, command.optionId, at)) {
+        scheduleAt(state, state.voyage!.arrivesAt, 'ARRIVE')
+        resolveAll(state, at)
+      }
       break
     }
 

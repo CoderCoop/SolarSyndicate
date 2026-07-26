@@ -335,6 +335,24 @@ check('the flow overlay is gone (RF-13)', (await page.$$('.flowtoggle, .flow__ch
 const figures = await page.$$('.schema .person')
 check('crew are drawn in their rooms as figures (RF-5)', figures.length === 4, `${figures.length} aboard`)
 
+// --- the chart (§5.1) -------------------------------------------------------
+await page.click('.tabs__btn:has-text("Chart")')
+await page.waitForSelector('.chart')
+
+const orbits = await page.$$('.chart__orbit')
+check('the chart draws every body with a port on it', orbits.length === 3, `${orbits.length} orbits`)
+
+const caption = await page.textContent('.chart__caption')
+check(
+  'and says where the ship is, in words',
+  /Berthed at .+/.test(caption ?? ''),
+  caption?.trim() ?? '',
+)
+check('with the ship marked on the plate', await page.isVisible('.chart__ship-mark'))
+check('and its port highlighted', await page.isVisible('.chart__body.is-current'))
+
+await page.screenshot({ path: join(SHOTS, '11-chart.png'), fullPage: true })
+
 // --- the flow view (RF-13 to RF-20) -----------------------------------------
 await page.click('.tabs__btn:has-text("Flows")')
 await page.waitForSelector('.chans')

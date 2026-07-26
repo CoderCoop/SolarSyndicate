@@ -130,6 +130,12 @@ await shot('crew', async (page) => {
   await page.waitForSelector('.watchstrip')
 }, { height: 1700 })
 
+// The chart: where the ship actually is.
+await shot('chart', async (page) => {
+  await page.click('.tabs__btn:has-text("Chart")')
+  await page.waitForSelector('.chart')
+}, { height: 900 })
+
 // The water channel: a loop drawn as a loop, with the counterfactual stated.
 await shot('flows-water', async (page) => {
   await page.click('.tabs__btn:has-text("Flows")')

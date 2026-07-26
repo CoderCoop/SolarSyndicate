@@ -1358,6 +1358,89 @@ button {
   color: var(--ink-faint);
 }
 
+
+/* ------------------------------------------------------------------- chart */
+/*
+ * Design §5.1. Top-down, sun at the centre, square-root radial scale so the
+ * inner system and the Belt are both legible on one plate.
+ */
+
+.chart {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.chart__orbit {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 0.7;
+}
+
+.chart__sun {
+  fill: var(--amber);
+  filter: drop-shadow(0 0 6px rgba(232, 163, 61, 0.6));
+}
+
+.chart__track {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2.5;
+  opacity: 0.75;
+}
+
+.chart__body circle {
+  fill: var(--bg-raised);
+  stroke: var(--ink-faint);
+  stroke-width: 1.1;
+}
+
+.chart__body text {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  fill: var(--ink-dim);
+}
+
+.chart__body .chart__ports {
+  font-size: 6.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+.chart__body.is-current circle {
+  stroke: var(--cyan);
+  fill: color-mix(in srgb, var(--cyan) 22%, var(--bg-raised));
+}
+
+.chart__body.is-current text {
+  fill: var(--ink);
+}
+
+.chart__ship-halo {
+  fill: color-mix(in srgb, var(--cyan) 14%, transparent);
+  stroke: var(--cyan);
+  stroke-width: 0.6;
+}
+
+.chart__ship-mark {
+  fill: var(--cyan);
+}
+
+.chart__ship.is-under-way .chart__ship-halo {
+  stroke-dasharray: 2 2;
+}
+
+.chart__caption {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  color: var(--ink);
+  text-align: center;
+}
+
 /* -------------------------------------------------------------------- parts */
 
 .parts {
