@@ -373,10 +373,29 @@ export const BodyDef = z.object({
 })
 export type BodyDef = z.infer<typeof BodyDef>
 
+/**
+ * What a port charges per unit, in credits. Spec 002 TR-19.
+ *
+ * Prices follow from where the port is: Ceres sits on ice, so water is cheap
+ * there and dear at Gateway, which hauls everything up a gravity well. The
+ * Belt imports its calories. Where you top up is meant to be a decision.
+ */
+export const PortPrices = z.object({
+  /** Per kg. */
+  water: z.number().positive(),
+  o2: z.number().positive(),
+  food: z.number().positive(),
+  propellant: z.number().positive(),
+  /** Per unit. */
+  spares: z.number().positive(),
+})
+export type PortPrices = z.infer<typeof PortPrices>
+
 export const PortDef = z.object({
   id: z.string(),
   name: z.string(),
   bodyId: z.string(),
+  prices: PortPrices,
   /**
    * Delta-v to climb out of this port's gravity well onto a heliocentric
    * transfer, and the same again to arrive. Leaving Ceres is cheap; leaving

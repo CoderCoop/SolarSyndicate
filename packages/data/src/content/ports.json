@@ -3,6 +3,13 @@
     "id": "port.gateway",
     "name": "Gateway Station",
     "bodyId": "earth",
+    "prices": {
+      "water": 3.1,
+      "o2": 8.4,
+      "food": 9.2,
+      "propellant": 2.9,
+      "spares": 620
+    },
     "escapeDeltaVMs": 3200,
     "blurb": "The Local's home berth in high Earth orbit. Everything is available and everything is expensive."
   },
@@ -10,6 +17,13 @@
     "id": "port.tranquillity",
     "name": "Tranquillity Yards",
     "bodyId": "earth",
+    "prices": {
+      "water": 2.4,
+      "o2": 6.9,
+      "food": 11.5,
+      "propellant": 2.2,
+      "spares": 540
+    },
     "escapeDeltaVMs": 1870,
     "blurb": "Lunar orbit. Cheaper to leave than Earth, and the only yard in the inner system that will look at a Kestrel without laughing."
   },
@@ -17,6 +31,13 @@
     "id": "port.phobos",
     "name": "Phobos Yard",
     "bodyId": "mars",
+    "prices": {
+      "water": 1.55,
+      "o2": 5.8,
+      "food": 15.8,
+      "propellant": 1.35,
+      "spares": 880
+    },
     "escapeDeltaVMs": 830,
     "blurb": "A hollowed-out moon with a docking spine bolted through it. Thin margins, thinner air."
   },
@@ -24,6 +45,13 @@
     "id": "port.ceres",
     "name": "Ceres Local",
     "bodyId": "ceres",
+    "prices": {
+      "water": 0.62,
+      "o2": 4.1,
+      "food": 18.4,
+      "propellant": 0.95,
+      "spares": 760
+    },
     "escapeDeltaVMs": 510,
     "blurb": "The Belt's crossroads. Half the hulls in dock are older than the crews flying them."
   }
