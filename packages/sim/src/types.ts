@@ -8,10 +8,11 @@
 import type { Watch } from '@solsyn/data'
 import type { ContractState } from './contracts.js'
 import type { LedgerEntry } from './ledger.js'
+import type { VoyageState } from './voyage.js'
 import type { GameTime } from './time.js'
 
 /** Bump when the shape changes; add a migration in persistence. §8.3 */
-export const SIM_STATE_VERSION = 4
+export const SIM_STATE_VERSION = 5
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -143,6 +144,7 @@ export interface WorkOrder {
 export type EventKind =
   | 'RESOURCE_BOUND'
   | 'DAY_ROLL'
+  | 'ARRIVE'
   | 'SHIFT_CHANGE'
   | 'PART_THRESHOLD'
   | 'WORK_ORDER_DONE'
@@ -194,6 +196,8 @@ export interface SimState {
   ledger: LedgerEntry[]
   /** The run under way, if any. One ship, one contract. */
   contract?: ContractState
+  /** The crossing under way, if the ship is not berthed. */
+  voyage?: VoyageState
   /** Bounded ring of recent dispatches, newest last. */
   log: LogEntry[]
 }
@@ -216,6 +220,7 @@ export type Command =
   | { kind: 'SPEND'; credits: number; reason: string }
   | { kind: 'ACCEPT_CONTRACT'; contractId: string }
   | { kind: 'ABANDON_CONTRACT' }
+  | { kind: 'DEPART'; optionId: string }
 
 /** A command with the game time it was issued at. */
 export interface TimedCommand {

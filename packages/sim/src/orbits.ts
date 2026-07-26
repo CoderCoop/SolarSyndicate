@@ -91,6 +91,57 @@ export function hohmannTransfer(fromBody: string, toBody: string): Transfer {
 }
 
 /**
+ * A transfer on an ellipse larger than the Hohmann one. Spec 002 TR-2, TR-3.
+ *
+ * Raising the semi-major axis past the minimum-energy value buys a shorter
+ * flight and costs delta-v twice over: a bigger departure burn, and an arrival
+ * where the ship crosses the target's orbit rather than kissing it tangentially,
+ * so the second burn has to kill a radial component as well as match speed.
+ *
+ * This is real two-body mechanics rather than a fudge factor -- vis-viva for the
+ * speeds, Kepler's equation for the time -- and it reduces exactly to
+ * `hohmannTransfer` when the multiplier is 1. What it does *not* do is solve for
+ * a departure that also arrives where the target will be; that is a Lambert
+ * problem, and §5.1 already states that phasing is handled by windows rather
+ * than by targeting.
+ */
+export function stretchedTransfer(
+  fromBody: string,
+  toBody: string,
+  semiMajorMultiplier: number,
+): Transfer {
+  const r1 = getBody(fromBody).orbitRadiusAu * AU
+  const r2 = getBody(toBody).orbitRadiusAu * AU
+  const hohmannA = (r1 + r2) / 2
+  const a = hohmannA * Math.max(1, semiMajorMultiplier)
+
+  // Departure is at periapsis, so the first burn is purely tangential.
+  const vPeri = Math.sqrt(MU_SUN * (2 / r1 - 1 / a))
+  const burn1 = Math.abs(vPeri - Math.sqrt(MU_SUN / r1))
+
+  // Arrival: speed from vis-viva, split into tangential and radial by
+  // conservation of angular momentum.
+  const h = r1 * vPeri
+  const v2 = Math.sqrt(Math.max(0, MU_SUN * (2 / r2 - 1 / a)))
+  const vTangential = h / r2
+  const vRadial = Math.sqrt(Math.max(0, v2 * v2 - vTangential * vTangential))
+  const vCirc2 = Math.sqrt(MU_SUN / r2)
+  const burn2 = Math.hypot(vTangential - vCirc2, vRadial)
+
+  // Time of flight from periapsis to r2, through the eccentric anomaly.
+  const e = 1 - r1 / a
+  const cosE = e === 0 ? 1 : (a - r2) / (a * e)
+  const E = Math.acos(Math.max(-1, Math.min(1, cosE)))
+  const meanAnomaly = E - e * Math.sin(E)
+
+  return {
+    deltaVMs: burn1 + burn2,
+    durationS: meanAnomaly * Math.sqrt(a ** 3 / MU_SUN),
+    semiMajorAxisM: a,
+  }
+}
+
+/**
  * Where the target must be, relative to the origin, at the moment of
  * departure — the reason launch windows exist rather than being flavour.
  *
