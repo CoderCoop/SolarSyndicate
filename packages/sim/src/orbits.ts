@@ -76,16 +76,30 @@ export interface Transfer {
  * meet the target, then circularise on arrival.
  */
 export function hohmannTransfer(fromBody: string, toBody: string): Transfer {
-  const r1 = getBody(fromBody).orbitRadiusAu * AU
-  const r2 = getBody(toBody).orbitRadiusAu * AU
-  const a = (r1 + r2) / 2
+  return hohmannBetween(
+    MU_SUN,
+    getBody(fromBody).orbitRadiusAu * AU,
+    getBody(toBody).orbitRadiusAu * AU,
+  )
+}
 
-  const burn1 = Math.sqrt(MU_SUN / r1) * (Math.sqrt((2 * r2) / (r1 + r2)) - 1)
-  const burn2 = Math.sqrt(MU_SUN / r2) * (1 - Math.sqrt((2 * r1) / (r1 + r2)))
+/**
+ * The same transfer, stated in terms of two radii about any primary.
+ *
+ * Written this way because the crossing between two ports around one planet is
+ * *the same problem* as the crossing between two planets around the sun -- only
+ * the gravitational parameter changes. Giving the in-system case its own
+ * formula is what let a hardcoded five-day, 1.59 km/s Luna hop sit next to
+ * honestly derived interplanetary legs for two milestones.
+ */
+export function hohmannBetween(mu: number, r1: number, r2: number): Transfer {
+  const a = (r1 + r2) / 2
+  const burn1 = Math.sqrt(mu / r1) * (Math.sqrt((2 * r2) / (r1 + r2)) - 1)
+  const burn2 = Math.sqrt(mu / r2) * (1 - Math.sqrt((2 * r1) / (r1 + r2)))
 
   return {
     deltaVMs: Math.abs(burn1) + Math.abs(burn2),
-    durationS: Math.PI * Math.sqrt(a ** 3 / MU_SUN),
+    durationS: Math.PI * Math.sqrt(a ** 3 / mu),
     semiMajorAxisM: a,
   }
 }
@@ -110,22 +124,35 @@ export function stretchedTransfer(
   toBody: string,
   semiMajorMultiplier: number,
 ): Transfer {
-  const r1 = getBody(fromBody).orbitRadiusAu * AU
-  const r2 = getBody(toBody).orbitRadiusAu * AU
+  return stretchedBetween(
+    MU_SUN,
+    getBody(fromBody).orbitRadiusAu * AU,
+    getBody(toBody).orbitRadiusAu * AU,
+    semiMajorMultiplier,
+  )
+}
+
+/** `stretchedTransfer` in terms of two radii about any primary. */
+export function stretchedBetween(
+  mu: number,
+  r1: number,
+  r2: number,
+  semiMajorMultiplier: number,
+): Transfer {
   const hohmannA = (r1 + r2) / 2
   const a = hohmannA * Math.max(1, semiMajorMultiplier)
 
   // Departure is at periapsis, so the first burn is purely tangential.
-  const vPeri = Math.sqrt(MU_SUN * (2 / r1 - 1 / a))
-  const burn1 = Math.abs(vPeri - Math.sqrt(MU_SUN / r1))
+  const vPeri = Math.sqrt(mu * (2 / r1 - 1 / a))
+  const burn1 = Math.abs(vPeri - Math.sqrt(mu / r1))
 
   // Arrival: speed from vis-viva, split into tangential and radial by
   // conservation of angular momentum.
   const h = r1 * vPeri
-  const v2 = Math.sqrt(Math.max(0, MU_SUN * (2 / r2 - 1 / a)))
+  const v2 = Math.sqrt(Math.max(0, mu * (2 / r2 - 1 / a)))
   const vTangential = h / r2
   const vRadial = Math.sqrt(Math.max(0, v2 * v2 - vTangential * vTangential))
-  const vCirc2 = Math.sqrt(MU_SUN / r2)
+  const vCirc2 = Math.sqrt(mu / r2)
   const burn2 = Math.hypot(vTangential - vCirc2, vRadial)
 
   // Time of flight from periapsis to r2, through the eccentric anomaly.
@@ -136,7 +163,7 @@ export function stretchedTransfer(
 
   return {
     deltaVMs: burn1 + burn2,
-    durationS: meanAnomaly * Math.sqrt(a ** 3 / MU_SUN),
+    durationS: meanAnomaly * Math.sqrt(a ** 3 / mu),
     semiMajorAxisM: a,
   }
 }

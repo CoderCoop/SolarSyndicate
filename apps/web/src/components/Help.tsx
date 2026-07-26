@@ -13,6 +13,13 @@
 /** Where the project lives. The site explains the *why*; the game is beneath it. */
 export const SITE_URL = 'https://codercoop.github.io/SolarSyndicate/'
 
+/**
+ * Shown in-game so a bug report can name a build. Injected at build time from
+ * package.json rather than typed here, because a version string maintained by
+ * hand is a version string that is wrong.
+ */
+export const VERSION = __APP_VERSION__
+
 interface Topic {
   q: string
   a: string
@@ -145,6 +152,7 @@ export function Help() {
           Opens in a new tab. The game keeps running — it is anchored to the wall clock and
           never pauses.
         </p>
+        <p className="help__version">Version {VERSION}</p>
       </section>
     </>
   )

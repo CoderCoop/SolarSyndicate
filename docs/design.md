@@ -539,45 +539,49 @@ equation, honest) next to a consumables budget bar (crew-days of O2/water/food) 
 choosing a faster transfer burns delta-v; a slower one burns life support margin.
 That single tension is the travel game.
 
-#### The Kestrel's mass budget is wrong, and it is the cause of three separate problems
+#### The Kestrel is a cislunar hauler, and that is now true in the numbers
 
-Stated plainly because it keeps resurfacing in different costumes. The engine is
-**not** the problem: 1200 s Isp sits squarely inside the +25–50% band §5.4 claims
-over real NTR work (NERVA managed ~850 s). The problem is that the ship is built
-like a building rather than a vehicle.
+The in-system leg used to get its own hand-set duration and price — five days
+and 1.59 km/s — sitting next to honestly derived interplanetary legs. It is now
+solved with the same vis-viva and Kepler maths, against the parent body's
+gravitational parameter: **3.91 km/s over 4.98 days**, Gateway's 6,778 km orbit
+to Tranquillity's 384,400 km one. Two ports around one body is the same problem
+as two planets around the sun; only the primary changes.
 
-| | Propellant mass fraction |
-|---|---|
-| Kestrel as specced (41 t dry, 18 t tank) | **31%** |
-| Apollo Service Module | 75% |
-| Saturn V S-IVB stage | 89% |
-| Falcon 9 second stage | 97% |
+The tank was resized to afford the truth rather than the truth being bent to fit
+the tank: **18 t → 32 t**, a propellant mass fraction of 31% → 44%. For scale,
+the Apollo Service Module ran 75% and a Falcon 9 upper stage 97%; 31% was a
+building, not a vehicle.
 
-A full tank buys **3.85 km/s**, total, for the whole ship. That single number
-explains all three of the things that have looked like separate bugs:
+**What that buys, and what it does not.** The Earth–Moon system works properly
+now, with margin. Mars does not, and the reason is worth stating because it is
+*not* the tank:
 
-- **Luna is priced dishonestly.** The real LEO→lunar-orbit Hohmann is 3.91 km/s;
-  the game charges ~1.59 because at the true figure the Kestrel cannot get there
-  with a *completely full* tank (18.2 t needed, 18 t capacity).
-- **Mars and the Belt are unreachable.** Earth→Phobos wants 9.62 km/s, which is
-  58.8 t of propellant — more than three times the tank.
-- **The efficiency mechanic barely pays.** The resupply allowance scales with
-  voyage length, so it only bites on long crossings, and the only flyable runs
-  are five-day hops.
+| Constraint | Kestrel | Earth→Phobos needs |
+|---|---|---|
+| Propellant | 32 t | 47 t |
+| Food endurance | **91 days** | **259 days** |
+| Water endurance | 281 days | 259 days |
 
-One number fixes all three: **raise `propellantCapacityKg` to ~60,000**. That is
-a 59% propellant fraction — still well short of Apollo's 75%, entirely ordinary
-for a real vehicle — and it yields 9.75 km/s, which covers Earth→Phobos, makes
-Luna round trips comfortable, and lets the Luna delta-v be corrected to the
-honest figure.
+Stores gate Mars harder than mass ratio does. Feeding four people for a Mars
+crossing needs roughly three times the pantry this hull has, *and* half again
+the tank — which is a different ship, not a bigger number. That makes the
+interplanetary board exactly what §10.2's M4 "hull upgrade path" is for: the
+runs are visible, priced, and marked with the shortfall in tonnes (TR-3b), so
+the player can see what the next hull buys before they can afford it.
 
-The catch to accept with it: NTR burns hydrogen at ~71 kg/m³, so 60 t is roughly
-845 m³ of tankage. A realistic NTR hauler is a habitat and an engine bolted to an
-enormous cryogenic balloon, and the cross-section should look like that. The
-current drawing implies the opposite silhouette, which is arguably how the mass
-budget got set this way in the first place. **Decision needed before M3**; until
-it is taken, the understated Luna delta-v is load-bearing and must not be
-"corrected" on its own.
+**A real result that fell out of doing this honestly:** a faster run to the Moon
+is nearly free. Minimum energy is 3.91 km/s and the three-and-a-half-day express
+is 4.04 — a 3% premium for 30% off the clock. That is why Apollo flew a
+three-day trajectory rather than a five-day one, and it means the cislunar
+trajectory choice is genuinely low-stakes. The interesting version of that
+decision lives on interplanetary crossings, where stretching the ellipse costs
+delta-v steeply (Earth→Phobos: 9.62 km/s at minimum energy, 14.93 express).
+
+**Still open, and deliberately so:** the Belt needs 14.9 km/s and ~148 t of
+propellant, which no single-stage NTR of this class reaches. §10.2 already puts
+NEP in M4, and high-Isp electric propulsion is the honest answer for outer-system
+work — so the Belt is gated behind a drive, not behind a bigger tank.
 
 ### 5.3 Missions
 

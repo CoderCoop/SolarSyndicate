@@ -12,8 +12,15 @@ import type { Settlement } from './reconcile.js'
 import type { VoyageState } from './voyage.js'
 import type { GameTime } from './time.js'
 
-/** Bump when the shape changes; add a migration in persistence. §8.3 */
-export const SIM_STATE_VERSION = 5
+/**
+ * Bump when the shape changes; add a migration in persistence. §8.3
+ *
+ * Distinct from the product version in package.json on purpose. This one only
+ * moves when a save written by an older build can no longer be read correctly
+ * -- v6 is such a case: the propellant reservoir stores its own capacity, so a
+ * v5 save keeps an 18 t tank and cannot afford the honestly priced Luna run.
+ */
+export const SIM_STATE_VERSION = 6
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).

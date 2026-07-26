@@ -14,7 +14,7 @@
       "water": 22,
       "o2": 5,
       "food": 38,
-      "propellant": 7700,
+      "propellant": 22700,
       "spares": 2
     },
     "blurb": "Machine tools and bar stock. Short, dull, and the Local gives it to hulls it does not yet trust."
@@ -34,7 +34,7 @@
       "water": 22,
       "o2": 5,
       "food": 38,
-      "propellant": 8100,
+      "propellant": 22600,
       "spares": 2
     },
     "blurb": "Finished castings and a crate of rejected ones going back for credit. The yard would rather not keep either."
@@ -54,7 +54,7 @@
       "water": 340,
       "o2": 46,
       "food": 1960,
-      "propellant": 36400,
+      "propellant": 48100,
       "spares": 11
     },
     "blurb": "Instruments in crated foam, and a note asking that the crates not be stacked. The window is the window; miss it and the next is two years out."
@@ -74,7 +74,7 @@
       "water": 340,
       "o2": 46,
       "food": 1960,
-      "propellant": 33500,
+      "propellant": 46200,
       "spares": 11
     },
     "blurb": "Core samples, spent instruments and eleven crates nobody will explain. The Office wants all of it and will not say which part matters."
@@ -94,7 +94,7 @@
       "water": 615,
       "o2": 82,
       "food": 3580,
-      "propellant": 44300,
+      "propellant": 59300,
       "spares": 16
     },
     "blurb": "Refrigerated, insured, and expected. Belt Mutual has a long memory for hulls that arrive late and a longer one for hulls that arrive warm."
@@ -114,7 +114,7 @@
       "water": 615,
       "o2": 82,
       "food": 3580,
-      "propellant": 51100,
+      "propellant": 66000,
       "spares": 14
     },
     "blurb": "Sixteen tonnes of finished billet, and every kilo of it is delta-v you have to pay for."
@@ -134,7 +134,7 @@
       "water": 745,
       "o2": 99,
       "food": 4340,
-      "propellant": 33800,
+      "propellant": 38000,
       "spares": 19
     },
     "blurb": "Ration packs and filter cartridges. Nobody on Phobos will thank you, but they will notice if it does not come."

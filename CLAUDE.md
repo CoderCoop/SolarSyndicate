@@ -12,6 +12,21 @@ Standard GitHub flow, no special cases:
 - CI is `.github/workflows/ci.yml`: `pnpm check` (typecheck, lint, tests) plus
   the Chromium end-to-end pass. Both must pass.
 
+## Versioning
+
+Semantic versioning, tagged `vX.Y.Z`, with `CHANGELOG.md` kept in the same
+commit as the change it describes:
+
+- **MINOR** for a milestone (§10.2) or a rework that changes what the player can
+  reach — a balance pass that makes a destination flyable is not a patch.
+- **PATCH** for fixes, tuning, and content that changes no capability.
+- `1.0.0` is the shipped game; until then it stays `0.x`.
+
+`SIM_STATE_VERSION` is a *separate* number and moves on its own schedule — only
+when an older save can no longer be read. Keep the two independent.
+
+All workspace packages share the root version.
+
 ## Conventions
 
 - `docs/design.md` is the source of truth for *why*. Code comments reference its

@@ -378,6 +378,14 @@ export const BodyDef = z.object({
   orbitPeriodDays: z.number().positive(),
   /** Angular position at game time zero, radians. Keeps the system unaligned. */
   phaseAtEpochRad: z.number(),
+  /**
+   * Standard gravitational parameter, m³/s². Real values.
+   *
+   * Needed so a transfer between two ports around this body can be solved with
+   * the same vis-viva and Kepler maths as an interplanetary one, instead of
+   * getting a hand-set duration and price of its own.
+   */
+  muM3S2: z.number().positive(),
 })
 export type BodyDef = z.infer<typeof BodyDef>
 

@@ -16,10 +16,10 @@
  * so a full hold costs propellant on every burn (TR-10) -- which is what makes
  * the fattest contract not automatically the best one.
  */
-import { getContract, getHull, getPort } from '@solsyn/data'
+import { getBody, getContract, getHull, getPort } from '@solsyn/data'
 import { pushLog } from './log.js'
 import { reconcileArrival } from './reconcile.js'
-import { propellantForDeltaV, stretchedTransfer } from './orbits.js'
+import { propellantForDeltaV, stretchedBetween, stretchedTransfer } from './orbits.js'
 import { levelAt, settle } from './resources.js'
 import { DAY, formatDuration, type GameTime } from './time.js'
 import type { SimState } from './types.js'
@@ -33,20 +33,6 @@ export const ENGINE_ISP_S = 1200
  * stranded, and §7.4 says the game does not do that quietly.
  */
 export const PROPELLANT_RESERVE_KG = 900
-
-/**
- * Plane change and insertion for a hop between two orbits around one body.
- * Small next to an escape, and not zero -- arriving somewhere is never free.
- */
-export const SAME_BODY_INSERTION_MS = 260
-
-/**
- * Minimum-energy crossing time between two orbits about the same body, days.
- *
- * Pinned by test against a real Hohmann from Gateway's radius to
- * Tranquillity's (4.98 days), so it cannot drift into being a made-up number.
- */
-export const SAME_BODY_TRANSFER_DAYS = 5
 
 export interface VoyageState {
   optionId: string
@@ -110,39 +96,26 @@ export function transferOptions(state: SimState): TransferOption[] {
   const wet = wetMassKg(state, state.now)
   const available = levelAt(state.ship.resources.propellant, state.now)
 
-  // Two ports around the same body are not two escapes: the ship never leaves
-  // that well, it moves between orbits inside it. Charging both escapes would
-  // make a Gateway-to-Luna hop cost more than the ship can ever carry, which
-  // is how the first version of this priced the opening contract out of reach.
+  // A ship moving between two orbits around one body never leaves that well,
+  // so there is no escape to pay for -- the transfer between the two radii is
+  // the entire cost, and it is computed below with the rest of the mechanics.
   const sameBody = from.bodyId === to.bodyId
-  const wellDeltaV = sameBody
-    ? Math.abs(from.escapeDeltaVMs - to.escapeDeltaVMs) + SAME_BODY_INSERTION_MS
-    : from.escapeDeltaVMs + to.escapeDeltaVMs
+  const wellDeltaV = sameBody ? 0 : from.escapeDeltaVMs + to.escapeDeltaVMs
 
   return PROFILES.map((profile) => {
-    // Two ports on one body have no *heliocentric* transfer ellipse between
-    // them: the whole cost is the wells, and "faster" means a more direct,
-    // dearer burn.
-    //
-    // The five days is not arbitrary. Gateway sits 400 km up and Tranquillity
-    // is in lunar orbit 384,400 km out, and a minimum-energy Hohmann between
-    // those two radii about Earth takes **4.98 days** -- so the figure is
-    // honest even though it is stated rather than derived. (Apollo did the same
-    // trip in three, on a far hotter trajectory than a loaded hauler would fly.)
-    //
-    // The delta-v is the part that is NOT honest, and it is worth stating
-    // plainly: that same Hohmann costs **3.91 km/s** (3,082 m/s to depart,
-    // 829 m/s to arrive), against the ~1.59 km/s charged here. The
-    // understatement is deliberate and load-bearing -- at the true figure the
-    // Kestrel cannot reach Luna even with a completely full tank (18.2 t
-    // needed, 18 t capacity), which would leave the game with no reachable
-    // destination at all. Correcting it is a content decision that needs a
-    // bigger hull first, not a one-line fix. See docs/design.md §5.2.
+    // Two ports around one body is the same problem as two planets around the
+    // sun -- only the primary changes. Solving it with the same vis-viva and
+    // Kepler maths is what finally removed the hand-set five-day, 1.59 km/s
+    // Luna hop that sat next to honestly derived interplanetary legs for two
+    // milestones. The honest figure is 3.91 km/s, and the tank was sized to
+    // afford it rather than the price being bent to fit the tank (§5.2).
     const leg = sameBody
-      ? {
-          deltaVMs: wellDeltaV * (profile.multiplier - 1) * 4,
-          durationS: (SAME_BODY_TRANSFER_DAYS * DAY) / profile.multiplier ** 3,
-        }
+      ? stretchedBetween(
+          getBody(from.bodyId).muM3S2,
+          from.orbitRadiusKm * 1000,
+          to.orbitRadiusKm * 1000,
+          profile.multiplier,
+        )
       : stretchedTransfer(from.bodyId, to.bodyId, profile.multiplier)
 
     const deltaVMs = wellDeltaV + leg.deltaVMs

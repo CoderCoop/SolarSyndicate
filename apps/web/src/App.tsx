@@ -202,7 +202,8 @@ export function App() {
           <p className="app__milestone">
             M2 — the ship goes somewhere. Contracts with a stated resupply allowance, real
             transfer orbits, and books that settle on arrival: efficiency now has a price.
-            No guilds or crew hiring yet.
+            The Kestrel is a cislunar hauler: Mars and the Belt are priced on the board and
+            out of reach until a bigger hull. No guilds or crew hiring yet.
           </p>
           <p className="app__links">
             <a href={SITE_URL} target="_blank" rel="noreferrer">

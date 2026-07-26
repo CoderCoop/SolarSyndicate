@@ -392,6 +392,10 @@ check(
   siteHref ?? '',
 )
 check('which opens in a new tab', (await page.getAttribute('.help__link', 'target')) === '_blank')
+
+// A bug report has to be able to name a build.
+const version = await page.textContent('.help__version')
+check('the build names its own version', /^Version \d+\.\d+\.\d+$/.test(version?.trim() ?? ''), version?.trim() ?? '')
 await page.screenshot({ path: join(SHOTS, '16-help.png'), fullPage: true })
 
 // --- the chart (§5.1) -------------------------------------------------------
@@ -468,19 +472,39 @@ check('accepting a run takes the board off the table', (await page.$$('.offer__a
 const optionLabels = await page.$$eval('.option__label', (els) => els.map((e) => e.textContent))
 check('the astrogator works up more than one trajectory', optionLabels.length === 3, optionLabels.join(' · '))
 
-// TR-3b: an option the ship cannot fly is shown with the reason, not hidden.
-const blocked = await page.$$('.option.is-blocked')
-check('an unflyable option is shown, not dropped (TR-3b)', blocked.length > 0, `${blocked.length} blocked`)
-if (blocked.length > 0) {
-  const why = await page.textContent('.option.is-blocked .option__why')
-  check('and says what it is short of, in tonnes', /t more/.test(why ?? ''), why?.trim() ?? '')
-  check(
-    'with no way to fly it anyway',
-    (await page.$$('.option.is-blocked .option__go')).length === 0,
-  )
-}
+// Every Luna trajectory is affordable, and that is not a balance slip: from
+// low orbit a faster run to the Moon really is nearly free, which is why Apollo
+// flew a three-day trajectory rather than a five-day one. So the cislunar
+// choice is genuinely low-stakes.
+const lunaSpread = await page.$$eval('.option__dv', (els) =>
+  els.map((e) => Number.parseFloat(e.textContent ?? '0')),
+)
+check(
+  'a faster run to the Moon costs little, as it really does',
+  Math.max(...lunaSpread) / Math.min(...lunaSpread) < 1.1,
+  lunaSpread.map((v) => v.toFixed(2)).join(' → '),
+)
+check('and all of them are flyable', (await page.$$('.option.is-blocked')).length === 0)
 
 await page.screenshot({ path: join(SHOTS, '13-astrogator.png'), fullPage: true })
+
+// TR-3b: an option the ship cannot fly is shown with the reason, not hidden.
+// Mars is where that bites -- 259 days away, and the Kestrel carries 91 days
+// of food and a third of the propellant it would need.
+await tap(page, '.panel:has(.allowance) .button--quiet')
+await page.waitForSelector('.offer')
+await tap(page, '.offer:has-text("Phobos") .offer__accept')
+await page.waitForSelector('.options')
+
+const blocked = await page.$$('.option.is-blocked')
+check('an unflyable option is shown, not dropped (TR-3b)', blocked.length > 0, `${blocked.length} blocked`)
+const why = await page.textContent('.option.is-blocked .option__why')
+check('and says what it is short of, in tonnes', /t more/.test(why ?? ''), why?.trim() ?? '')
+check(
+  'with no way to fly it anyway',
+  (await page.$$('.option.is-blocked .option__go')).length === 0,
+)
+await page.screenshot({ path: join(SHOTS, '13b-unflyable.png'), fullPage: true })
 
 // Walking away costs money and never the ship (TR-21).
 const balanceBefore = await page.textContent('.books__balance')
