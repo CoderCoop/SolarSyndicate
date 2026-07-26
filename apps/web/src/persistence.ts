@@ -7,13 +7,7 @@
  * and leave running for months.
  */
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import {
-  applyCommand,
-  createWorld,
-  SIM_STATE_VERSION,
-  type SimState,
-  type TimedCommand,
-} from '@solsyn/sim'
+import { applyCommand, SIM_STATE_VERSION, type SimState, type TimedCommand } from '@solsyn/sim'
 
 const DB_NAME = 'solar-syndicate'
 const DB_VERSION = 1
@@ -51,59 +45,20 @@ function db(): Promise<IDBPDatabase<SyndicateDB>> {
 }
 
 /**
- * Migrate a loaded snapshot forward. Every version bump needs a case here;
- * an unrecognised future version is refused rather than guessed at.
+ * Handle a snapshot from a different version.
  *
- * §8.3 calls save-breaking the cardinal sin of an installed PWA, so these run
- * in sequence: v1 -> v2 -> v3, each transforming in place, however many
- * versions the player has skipped.
+ * Pre-release, so there is nothing to preserve: a save from an older shape is
+ * discarded and the world starts again, rather than carrying transforms for
+ * versions nobody is playing. The version field and this hook stay because
+ * they are what make a real migration possible the moment one is warranted
+ * (§8.3) — there is simply nothing to migrate yet.
  */
 function migrate(input: SimState): SimState | undefined {
-  if (input.version > SIM_STATE_VERSION) {
-    console.warn(
-      `Save is from a newer build (v${input.version} > v${SIM_STATE_VERSION}); refusing to load it.`,
-    )
-    return undefined
-  }
-
-  let state = input
-  if (state.version === 1) state = migrateV1toV2(state)
-
-  return state.version === SIM_STATE_VERSION ? state : undefined
-}
-
-/**
- * M0 -> M1. A v1 ship had a single battery reservoir, no crew, no work orders
- * and parts with no condition. Keep everything the player actually built up
- * (their battery level, which systems they had switched off) and fill in the
- * rest from a fresh world of the same seed.
- */
-function migrateV1toV2(old: SimState): SimState {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const v1 = old as any
-  const fresh = createWorld(old.seed, old.epochUtcMs)
-
-  fresh.now = old.now
-  fresh.log = old.log ?? []
-  fresh.nextSeq = Math.max(fresh.nextSeq, old.nextSeq ?? 1)
-  fresh.rngCounters = old.rngCounters ?? {}
-
-  if (v1.ship?.battery) {
-    fresh.ship.resources.battery = v1.ship.battery
-  }
-  for (const oldPart of v1.ship?.parts ?? []) {
-    const part = fresh.ship.parts.find((p) => p.id === oldPart.id)
-    if (!part) continue
-    part.enabled = oldPart.enabled ?? part.enabled
-    part.shed = oldPart.shed ?? false
-  }
-  fresh.ship.brownout = v1.ship?.brownout ?? false
-
-  // Events referenced v1 kinds that no longer exist; a fresh queue is rebuilt
-  // by the first advance.
-  fresh.queue = fresh.queue.filter((e) => e.at >= fresh.now)
-  fresh.version = 2
-  return fresh
+  if (input.version === SIM_STATE_VERSION) return input
+  console.warn(
+    `Save is v${input.version}, this build is v${SIM_STATE_VERSION}. Starting a new world.`,
+  )
+  return undefined
 }
 
 export interface LoadedSave {
