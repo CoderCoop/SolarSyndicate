@@ -12,7 +12,7 @@
  * turns over, a component fails.
  */
 import { getHull, getPart, SHED_ORDER, type PartProvides, type PowerPriority } from '@solsyn/data'
-import { attendanceFor, closureBonusFor, outputScaleFor } from './attendance.js'
+import { tuneOutputScale, tuneOf } from './tune.js'
 import { activityLoad, fatigueRatePerSecond, METABOLIC } from './crew.js'
 import { pushLog } from './log.js'
 import { boundTime, levelAt, settle } from './resources.js'
@@ -39,10 +39,17 @@ export function partRunning(part: PartState): boolean {
   return part.enabled && !part.broken
 }
 
-/** A part's effective output scale: zero if down, degraded if worn. */
+/**
+ * A part's effective output scale: zero if down, degraded if worn, and scaled
+ * again by how well adjusted it is (spec 004 RF-36c).
+ *
+ * Two independent axes, deliberately multiplied in one place so everything
+ * downstream -- power, scrubbing, closure, yield -- inherits both without
+ * having to know about either.
+ */
 export function partScale(state: SimState, part: PartState, t: GameTime): number {
   if (!partRunning(part)) return 0
-  return conditionOutput(levelAt(part.condition, t))
+  return conditionOutput(levelAt(part.condition, t)) * tuneOutputScale(tuneOf(part, t))
 }
 
 function provides(part: PartState): PartProvides {
@@ -101,9 +108,8 @@ export function partPowerKw(state: SimState, part: PartState, t: GameTime): numb
     return def.powerKw
   }
 
-  const outputScale = outputScaleFor(attendanceFor(state, part.roomId, t))
   const derate = state.ship.thermalTrip && def.provides.thermalWasteKw ? DERATE_SCALE : 1
-  return def.powerKw * partScale(state, part, t) * outputScale * derate
+  return def.powerKw * partScale(state, part, t) * derate
 }
 
 export function powerBalance(state: SimState, t: GameTime): PowerBalance {
@@ -202,10 +208,9 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
     }
     // Best recycler wins rather than summing -- they are one loop.
     if (p.waterRecycleFraction) {
-      recycleFraction = Math.max(
-        recycleFraction,
-        p.waterRecycleFraction * scale + closureBonusFor(attendanceFor(state, part.roomId, t)),
-      )
+      // Closure rides on `scale`, so both condition and tune reach it. Capped
+      // below 1 further down: no loop is perfect.
+      recycleFraction = Math.max(recycleFraction, p.waterRecycleFraction * scale)
     }
     if (def.powerKw < 0) electricalLoadKw += -def.powerKw
   }

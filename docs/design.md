@@ -257,23 +257,45 @@ skill, so fatigue, cabin CO₂ and cabin temperature all feed back into it. A ti
 technician in a hot room is worth less than a rested one, which closes the loop
 between §3.2's networks and the people working inside them.
 
-**Presence buys condition, not throughput.** "Keeping the systems in good
-operational status" is a claim about status *over time*, so the large term is
-wear, not output:
+**Two axes, and attention is what moves the second one.** A part carries a
+*condition* and a *tune*, and they are not the same thing:
 
-| | Effect at skill 100 × effectiveness 1.0 |
-|---|---|
-| Output | +6% of rated |
-| Loop closure | +3 percentage points |
-| **Wear** | **×0.55** — against ×1.0 for an unskilled hand and ×1.15 for a deserted room |
+| | **Condition** | **Tune** |
+|---|---|---|
+| What it is | Physical wear | Accumulated small inefficiencies |
+| Falls because | The part is running | Nobody is paying attention |
+| Rises because | A **work order** — labour-hours and spares | A skilled hand **on station** |
+| Ceiling | Rated | *Above* rated, with a good enough operator |
+| Failure mode | Breaks outright | Quietly costs you margin |
 
-A part's rated figures are **what it delivers unattended**. An unattended ship
-runs to spec indefinitely and never decays toward a worse steady state, so §7.4's
-ban on punishing absence holds by construction rather than by remembering to
-check. The deserted-room penalty is deliberately mild — 15% faster wear is weeks
-of drift, visible in the condition bar long before it is a failure, and always
-recoverable with a work order. A reason to staff a watch, never a punishment for
-closing the app.
+A water recycler does not simply wear out. Gunk builds up in a line. A hose sits
+slightly outside its specified diameter and nobody measures it. Cabin humidity
+drifts and the setpoints were never re-trimmed for it. In hydroponics a fungus
+takes hold in the root system and wants the medium sterilised, or a batch of
+seed needs lower light for a few days after germination or half the seedlings
+die. **Anyone can run the plant. A skilled operator notices** — and a very good
+one finds ways to run it better than the manufacturer intended.
+
+So tune falls through inattention and rises only through assignment, while
+condition falls through use and rises only through maintenance. A part can be
+mechanically sound and badly out of adjustment, or freshly trimmed and about to
+break. They are shown separately and fixed separately.
+
+At spec tune a part delivers exactly its nameplate; below that it underperforms,
+above it it beats the tin. An unskilled hand keeps a system running but spots
+nothing, and it settles below spec. A specialist holds it above. Only a very
+good operator, rested and breathing clean air, reaches the top.
+
+Attendance also multiplies **wear**: ×0.55 with a skilled hand on station,
+against ×1.0 for an unskilled one and ×1.15 for a deserted room.
+
+**The fair-play floor (§7.4).** Tune decay is bounded. A wholly neglected system
+bottoms out at a stated fraction of rated output — inefficient, never
+non-viable, and never spiralling — and the ship's stores and margins are set
+against that floor rather than against spec. A ship left alone gets *worse at
+its job*; it does not die of it, and a competent hand back on station recovers
+it. The ship is delivered exactly at spec, so the nameplate is what you get on
+day one and every change from there is something you did or failed to do.
 
 Upgrades raise the **base**; crew raise the **multiplier**. Keeping them on
 separate terms means neither obsoletes the other: a superb technician cannot

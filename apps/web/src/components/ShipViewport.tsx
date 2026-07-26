@@ -13,6 +13,7 @@
 import { useState } from 'react'
 import type { CrewView, PowerView, RoomView } from '@solsyn/sim'
 import { DeckSchematic } from './DeckSchematic.js'
+import { StationCard } from './StationCard.js'
 
 export interface ShipViewportProps {
   shipName: string
@@ -137,9 +138,8 @@ export function ShipViewport({
   onTogglePart,
   onOrderWork,
 }: ShipViewportProps) {
-  // Off by default: the schematic has to be complete on its own (SV-12).
-  const [showFlow, setShowFlow] = useState(false)
   const [openCrewId, setOpenCrewId] = useState<string | undefined>()
+  const [openPartId, setOpenPartId] = useState<string | undefined>()
 
   const openCrew = crew.find((c) => c.id === openCrewId)
 
@@ -150,31 +150,7 @@ export function ShipViewport({
           <h1 className="ship__name">{shipName}</h1>
           <p className="ship__class">{className}</p>
         </div>
-        <button
-          type="button"
-          className={`flowtoggle ${showFlow ? 'is-on' : ''}`}
-          aria-pressed={showFlow}
-          onClick={() => setShowFlow((v) => !v)}
-        >
-          <span className="flowtoggle__marks" aria-hidden="true">
-            <span className="flowtoggle__mark flowtoggle__mark--power" />
-            <span className="flowtoggle__mark flowtoggle__mark--heat" />
-            <span className="flowtoggle__mark flowtoggle__mark--water" />
-          </span>
-          Flows
-        </button>
       </header>
-
-      {showFlow && (
-        <p className="ship__legend">
-          <span className="legend legend--power">Power</span>
-          <span className="legend legend--heat">Heat</span>
-          <span className="legend legend--water">Water</span>
-          <span className="ship__legend-note">
-            Width is magnitude; arrows point the way it moves.
-          </span>
-        </p>
-      )}
 
       <div className="stack">
         {/* The nose. Its base matches the deck stack exactly, so the hull reads
@@ -218,9 +194,28 @@ export function ShipViewport({
                 <DeckSchematic
                   room={room}
                   crew={crew.filter((c) => c.roomId === room.id)}
-                  showFlow={showFlow}
-                  onSelectCrew={setOpenCrewId}
+                  selectedPartId={openPartId}
+                  onSelectPart={(id) => {
+                    setOpenPartId(id)
+                    setOpenCrewId(undefined)
+                  }}
+                  onSelectCrew={(id) => {
+                    setOpenCrewId(id)
+                    setOpenPartId(undefined)
+                  }}
                 />
+
+                {/* RF-9: the machine you touched opens under the room it is in,
+                    held highlighted above, so the two are visibly one thing. */}
+                {room.parts.some((p) => p.id === openPartId) && (
+                  <StationCard
+                    part={room.parts.find((p) => p.id === openPartId)!}
+                    attendance={room.attendance}
+                    onClose={() => setOpenPartId(undefined)}
+                    onToggle={onTogglePart}
+                    onOrderWork={onOrderWork}
+                  />
+                )}
 
                 {open && (
                   <div className="deck__body">

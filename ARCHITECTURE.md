@@ -140,7 +140,20 @@ output, and work orders read the resulting environment to decide how fast the
 crew can work. One ordering, in one place, so a new system can only be wired in
 correctly.
 
-**Attendance** (`attendance.ts`) feeds the first two. A room's wear rate and its
+Parts carry **two independent health axes**. `condition` is physical wear: it
+falls while running and is restored by a work order costing labour-hours and
+spares. `tune` (`tune.ts`) is accumulated small inefficiencies — gunk in a line,
+a hose out of spec, setpoints never re-trimmed — which fall through inattention
+and are restored *only* by assignment. `partScale` multiplies both in one place,
+so power, scrubbing, closure and yield all inherit them without knowing either
+exists.
+
+Tune is an ordinary reservoir whose rate and bounds are set at resolve time:
+climbing toward the operator's ceiling when tended, falling toward zero when
+not. Because `levelAt` clamps, a plateau needs no scheduled event at all —
+which is why adding a whole second axis cost the engine nothing.
+
+**Attendance** (`attendance.ts`) feeds all of it. A room's wear rate and its
 parts' efficiency depend on who is standing watch in it — scaled by that
 person's current effectiveness, so fatigue and bad air feed back into the
 machinery they are tending. It reads state and returns numbers; it schedules
@@ -148,10 +161,10 @@ nothing. That matters: attendance changes only when a watch turns over or a work
 order moves, and both of those already re-resolve the world, so nothing new had
 to fire for the ship to respond and offline catch-up stays bit-identical.
 
-A part's rated figures are what it delivers **unattended**, so attendance is
-always a multiplier ≥ 1 on output and the only penalty for a deserted room is a
-mild 1.15× on wear. An unattended ship therefore holds spec indefinitely, which
-is design §7.4 enforced by the shape of the code rather than by vigilance.
+Tune decay is bounded, so a wholly neglected system bottoms out at a stated
+fraction of rated output rather than falling to nothing: inefficient, never
+non-viable, and never spiralling. That floor is design §7.4 enforced by the
+shape of the code rather than by vigilance.
 
 The two dotted paths are the ship protecting itself while nobody is watching
 (design §7.4): load shedding by priority when the battery empties, and a

@@ -322,11 +322,12 @@ button {
   color: var(--ink-faint);
 }
 
-/* ---------------------------------------------------------------- schematic */
+/* ------------------------------------------------------------ room interior */
 /*
- * Spec 003. Blueprint line-art: everything is drawn, nothing is a picture.
- * Line weight carries structure -- hull heaviest, fittings lightest -- and
- * colour carries meaning on top of that, never instead of it (SV-5).
+ * Spec 004. Rooms drawn as interior elevations: everything is line-work at its
+ * real size, on a common metre grid, with a person for scale. Line weight
+ * carries structure -- hull heaviest, fittings lightest -- and colour carries
+ * meaning on top of that, never instead of it (RF-6).
  */
 
 .schema {
@@ -336,28 +337,46 @@ button {
   overflow: visible;
 }
 
-/* The deck list's own border is the hull; this is the deck's interior. */
-.schema__hull rect {
-  fill: color-mix(in srgb, var(--bg-sunken) 55%, transparent);
+.room__air {
+  fill: color-mix(in srgb, var(--bg-sunken) 62%, transparent);
+}
+
+.room__rib {
+  stroke: #16222c;
+  stroke-width: 0.6;
+}
+
+.room__tray {
+  fill: #0a1219;
   stroke: none;
 }
 
-.schema__floor {
-  stroke: var(--line-bright);
-  stroke-width: 0.7;
-}
-
-.schema__ladder line {
+.room__conduit {
   stroke: var(--line);
   stroke-width: 0.4;
 }
 
-/* --- glyphs --- */
+.room__deck {
+  stroke: var(--line-bright);
+  stroke-width: 0.9;
+}
+
+.room__grate {
+  stroke: #1a2833;
+  stroke-width: 0.45;
+}
+
+.room__ladder line {
+  stroke: var(--line);
+  stroke-width: 0.4;
+}
+
+/* --- equipment and furniture --- */
 
 .glyph {
   fill: none;
   stroke: var(--glyph, var(--ink-faint));
-  stroke-width: 0.7;
+  stroke-width: 0.6;
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: opacity 400ms ease;
@@ -365,281 +384,337 @@ button {
 
 .glyph--cool {
   --glyph: #6f93ab;
-  --glyph-fill: rgba(79, 209, 217, 0.07);
+  --glyph-fill: rgba(79, 209, 217, 0.06);
 }
 
-/* Warm where people rest -- the one thing worth keeping from the cutaway. */
+/* Warm where people rest, green where things grow, hot at the reactor. */
 .glyph--warm {
   --glyph: #c69256;
-  --glyph-fill: rgba(232, 163, 61, 0.1);
+  --glyph-fill: rgba(232, 163, 61, 0.09);
 }
 
 .glyph--grow {
   --glyph: #6aa87f;
-  --glyph-fill: rgba(111, 207, 143, 0.1);
+  --glyph-fill: rgba(111, 207, 143, 0.08);
 }
 
 .glyph--hot {
   --glyph: #cf8f6b;
-  --glyph-fill: rgba(232, 120, 61, 0.1);
+  --glyph-fill: rgba(232, 120, 61, 0.09);
 }
 
-.glyph .g-fill {
+.glyph .kit {
   fill: var(--glyph-fill);
+  stroke: var(--glyph);
+  stroke-width: 0.75;
 }
 
-.glyph .g-warm {
-  fill: rgba(232, 163, 61, 0.13);
+.glyph .kit.warm {
+  fill: rgba(232, 163, 61, 0.11);
 }
 
-.glyph .g-grow {
-  fill: rgba(111, 207, 143, 0.22);
+.glyph .plinth {
+  fill: color-mix(in srgb, var(--bg-sunken) 70%, transparent);
+}
+
+.glyph .shield {
+  fill: #16222c;
+}
+
+.glyph .hair {
+  fill: none;
+  stroke: var(--glyph);
+  stroke-width: 0.45;
+  opacity: 0.85;
+}
+
+.glyph .kit-line {
+  fill: none;
+  stroke: var(--glyph);
+  stroke-width: 0.6;
+}
+
+.glyph .kit-line.thick {
+  stroke-width: 1.2;
+}
+
+.glyph .pipe {
+  fill: none;
+  stroke: #3f6272;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+
+.glyph .grow {
+  fill: rgba(111, 207, 143, 0.26);
   stroke: none;
 }
 
-.glyph .g-lamp {
-  stroke: rgba(232, 163, 61, 0.5);
-  stroke-width: 1.1;
+.glyph .lamp {
+  stroke: rgba(232, 163, 61, 0.55);
+  stroke-width: 0.9;
+  stroke-linecap: round;
 }
 
-.glyph .g-hot {
-  fill: rgba(232, 120, 61, 0.4);
+.glyph .glow {
+  fill: rgba(232, 120, 61, 0.42);
   stroke: none;
 }
 
-/* Off: dimmed and struck through the middle. Shed: same, plus a dashed
-   outline, because the ship chose it rather than the player. */
+/* Off: dimmed, struck through the middle. Shed: dashed as well, because the
+   ship chose it rather than the player. */
 .glyph.is-off,
 .glyph.is-shed {
   opacity: 0.34;
 }
 
-.glyph.is-shed {
+.glyph.is-shed .kit {
   stroke-dasharray: 2 1.6;
 }
 
 .glyph__off {
   stroke: var(--glyph);
-  stroke-width: 0.6;
+  stroke-width: 0.5;
 }
 
 .glyph.is-broken {
   --glyph: var(--red);
-  --glyph-fill: rgba(229, 103, 95, 0.12);
+  --glyph-fill: rgba(229, 103, 95, 0.1);
   opacity: 1;
 }
 
 .glyph__x line {
   stroke: var(--red);
-  stroke-width: 0.9;
+  stroke-width: 0.8;
 }
 
-/* --- crew markers --- */
+/* --- targets (RF-8) --- */
 
-.marker {
+.hit {
+  fill: transparent;
   cursor: pointer;
-}
-
-.marker__ring {
-  fill: color-mix(in srgb, var(--bg-sunken) 80%, transparent);
-  stroke: var(--ink-faint);
-  stroke-width: 0.7;
-}
-
-.marker__text {
-  font-size: 4.4px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  fill: var(--ink-dim);
-  stroke: none;
-}
-
-.marker--watch .marker__ring {
-  stroke: var(--cyan);
-  stroke-width: 1;
-  fill: color-mix(in srgb, var(--cyan) 15%, var(--bg-sunken));
-}
-
-.marker--watch .marker__text {
-  fill: var(--cyan);
-}
-
-.marker--off .marker__ring {
-  stroke: var(--amber);
-}
-
-.marker--off .marker__text {
-  fill: var(--amber);
-}
-
-/* Asleep: dashed ring, dimmed. Distinct in shape, not only in colour. */
-.marker--sleep .marker__ring {
-  stroke-dasharray: 1.6 1.4;
-  opacity: 0.55;
-}
-
-.marker--sleep .marker__text {
-  opacity: 0.5;
-}
-
-.marker:focus-visible {
   outline: none;
 }
 
-.marker:focus-visible .marker__ring {
-  stroke: var(--ink);
-  stroke-width: 1.4;
+.picked {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 0.7;
+  stroke-dasharray: 2.5 2;
+  pointer-events: none;
 }
 
-/* --- flow overlay (SV-13 to SV-16) --- */
+.hit:focus-visible {
+  stroke: var(--ink);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 1.5;
+}
 
-.flowtoggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  flex: none;
-  padding: 6px 11px;
-  font-size: 12px;
+@media (hover: hover) {
+  .hit:hover {
+    fill: rgba(79, 209, 217, 0.05);
+  }
+}
+
+/* --- people (RF-5) --- */
+
+.person .figure {
+  fill: color-mix(in srgb, var(--bg-sunken) 60%, transparent);
+  stroke: var(--ink-faint);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+
+.person .figure-arm {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 0.6;
+  stroke-linecap: round;
+}
+
+.person__tag {
+  font-size: 3.6px;
+  font-weight: 600;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+.person--watch .figure,
+.person--watch .figure-arm {
+  stroke: var(--cyan);
+  stroke-width: 0.7;
+}
+
+.person--watch .figure {
+  fill: color-mix(in srgb, var(--cyan) 14%, var(--bg-sunken));
+}
+
+.person--watch .person__tag {
+  fill: var(--cyan);
+}
+
+.person--off .figure,
+.person--off .figure-arm {
+  stroke: var(--amber);
+}
+
+.person--off .person__tag {
+  fill: var(--amber);
+}
+
+.person--sleep .figure {
+  opacity: 0.6;
+}
+
+.person--sleep .person__tag {
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------- station card */
+
+.station {
+  margin: 0 12px 12px;
+  padding: 12px 13px 13px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--cyan);
+  border-radius: 9px;
+}
+
+.station--broken {
+  border-color: var(--red);
+}
+
+.station__head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.station__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.station__power {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.station__power.is-source {
+  color: var(--green);
+}
+
+.station__power.is-load {
   color: var(--ink-dim);
-  background: var(--bg-raised);
-  border: 1px solid var(--line-bright);
-  border-radius: 999px;
+}
+
+.station__close {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--ink-faint);
+  background: none;
+  border: 0;
   cursor: pointer;
 }
 
-.flowtoggle.is-on {
-  color: var(--ink);
-  border-color: var(--cyan);
+/* Two axes, side by side, because they are different problems with different
+   answers (RF-36d). */
+.station__meters {
+  display: grid;
+  gap: 11px;
+  margin: 11px 0 0;
 }
 
-.flowtoggle__marks {
-  display: inline-flex;
-  gap: 2px;
-}
-
-.flowtoggle__mark {
-  width: 2px;
-  height: 11px;
-  border-radius: 1px;
-  opacity: 0.45;
-}
-
-.flowtoggle.is-on .flowtoggle__mark {
-  opacity: 1;
-}
-
-.flowtoggle__mark--power {
-  background: var(--cyan);
-}
-
-.flowtoggle__mark--heat {
-  background: var(--red);
-}
-
-.flowtoggle__mark--water {
-  background: #6f9fe0;
-}
-
-.ship__legend {
+.meterline__top {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin: 0 2px 10px;
+  align-items: baseline;
+  gap: 8px;
   font-size: 12px;
 }
 
-.legend::before {
-  content: '';
-  display: inline-block;
-  width: 14px;
-  height: 3px;
-  margin-right: 6px;
-  vertical-align: middle;
-  border-radius: 2px;
+.meterline__label {
+  flex: 1;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 10.5px;
 }
 
-.legend--power {
-  color: var(--cyan);
+.meterline__value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
 }
-.legend--power::before {
+
+.meterline__track {
+  height: 4px;
+  margin: 5px 0 4px;
+  border-radius: 2px;
+  background: #16222c;
+  overflow: hidden;
+}
+
+.meterline__fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cyan);
+  transition: width 500ms ease;
+}
+
+.meterline--sharp .meterline__fill {
+  background: var(--green);
+}
+.meterline--good .meterline__fill {
   background: var(--cyan);
 }
-
-.legend--heat {
-  color: var(--red);
+.meterline--worn .meterline__fill {
+  background: var(--amber);
 }
-.legend--heat::before {
+.meterline--poor .meterline__fill,
+.meterline--critical .meterline__fill {
   background: var(--red);
 }
 
-.legend--water {
-  color: #6f9fe0;
-}
-.legend--water::before {
-  background: #6f9fe0;
-}
-
-.ship__legend-note {
+.meterline__hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
   color: var(--ink-faint);
 }
 
-.flow__idle {
-  stroke: var(--line);
-  stroke-width: 0.4;
-  stroke-dasharray: 1 2;
+.station__blurb {
+  margin: 11px 0 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.5;
 }
 
-.flow__trunk,
-.flow__branch {
-  fill: none;
-  stroke: var(--chan);
-  stroke-linecap: round;
-  stroke-dasharray: 4 3.2;
-  animation: flow-run 1.4s linear infinite;
+.station__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-/* Direction: outbound flows run up the trunk, inbound run down. */
-.flow__ch.is-out .flow__trunk,
-.flow__ch.is-out .flow__branch {
-  animation-direction: reverse;
+.station__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
 }
 
-.flow__head {
-  fill: var(--chan);
-  stroke: none;
+.station__ordered {
+  flex: 1;
+  font-size: 13px;
+  color: var(--cyan);
 }
 
-.flow__ch--power {
-  --chan: var(--cyan);
-}
-
-.flow__ch--heat {
-  --chan: var(--red);
-}
-
-.flow__ch--water {
-  --chan: #6f9fe0;
-}
-
-@keyframes flow-run {
-  to {
-    stroke-dashoffset: -7.2;
-  }
-}
-
-/*
- * SV-15: with motion suppressed the overlay stays usable. The dashes become a
- * solid line and the arrowheads carry direction on their own.
- */
-@media (prefers-reduced-motion: reduce) {
-  .flow__trunk,
-  .flow__branch {
-    animation: none;
-    stroke-dasharray: none;
-  }
+.station__actions .switch {
+  margin-left: auto;
 }
 
 /* --- crew card --- */

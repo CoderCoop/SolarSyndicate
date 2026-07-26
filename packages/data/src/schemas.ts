@@ -48,6 +48,30 @@ export const Glyph = z.enum([
 export type Glyph = z.infer<typeof Glyph>
 
 /**
+ * How a thing sits in the room. Spec 004 RF-3.
+ *
+ * The room is drawn as an interior elevation, so an object has to say where it
+ * belongs: standing on the deck, bolted to the bulkhead, or hanging off the
+ * overhead. This is what stops the packer having to guess, and what makes a new
+ * part land somewhere sensible without anyone drawing it.
+ */
+export const Fitting = z.enum(['floor', 'wall', 'ceiling'])
+export type Fitting = z.infer<typeof Fitting>
+
+/**
+ * Real size, in metres. Spec 004 RF-3, RF-4.
+ *
+ * Proportions between objects are stated by data rather than chosen per
+ * drawing, and a crew figure is drawn against the same scale -- so a scrubber
+ * is the size a scrubber is, next to a person who is 1.7 m tall.
+ */
+export const SizeM = z.object({
+  w: z.number().positive().max(12),
+  h: z.number().positive().max(6),
+})
+export type SizeM = z.infer<typeof SizeM>
+
+/**
  * Furniture the simulation does not model but the player expects to see: bunks,
  * a table, empty cargo bays. Data, on the same footing as parts (SV-4), so a
  * refit changes JSON rather than JSX.
@@ -55,6 +79,8 @@ export type Glyph = z.infer<typeof Glyph>
 export const FixtureDef = z.object({
   glyph: Glyph,
   count: z.number().int().positive().default(1),
+  fitting: Fitting.default('floor'),
+  sizeM: SizeM,
 })
 export type FixtureDef = z.infer<typeof FixtureDef>
 
@@ -70,11 +96,11 @@ export const RoomDef = z.object({
   /** Position in the vertical stack, 0 = nose. §3.1 */
   deck: z.number().int().nonnegative(),
   /**
-   * Relative height of this deck in the cross-section (SV-2). A cargo hold
-   * should look like a hold and a cockpit like a cockpit; that is proportion,
-   * not balance, but it belongs beside the room it describes.
+   * Deck head height in metres (SV-2, RF-4). A cargo hold should look like a
+   * hold and a cockpit like a cockpit; stating it in metres rather than in
+   * arbitrary units is what lets a person be drawn to scale inside it.
    */
-  deckUnits: z.number().positive().default(1),
+  deckHeightM: z.number().positive().max(8),
   fixtures: z.array(FixtureDef).default([]),
   /**
    * Which skill counts as tending this room (spec 004 RF-27). A hand on watch
@@ -132,6 +158,9 @@ export const PartDef = z.object({
   startsEnabled: z.boolean().default(true),
   /** How it draws itself in the cross-section (SV-3). */
   glyph: Glyph,
+  /** Where it sits in the room, and how big it really is (RF-3). */
+  fitting: Fitting.default('floor'),
+  sizeM: SizeM,
   provides: PartProvides,
 
   // --- condition & maintenance (§3.3) ---
@@ -250,10 +279,6 @@ export type PortDef = z.infer<typeof PortDef>
  * Presence is upside -- a little output, and mostly slower wear.
  */
 export const AttendanceTuning = z.object({
-  /** Fractional lift to rated output at quality 1. */
-  outputBonusMax: z.number().min(0).max(0.5),
-  /** Percentage points of loop closure added at quality 1, as a fraction. */
-  closureBonusMax: z.number().min(0).max(0.2),
   /** Wear multiplier with a quality-1 hand on station. */
   wearScaleSkilled: z.number().positive(),
   /** Wear multiplier with someone present but unskilled. */
@@ -267,8 +292,40 @@ export const AttendanceTuning = z.object({
 })
 export type AttendanceTuning = z.infer<typeof AttendanceTuning>
 
+/**
+ * Tune. Spec 004 RF-36.
+ *
+ * The second axis, orthogonal to physical wear: gunk in a line, a hose outside
+ * its specified diameter, setpoints never re-trimmed for the humidity the ship
+ * actually runs at, a fungus in the root system nobody spotted. Anyone can run
+ * the plant; a skilled operator *notices*. So tune falls through inattention
+ * and rises through assignment -- never through a work order, which is what
+ * fixes the other axis.
+ */
+export const TuneTuning = z.object({
+  /** Tune level at which a part delivers exactly its rated figures. */
+  specTune: z.number().min(1).max(99),
+  /**
+   * Output multiplier at zero tune. The fair-play floor (RF-35a): a wholly
+   * neglected ship is inefficient, never non-viable, and never spiralling.
+   */
+  outputAtZeroTune: z.number().min(0.5).max(1),
+  /** Output multiplier at tune 100 -- above the nameplate, which is the point. */
+  outputAtFullTune: z.number().min(1).max(1.5),
+  /** Tune lost per game day while running unattended. */
+  decayPerDayUnattended: z.number().positive(),
+  /** Tune gained per game day, per unit of operator quality. */
+  gainPerDayPerQuality: z.number().positive(),
+  /** Tune an operator of quality 0 can hold: they keep it running, no more. */
+  ceilingUnskilled: z.number().min(0).max(100),
+  /** Tune an operator of quality 1 can hold. */
+  ceilingSkilled: z.number().min(0).max(100),
+})
+export type TuneTuning = z.infer<typeof TuneTuning>
+
 export const Tuning = z.object({
   attendance: AttendanceTuning,
+  tune: TuneTuning,
 })
 export type Tuning = z.infer<typeof Tuning>
 

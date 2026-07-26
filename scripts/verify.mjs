@@ -62,6 +62,18 @@ const server = createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, r))
 const base = `http://127.0.0.1:${server.address().port}${MOUNT}`
 
+/**
+ * Click something, having first centred it in the viewport. The status bar is
+ * sticky, so Playwright's own scroll-into-view can leave a target underneath
+ * it and the click lands on the header instead.
+ */
+async function tap(page, selector) {
+  const el = await page.waitForSelector(selector)
+  await el.evaluate((e) => e.scrollIntoView({ block: 'center' }))
+  await page.waitForTimeout(120)
+  await el.click()
+}
+
 const checks = []
 const check = (name, ok, detail = '') => {
   checks.push({ name, ok, detail })
@@ -231,59 +243,63 @@ const totalGlyphs = glyphCounts.reduce((a, b) => a + b, 0)
 check('parts and fixtures both come from content (SV-3, SV-4)', totalGlyphs === 28, `${totalGlyphs} glyphs`)
 
 // SV-7: everyone is somewhere, and nobody is in two places.
-const markers = await page.$$eval('.schema .marker__text', (els) => els.map((e) => e.textContent))
+const markers = await page.$$eval('.schema .person__tag', (els) => els.map((e) => e.textContent))
 check(
   'all four crew stand on the ship, once each (SV-7)',
   markers.length === 4 && new Set(markers).size === 4,
   markers.join(' '),
 )
 
-// SV-9: the three activities are visually distinct.
-const activities = await page.$$eval('.schema .marker', (els) =>
-  els.map((e) => [...e.classList].find((c) => c.startsWith('marker--'))),
+// RF-5: posture, not only colour, distinguishes the three activities.
+const activities = await page.$$eval('.schema .person', (els) =>
+  els.map((e) => [...e.classList].find((c) => c.startsWith('person--'))),
 )
 check(
-  'markers distinguish on watch, off watch and asleep (SV-9)',
+  'figures distinguish on watch, off watch and asleep (RF-5)',
   new Set(activities).size >= 2,
   activities.join(' '),
 )
 
 // SV-10: tapping a crew member opens them.
-await page.click('.schema .marker')
+await tap(page, '.schema .person .hit')
 await page.waitForSelector('.whois')
 const whoName = await page.textContent('.whois__name')
 check('tapping a crew marker opens that person (SV-10)', Boolean(whoName), whoName ?? '')
 await page.click('.whois__close')
 
-// SV-12, SV-13, SV-14: the overlay is off until asked for, and its widths
-// agree with the numbers the deck headers already print.
-check('the flow overlay is off by default (SV-12)', (await page.$$('.flow__ch')).length === 0)
-await page.click('.flowtoggle')
-await page.waitForSelector('.flow__ch')
+// RF-9, RF-10: tapping a machine opens that machine, not a list.
+// The reactor deck: plenty of machinery, and nobody stationed on it, so the
+// target under test is unambiguously the machine.
+await tap(page, '.deck:nth-child(6) .schema .hit')
+await page.waitForSelector('.station')
+const stationName = await page.textContent('.station__name')
+check('tapping a machine opens that machine (RF-9)', Boolean(stationName), stationName ?? '')
 
-const trunks = await page.$$eval('.decks > .deck', (decks) =>
-  decks.map((d) => ({
-    name: d.querySelector('.deck__name')?.textContent?.trim(),
-    kw: Number.parseFloat(d.querySelector('.deck__power')?.textContent ?? '0') || 0,
-    width: Number.parseFloat(
-      d.querySelector('.flow__ch--power .flow__trunk')?.getAttribute('stroke-width') ?? '0',
-    ),
-  })),
-)
-const life = trunks.find((t) => t.name === 'Life Support')
-const bridge = trunks.find((t) => t.name === 'Bridge')
-check(
-  'a bigger draw draws a wider link (SV-14)',
-  Math.abs(life.kw) > Math.abs(bridge.kw) && life.width > bridge.width,
-  `Life ${life.kw}kW/${life.width} vs Bridge ${bridge.kw}kW/${bridge.width}`,
+const meterLabels = await page.$$eval('.station .meterline__label', (els) =>
+  els.map((e) => e.textContent),
 )
 check(
-  'the reactor supplies the trunk while the others draw from it',
-  await page.isVisible('.deck:nth-child(6) .flow__ch--power.is-out'),
+  'the card shows both health axes, separately (RF-36d)',
+  meterLabels.includes('Condition') && meterLabels.includes('Tune'),
+  meterLabels.join(' / '),
+)
+const tuneHint = await page.textContent('.station .meterline:last-child .meterline__hint')
+check(
+  'and explains what moves tune',
+  /on this deck/.test(tuneHint ?? ''),
+  tuneHint?.trim() ?? '',
 )
 
-await page.screenshot({ path: join(SHOTS, '08-flows.png'), fullPage: true })
-await page.click('.flowtoggle')
+check('the machine is held highlighted while its card is open', await page.isVisible('.picked'))
+await page.screenshot({ path: join(SHOTS, '08-station.png'), fullPage: true })
+await tap(page, '.station__close')
+
+// RF-13: the margin overlay is gone, not merely hidden.
+check('the flow overlay is gone (RF-13)', (await page.$$('.flowtoggle, .flow__ch')).length === 0)
+
+// RF-5, RF-8: people are drawn in the room and are targets.
+const figures = await page.$$('.schema .person')
+check('crew are drawn in their rooms as figures (RF-5)', figures.length === 4, `${figures.length} aboard`)
 
 await page.click('.tabs__btn:has-text("Life")')
 await page.waitForSelector('.gauges')
@@ -348,33 +364,6 @@ check('service worker registers (offline-capable shell)', swRegistered)
 
 // --- no runtime errors ------------------------------------------------------
 check('no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
-
-// --- SV-15: the overlay survives reduced motion -----------------------------
-{
-  const still = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    isMobile: true,
-    hasTouch: true,
-    reducedMotion: 'reduce',
-  })
-  const p = await still.newPage()
-  await p.goto(base, { waitUntil: 'networkidle' })
-  await p.waitForSelector('.ship')
-  await p.click('.flowtoggle')
-  await p.waitForSelector('.flow__ch')
-
-  const motion = await p.$$eval('.flow__trunk', (els) =>
-    els.map((e) => getComputedStyle(e).animationName),
-  )
-  check(
-    'nothing animates when motion is suppressed (SV-15)',
-    motion.length > 0 && motion.every((n) => n === 'none'),
-    motion.slice(0, 3).join(' '),
-  )
-  const heads = await p.$$('.flow__head')
-  check('direction is still shown, by arrowhead (SV-15)', heads.length > 0, `${heads.length} arrows`)
-  await still.close()
-}
 
 // ---------------------------------------------------------------------------
 // Offline catch-up (§7.2, §7.4) -- the whole point of M0.

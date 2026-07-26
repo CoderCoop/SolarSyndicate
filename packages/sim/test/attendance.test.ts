@@ -85,8 +85,9 @@ describe('rated means unattended', () => {
     const { deserted } = pair(4 * HOUR)
     expect(attendanceFor(deserted, 'life-support', deserted.now).attended).toBe(false)
 
-    // The recycler is rated 0.97, derated only by its own condition. No crew
-    // term at all -- that is what "rated means unattended" has to mean.
+    // The recycler is rated 0.97, derated only by condition and tune. There is
+    // no separate crew term: a fresh ship sits at spec tune, so day one is the
+    // nameplate whether or not anybody is watching.
     const recycler = partIn(deserted, 'life.water.recycler')
     const expected = 0.97 * partScale(deserted, recycler, deserted.now)
     expect(lifeSupportView(deserted).recycleFraction).toBeCloseTo(expected, 12)
@@ -110,20 +111,16 @@ describe('rated means unattended', () => {
   })
 })
 
-describe('attendance improves the loop', () => {
-  it('raises closure when the tech is on watch, and drops it when she is not', () => {
+describe('attendance improves the loop, but not instantly', () => {
+  it('does not move closure the moment someone walks in', () => {
+    // Efficiency lives in tune now (RF-36), which is a level, not a switch.
+    // At the same instant with the same tune, who is standing there makes no
+    // difference at all -- the difference accumulates.
     const { deserted, tended } = pair(4 * HOUR)
-    expect(lifeSupportView(tended).recycleFraction).toBeGreaterThan(
+    expect(lifeSupportView(tended).recycleFraction).toBeCloseTo(
       lifeSupportView(deserted).recycleFraction,
+      12,
     )
-  })
-
-  it('caps the gain at three points of closure', () => {
-    const { deserted, tended } = pair(4 * HOUR)
-    const gain =
-      lifeSupportView(tended).recycleFraction - lifeSupportView(deserted).recycleFraction
-    expect(gain).toBeGreaterThan(0)
-    expect(gain).toBeLessThanOrEqual(0.03 + 1e-9)
   })
 
   it('gives a tired hand less than a rested one', () => {

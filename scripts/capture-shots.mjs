@@ -130,17 +130,20 @@ await shot('crew', async (page) => {
   await page.waitForSelector('.roster')
 })
 
-// The cross-section as shipped, for the changelog: decks drawn from content,
-// crew standing on the deck they are actually on.
-await shot('ship-schematic', async (page) => {
+// The ship as rooms, for the changelog: interiors drawn from content, crew
+// standing in the room they are actually in, at human scale.
+await shot('ship-rooms', async (page) => {
   await page.waitForSelector('.schema .glyph')
 }, { height: 1800 })
 
-// The same ship with the flow overlay on.
-await shot('ship-flow-overlay', async (page) => {
-  await page.click('.flowtoggle')
-  await page.waitForSelector('.flow__ch')
-}, { height: 1800 })
+// A machine opened in place, showing both health axes.
+await shot('station-card', async (page) => {
+  const el = await page.waitForSelector('.deck:nth-child(6) .schema .hit')
+  await el.evaluate((e) => e.scrollIntoView({ block: 'center' }))
+  await page.waitForTimeout(150)
+  await el.click()
+  await page.waitForSelector('.station')
+}, { height: 1100 })
 
 await browser.close()
 server.close()
