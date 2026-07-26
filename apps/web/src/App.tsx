@@ -20,6 +20,7 @@ import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
 import { Flows } from './components/Flows.js'
 import { Help, SITE_URL } from './components/Help.js'
+import { InstallBanner } from './components/InstallOffer.js'
 import { Mission } from './components/Mission.js'
 import { StarChart } from './components/StarChart.js'
 import { LifeSupport } from './components/LifeSupport.js'
@@ -103,6 +104,10 @@ export function App() {
   return (
     <div className="app">
       <StatusBar now={state.now} power={power} life={life} brokenCount={brokenCount} />
+
+      {/* Under the status bar, never over it: the offer must not cover a gauge
+          the player is watching. */}
+      <InstallBanner />
 
       <nav className="tabs" aria-label="Sections">
         {TABS.map((t) => (

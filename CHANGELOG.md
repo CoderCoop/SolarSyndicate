@@ -9,6 +9,18 @@ means here.
 
 ## [Unreleased]
 
+### Added
+
+- **The game offers to install itself.** It has been an installable PWA since
+  M0 — manifest, service worker, offline shell — and nothing ever said so.
+  A dismissible banner under the status bar when the browser allows it, a
+  permanent entry on the Help tab for anyone who said "not now", and written
+  instructions on iOS Safari, which never fires `beforeinstallprompt` and needs
+  Share → Add to Home Screen. Dismissal is remembered in `localStorage`, not in
+  the save: it is a fact about the browser, not about the world.
+- `scripts/stop-hook-git-check.sh` — a working copy of the session stop hook,
+  with the two bugs fixed that made it fire on every merge.
+
 ## [0.3.0] — 2026-07-26
 
 The milestone-2 follow-up: a clock you can sit through, missions instead of

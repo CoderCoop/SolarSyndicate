@@ -10,6 +10,8 @@
  * Written as questions, because that is how someone stuck actually thinks.
  */
 
+import { InstallSection } from './InstallOffer.js'
+
 /** Where the project lives. The site explains the *why*; the game is beneath it. */
 export const SITE_URL = 'https://codercoop.github.io/SolarSyndicate/'
 
@@ -136,6 +138,11 @@ export function Help() {
             </dl>
           </div>
         ))}
+      </section>
+
+      <section className="panel" aria-label="Install">
+        <h2 className="panel__title">Install</h2>
+        <InstallSection />
       </section>
 
       <section className="panel" aria-label="About">

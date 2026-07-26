@@ -385,6 +385,16 @@ check(
   questions.filter((q) => /A, B and C|five days/.test(q ?? '')).join(' | '),
 )
 
+// The install offer. Headless Chromium does not fire beforeinstallprompt, so
+// the banner cannot appear here -- but the Help entry must always say
+// something, because "your browser did not offer" is still an answer.
+const installPanel = await page.textContent('section[aria-label="Install"]')
+check(
+  'help always answers how to install',
+  /install/i.test(installPanel ?? '') && (installPanel?.length ?? 0) > 60,
+  installPanel?.slice(12, 72).trim() ?? '',
+)
+
 const siteHref = await page.getAttribute('.help__link', 'href')
 check(
   'and a way to reach the project site',
@@ -657,6 +667,28 @@ const swRegistered = await page.evaluate(async () => {
 check('service worker registers (offline-capable shell)', swRegistered)
 
 // --- no runtime errors ------------------------------------------------------
+// The banner must not appear unbidden: without an install opportunity there is
+// nothing to offer, and a dead banner over the status bar is worse than none.
+check('no install banner when the browser has not offered', (await page.$$('.install')).length === 0)
+
+// Fire the event the way Chromium would, and the offer should appear.
+await page.evaluate(() => {
+  const e = new Event('beforeinstallprompt')
+  e.prompt = () => Promise.resolve()
+  e.userChoice = Promise.resolve({ outcome: 'accepted' })
+  window.dispatchEvent(e)
+})
+await page.waitForSelector('.install', { timeout: 3000 })
+check('the game offers to install itself once the browser allows it', await page.isVisible('.install'))
+const offerWhy = await page.textContent('.install__why')
+check('and says why it is worth doing', /offline/.test(offerWhy ?? ''), offerWhy?.trim() ?? '')
+
+await page.click('.install .button--quiet')
+check('"Not now" dismisses it', (await page.$$('.install')).length === 0)
+await page.reload({ waitUntil: 'networkidle' })
+await page.waitForSelector('.ship')
+check('and the dismissal is remembered across a reload', (await page.$$('.install')).length === 0)
+
 check('no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
 
 // ---------------------------------------------------------------------------
