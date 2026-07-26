@@ -1,0 +1,27 @@
+# Secret scanning before anything can enter history.
+#
+# This is the first of three layers; the other two are a gitleaks scan in CI
+# (.github/workflows/ci.yml) and GitHub's own secret scanning with push
+# protection (set in infra/). No single layer is trusted on its own.
+#
+# Install once per clone:  pre-commit install
+#
+# A genuine false positive gets an inline `gitleaks:allow` marker on the
+# offending line, never a weakened rule or a skipped hook.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Cheap guards against the other common way credentials get committed:
+      # a stray keyfile, or a .env dragged in by an editor.
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ['--maxkb=512']
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
