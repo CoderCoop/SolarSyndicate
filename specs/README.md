@@ -10,7 +10,7 @@ are binding: a spec that violates one is wrong even if it is otherwise good.
 
 | Spec | Milestone | Status |
 | --- | --- | --- |
-| [`002-travel-and-contracts`](002-travel-and-contracts/spec.md) | M2 | Draft, awaiting approval |
+| [`002-travel-and-contracts`](002-travel-and-contracts/spec.md) | M2 | Approved, ready to implement |
 | [`003-ship-view`](003-ship-view/spec.md) | — (presentation) | Implemented; superseded in part by 004 |
 | [`004-rooms-flows-crew`](004-rooms-flows-crew/spec.md) | — (presentation + §4.2) | Implemented |
 

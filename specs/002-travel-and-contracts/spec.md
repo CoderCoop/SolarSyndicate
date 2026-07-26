@@ -1,6 +1,6 @@
 # Feature Specification: Travel and Contracts (M2)
 
-**Status:** approach approved; two open questions remain before implementation
+**Status:** approved — both open questions resolved; ready to implement
 **Milestone:** M2, "Going somewhere" (design §10.2)
 **Depends on:** M1 (resource networks, crew, wear)
 
@@ -174,10 +174,60 @@ approval, and "the astrogator has a recommendation, and standing orders say
 whether to act on it unapproved" becomes a policy toggle rather than a new
 system.
 
-## Open questions
+## Resolved: four ports, and resupply on an allowance
 
-1. **How many ports at M2?** Enough to make windows matter without building
-   the whole system. Proposal: Earth orbit, Luna, Mars/Phobos, Ceres.
-2. **What replaces station services for pacing?** Once replenishment costs
-   money, the opening budget has to be sized so a new player cannot strand
-   themselves in their first hour. Needs playtesting, not a decision now.
+**Four ports.** Earth orbit (Gateway), Luna (Tranquillity), Mars/Phobos, and
+Ceres — already in `ports.json`. Enough that a window matters and a route is a
+choice; few enough that each place stays a place rather than a node.
+
+**Station services do not go away. They get metered.**
+
+The pacing problem was never really "what replaces the free top-up". It was
+that efficiency had no consequence: loop closure, tune, attendance and upgrade
+tiers all moved numbers that nothing was counting. An allowance counts them.
+
+- **TR-16** A contract carries a **resupply allowance**: a quantity of each
+  consumable the Guild has budgeted for the run — water, oxygen, food, spares,
+  propellant.
+- **TR-17** On resupply, actual consumption since departure is measured against
+  the allowance. **Under it, the difference is credited. Over it, the shortfall
+  is charged**, at that port's price.
+- **TR-18** Overrun is billed at port price, which is dearer than the allowance
+  rate. Running lean is not merely thrifty; running over is a penalty on top of
+  a cost.
+- **TR-19** Ports price consumables differently, and the differences follow from
+  where they are. Ceres sits on ice, so water is cheap there and dear at
+  Gateway; food is dear anywhere that does not grow it. Where you top up is a
+  decision.
+- **TR-20** The allowance is stated **before** the contract is accepted, next to
+  the payment, so the question "can I do this run inside the budget" is
+  answerable at the moment it is asked rather than discovered on arrival.
+- **TR-21** A shortfall is never fatal and never blocks departure. It comes out
+  of the money, which is §7.4's line: the ship may be poorer for your
+  inattention, never stranded by it.
+
+### Why this is the right shape
+
+It closes the loop between every system built for M1 and spec 004 and the one
+thing the player is actually optimising:
+
+| Mechanic | What it now buys |
+|---|---|
+| Recycler tier (RF-30) | Less water drawn from the allowance |
+| Loop closure and tune (RF-36) | The same, and it moves week to week |
+| Attendance (RF-27) | Keeps tune up, so keeps consumption down |
+| Scrubber floor | Cleaner air for the same makeup oxygen |
+| Watch bill | Which systems stay efficient while under way |
+
+A tended ship arrives **under** its allowance and banks the difference. A
+neglected one arrives over and pays for it. That is the same number the Flows
+tab has been reporting all along, finally attached to a consequence — and it
+means a player can see, in credits, exactly what putting Sandoval on the Life
+Support watch was worth.
+
+### Open
+
+**Opening budget size.** How much slack a first contract carries so a new
+player cannot strand themselves in hour one. This is a playtest number, not a
+design decision, and the model above is safe either way: getting it wrong makes
+the first run tight or generous, never unwinnable (TR-21).
