@@ -89,3 +89,6 @@ for (const hull of content.hulls) {
 }
 for (const part of content.parts) getRoom(part.roomId)
 for (const port of content.ports) getBody(port.bodyId)
+// Spec 003 SV-8: a crew member's default station must be a room that exists,
+// or they would be derived into a deck nobody can draw.
+for (const crew of content.crew) getRoom(crew.stationRoomId)

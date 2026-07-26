@@ -9,13 +9,21 @@
  * Catch-up is not a separate code path. Opening the app after a week away runs
  * exactly the same loop as a second of live play -- it just pops more events.
  */
-import { content, getCrewDef, getHull, getPart, STARTER_HULL_ID } from '@solsyn/data'
+import {
+  content,
+  getCrewDef,
+  getHull,
+  getPart,
+  STARTER_HULL_ID,
+  type Glyph,
+} from '@solsyn/data'
 import { activityAt, co2Ppm, crewEffectiveness, nextShiftBoundary, updateActivities } from './crew.js'
 import { pushLog } from './log.js'
 import {
   lifeBalance,
   powerBalance,
   partPowerKw,
+  partScale,
   resolveNetworks,
   resourceBoundMessage,
   restoreShedLoads,
@@ -440,6 +448,43 @@ export function lifeSupportView(state: SimState): LifeSupportView {
   }
 }
 
+/**
+ * Which room a crew member is in. Spec 003 SV-8.
+ *
+ * Derived, never stored (constitution V). Sleeping and off-watch crew are in
+ * Quarters; a crew member on a work order is at the part they are working on;
+ * anyone else is at their station. Three inputs the sim already tracks, so
+ * this needs no field in SimState and no save migration -- and it cannot drift
+ * out of agreement with the roster, because there is nothing to keep in sync.
+ */
+function crewRoomId(state: SimState, crew: CrewState): string {
+  const roomByDef = (defId: string): string | undefined =>
+    state.ship.rooms.find((r) => r.defId === defId)?.id
+
+  if (crew.activity !== 'sleep' && crew.workOrderId) {
+    const order = state.workOrders.find((w) => w.id === crew.workOrderId)
+    const part = order ? state.ship.parts.find((p) => p.id === order.partId) : undefined
+    if (part) return part.roomId
+  }
+
+  const def = getCrewDef(crew.defId)
+  const station = crew.activity === 'watch' ? def.stationRoomId : QUARTERS_ROOM_DEF
+  // Fall back to the first room rather than throwing: a hull without quarters
+  // is a content bug, not a reason to blank the screen.
+  return roomByDef(station) ?? roomByDef(def.stationRoomId) ?? state.ship.rooms[0]!.id
+}
+
+/** Where crew go when they are not on watch. */
+const QUARTERS_ROOM_DEF = 'quarters'
+
+/** First letter of the given name and of the family name. */
+function initialsOf(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean)
+  const first = parts[0]?.[0] ?? '?'
+  const last = parts.length > 1 ? parts[parts.length - 1]![0]! : ''
+  return (first + last).toUpperCase()
+}
+
 export interface CrewView {
   id: string
   name: string
@@ -447,6 +492,10 @@ export interface CrewView {
   age: number
   watch: string
   activity: string
+  /** Room instance they are in right now, derived (SV-7, SV-8). */
+  roomId: string
+  /** Two letters for the marker on the cross-section. */
+  initials: string
   fatigue: number
   health: number
   effectiveness: number
@@ -480,6 +529,8 @@ export function crewViews(state: SimState): CrewView[] {
       age: def.age,
       watch: crew.watch,
       activity: crew.activity,
+      roomId: crewRoomId(state, crew),
+      initials: initialsOf(def.name),
       fatigue: levelAt(crew.fatigue, t),
       health: levelAt(crew.health, t),
       effectiveness: crewEffectiveness(state, crew, t),
@@ -539,10 +590,16 @@ export interface RoomView {
   short: string
   blurb: string
   deck: number
+  /** Relative height of this deck in the cross-section (SV-2). */
+  deckUnits: number
+  /** Furniture the sim does not model but the schematic draws (SV-4). */
+  fixtures: { glyph: Glyph; count: number }[]
   parts: {
     id: string
     name: string
     blurb: string
+    /** How this part draws itself (SV-3). */
+    glyph: Glyph
     /** Rated power from the catalogue. */
     powerKw: number
     /** What it is actually contributing now, after condition and derate. */
@@ -557,6 +614,15 @@ export interface RoomView {
     hasWorkOrder: boolean
   }[]
   netKw: number
+  /**
+   * Waste heat this room is putting into the loop, kW. The flow overlay draws
+   * this (SV-13); it is the same figure the thermal balance uses, because a
+   * link the player can see must never disagree with a number they can read
+   * (SV-14).
+   */
+  heatKw: number
+  /** Net water this room moves, kg/day. Negative consumes, positive returns. */
+  waterKgPerDay: number
   /** Any part in this room broken or below 25%? Drives the deck warning dot. */
   needsAttention: boolean
 }
@@ -575,12 +641,22 @@ export function roomViews(state: SimState): RoomView[] {
         .map((p) => {
           const pd = getPart(p.defId)
           const condition = levelAt(p.condition, t)
+          const scale = partScale(state, p, t)
+          const draw = partPowerKw(state, p, t)
           return {
             id: p.id,
             name: pd.name,
             blurb: pd.blurb,
+            glyph: pd.glyph,
             powerKw: pd.powerKw,
-            effectiveKw: partPowerKw(state, p, t),
+            effectiveKw: draw,
+            // Everything a part draws becomes heat, plus whatever it wastes
+            // beyond that (§3.2). Radiators are the one negative term.
+            heatKw:
+              Math.max(0, -draw) +
+              (pd.provides.thermalWasteKw ?? 0) * scale -
+              (pd.provides.heatRejectKw ?? 0) * scale,
+            waterKgPerDay: -(pd.provides.waterUseKgPerDay ?? 0) * scale,
             enabled: p.enabled,
             shed: p.shed,
             broken: p.broken,
@@ -597,10 +673,16 @@ export function roomViews(state: SimState): RoomView[] {
         short: def.short,
         blurb: def.blurb,
         deck: def.deck,
-        parts,
+        deckUnits: def.deckUnits,
+        fixtures: def.fixtures,
+        // Strip the flow terms: they belong to the room, not to the part rows
+        // the UI already renders.
+        parts: parts.map(({ heatKw: _h, waterKgPerDay: _w, ...rest }) => rest),
         // Effective, not rated: the per-room figures have to add up to the
         // number in the status bar or the player cannot trace a deficit.
         netKw: parts.reduce((sum, p) => sum + p.effectiveKw, 0),
+        heatKw: parts.reduce((sum, p) => sum + p.heatKw, 0),
+        waterKgPerDay: parts.reduce((sum, p) => sum + p.waterKgPerDay, 0),
         needsAttention: parts.some((p) => p.broken || p.condition < 25),
       }
     })

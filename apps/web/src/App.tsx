@@ -93,6 +93,7 @@ export function App() {
               shipName={state.ship.name}
               className={state.ship.className}
               rooms={rooms}
+              crew={crew}
               power={power}
               openRoomId={openRoomId}
               onSelectRoom={setOpenRoom}

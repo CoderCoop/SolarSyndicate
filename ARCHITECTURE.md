@@ -177,6 +177,26 @@ trivial responsiveness, fast to iterate. Everything sits behind the
 `ShipViewport` props interface, so swapping in a canvas renderer later means
 writing one new component rather than rewriting the app.
 
+**The schematic is generated, not drawn** (spec 003). Each deck is an SVG whose
+height comes from the room's `deckUnits` and whose contents come from the
+parts installed in it plus the fixtures the room declares. Every object picks
+its shape from a closed `Glyph` enum in `@solsyn/data`; `shipGlyphs.tsx` is the
+only file that knows what a glyph looks like, and `packGlyphs` places them
+without knowing what they are. Adding a part to `parts.json` puts it on the
+ship with no code change — which is why this direction was chosen over
+hand-illustrated interiors, where every component would have been an art
+commission.
+
+Crew appear as markers on the deck they are in. That deck is **derived** from
+activity, work order and declared station (`crewRoomId`) rather than stored, so
+the picture cannot drift out of agreement with the roster and no save needs
+migrating to show people aboard.
+
+The **flow overlay** is an optional layer inside the same SVGs, drawing power,
+heat and water as links whose width comes from the same `roomViews` figures the
+deck headers print. It occupies a permanently reserved right-hand margin, so
+switching it on never reflows the schematic beneath it.
+
 The UI reads **selectors** (`powerView`, `lifeSupportView`, `crewViews`,
 `workOrderViews`, `roomViews`) rather than `SimState` directly. Selectors are
 the published surface of the simulation; the state shape stays free to change

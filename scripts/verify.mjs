@@ -211,6 +211,80 @@ check('a named crew member has the job', /has it$/.test(hand?.trim() ?? ''), han
 
 await page.screenshot({ path: join(SHOTS, '06-crew.png'), fullPage: true })
 
+// --- spec 003: the ship you can see -----------------------------------------
+console.log('\n  -- the ship you can see --')
+
+await page.click('.tabs__btn:has-text("Ship")')
+await page.waitForSelector('.ship')
+
+// SV-3, SV-4: every part and fixture is drawn, from data.
+const glyphCounts = await page.$$eval('.decks > .deck', (decks) =>
+  decks.map((d) => d.querySelectorAll('.schema .glyph').length),
+)
+check(
+  'every deck draws its contents',
+  glyphCounts.every((n) => n > 0),
+  glyphCounts.join(' / '),
+)
+// 12 parts + 2 couches + 6 bunks + 1 table + 4 bays + 3 lockers.
+const totalGlyphs = glyphCounts.reduce((a, b) => a + b, 0)
+check('parts and fixtures both come from content (SV-3, SV-4)', totalGlyphs === 28, `${totalGlyphs} glyphs`)
+
+// SV-7: everyone is somewhere, and nobody is in two places.
+const markers = await page.$$eval('.schema .marker__text', (els) => els.map((e) => e.textContent))
+check(
+  'all four crew stand on the ship, once each (SV-7)',
+  markers.length === 4 && new Set(markers).size === 4,
+  markers.join(' '),
+)
+
+// SV-9: the three activities are visually distinct.
+const activities = await page.$$eval('.schema .marker', (els) =>
+  els.map((e) => [...e.classList].find((c) => c.startsWith('marker--'))),
+)
+check(
+  'markers distinguish on watch, off watch and asleep (SV-9)',
+  new Set(activities).size >= 2,
+  activities.join(' '),
+)
+
+// SV-10: tapping a crew member opens them.
+await page.click('.schema .marker')
+await page.waitForSelector('.whois')
+const whoName = await page.textContent('.whois__name')
+check('tapping a crew marker opens that person (SV-10)', Boolean(whoName), whoName ?? '')
+await page.click('.whois__close')
+
+// SV-12, SV-13, SV-14: the overlay is off until asked for, and its widths
+// agree with the numbers the deck headers already print.
+check('the flow overlay is off by default (SV-12)', (await page.$$('.flow__ch')).length === 0)
+await page.click('.flowtoggle')
+await page.waitForSelector('.flow__ch')
+
+const trunks = await page.$$eval('.decks > .deck', (decks) =>
+  decks.map((d) => ({
+    name: d.querySelector('.deck__name')?.textContent?.trim(),
+    kw: Number.parseFloat(d.querySelector('.deck__power')?.textContent ?? '0') || 0,
+    width: Number.parseFloat(
+      d.querySelector('.flow__ch--power .flow__trunk')?.getAttribute('stroke-width') ?? '0',
+    ),
+  })),
+)
+const life = trunks.find((t) => t.name === 'Life Support')
+const bridge = trunks.find((t) => t.name === 'Bridge')
+check(
+  'a bigger draw draws a wider link (SV-14)',
+  Math.abs(life.kw) > Math.abs(bridge.kw) && life.width > bridge.width,
+  `Life ${life.kw}kW/${life.width} vs Bridge ${bridge.kw}kW/${bridge.width}`,
+)
+check(
+  'the reactor supplies the trunk while the others draw from it',
+  await page.isVisible('.deck:nth-child(6) .flow__ch--power.is-out'),
+)
+
+await page.screenshot({ path: join(SHOTS, '08-flows.png'), fullPage: true })
+await page.click('.flowtoggle')
+
 await page.click('.tabs__btn:has-text("Life")')
 await page.waitForSelector('.gauges')
 const gaugeLabels = await page.$$eval('.gauge-row__label', (els) => els.map((e) => e.textContent))
@@ -274,6 +348,33 @@ check('service worker registers (offline-capable shell)', swRegistered)
 
 // --- no runtime errors ------------------------------------------------------
 check('no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
+
+// --- SV-15: the overlay survives reduced motion -----------------------------
+{
+  const still = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    reducedMotion: 'reduce',
+  })
+  const p = await still.newPage()
+  await p.goto(base, { waitUntil: 'networkidle' })
+  await p.waitForSelector('.ship')
+  await p.click('.flowtoggle')
+  await p.waitForSelector('.flow__ch')
+
+  const motion = await p.$$eval('.flow__trunk', (els) =>
+    els.map((e) => getComputedStyle(e).animationName),
+  )
+  check(
+    'nothing animates when motion is suppressed (SV-15)',
+    motion.length > 0 && motion.every((n) => n === 'none'),
+    motion.slice(0, 3).join(' '),
+  )
+  const heads = await p.$$('.flow__head')
+  check('direction is still shown, by arrowhead (SV-15)', heads.length > 0, `${heads.length} arrows`)
+  await still.close()
+}
 
 // ---------------------------------------------------------------------------
 // Offline catch-up (§7.2, §7.4) -- the whole point of M0.

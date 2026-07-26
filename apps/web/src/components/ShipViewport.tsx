@@ -10,12 +10,15 @@
  * below sits behind ShipViewportProps, so swapping in PixiJS later means
  * writing one new component, not rewriting the app.
  */
-import type { PowerView, RoomView } from '@solsyn/sim'
+import { useState } from 'react'
+import type { CrewView, PowerView, RoomView } from '@solsyn/sim'
+import { DeckSchematic } from './DeckSchematic.js'
 
 export interface ShipViewportProps {
   shipName: string
   className: string
   rooms: RoomView[]
+  crew: CrewView[]
   power: PowerView
   openRoomId: string | undefined
   onSelectRoom: (roomId: string | undefined) => void
@@ -127,18 +130,51 @@ export function ShipViewport({
   shipName,
   className,
   rooms,
+  crew,
   power,
   openRoomId,
   onSelectRoom,
   onTogglePart,
   onOrderWork,
 }: ShipViewportProps) {
+  // Off by default: the schematic has to be complete on its own (SV-12).
+  const [showFlow, setShowFlow] = useState(false)
+  const [openCrewId, setOpenCrewId] = useState<string | undefined>()
+
+  const openCrew = crew.find((c) => c.id === openCrewId)
+
   return (
     <section className="ship" aria-label="Ship cross-section">
       <header className="ship__id">
-        <h1 className="ship__name">{shipName}</h1>
-        <p className="ship__class">{className}</p>
+        <div className="ship__titles">
+          <h1 className="ship__name">{shipName}</h1>
+          <p className="ship__class">{className}</p>
+        </div>
+        <button
+          type="button"
+          className={`flowtoggle ${showFlow ? 'is-on' : ''}`}
+          aria-pressed={showFlow}
+          onClick={() => setShowFlow((v) => !v)}
+        >
+          <span className="flowtoggle__marks" aria-hidden="true">
+            <span className="flowtoggle__mark flowtoggle__mark--power" />
+            <span className="flowtoggle__mark flowtoggle__mark--heat" />
+            <span className="flowtoggle__mark flowtoggle__mark--water" />
+          </span>
+          Flows
+        </button>
       </header>
+
+      {showFlow && (
+        <p className="ship__legend">
+          <span className="legend legend--power">Power</span>
+          <span className="legend legend--heat">Heat</span>
+          <span className="legend legend--water">Water</span>
+          <span className="ship__legend-note">
+            Width is magnitude; arrows point the way it moves.
+          </span>
+        </p>
+      )}
 
       <div className="stack">
         {/* The nose. Its base matches the deck stack exactly, so the hull reads
@@ -177,6 +213,15 @@ export function ShipViewport({
                   </span>
                 </button>
 
+                {/* The deck itself. Sits between the header and the part list
+                    so tapping to expand still works exactly as it did. */}
+                <DeckSchematic
+                  room={room}
+                  crew={crew.filter((c) => c.roomId === room.id)}
+                  showFlow={showFlow}
+                  onSelectCrew={setOpenCrewId}
+                />
+
                 {open && (
                   <div className="deck__body">
                     <p className="deck__blurb">{room.blurb}</p>
@@ -207,6 +252,30 @@ export function ShipViewport({
         </svg>
         <div className={`stack__plume ${power.netKw < 0 ? 'is-hot' : ''}`} aria-hidden="true" />
       </div>
+
+      {openCrew && (
+        <div className="whois" role="dialog" aria-label={openCrew.name}>
+          <div className="whois__head">
+            <span className="whois__initials">{openCrew.initials}</span>
+            <span className="whois__names">
+              <strong className="whois__name">{openCrew.name}</strong>
+              <span className="whois__role">
+                {openCrew.role} · {openCrew.age} · watch {openCrew.watch}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="whois__close"
+              aria-label="Close"
+              onClick={() => setOpenCrewId(undefined)}
+            >
+              ×
+            </button>
+          </div>
+          <p className="whois__doing">{openCrew.doing}</p>
+          <p className="whois__blurb">{openCrew.blurb}</p>
+        </div>
+      )}
     </section>
   )
 }

@@ -19,6 +19,45 @@ export type PowerPriority = z.infer<typeof PowerPriority>
 /** Shed order: last entry sheds first. */
 export const SHED_ORDER: readonly PowerPriority[] = ['low', 'normal', 'high'] as const
 
+/**
+ * How a thing draws itself in the cross-section. Spec 003 SV-3.
+ *
+ * Deliberately a closed vocabulary. An open string would let content ask for
+ * art that does not exist and fail silently at render time; this fails loudly
+ * at load, like every other content mistake in the project. Adding a glyph is
+ * a two-file change -- this enum and the renderer -- which is the intended
+ * friction. Adding a *part* that reuses an existing glyph costs no code.
+ */
+export const Glyph = z.enum([
+  'console', // flat instrument panel
+  'dish', // parabolic antenna
+  'column', // vertical process cylinder: scrubber, electrolysis, recycler
+  'tray', // stacked grow trays under lamps
+  'battery', // cell stack
+  'pump', // thermal loop pump and manifold
+  'core', // reactor core behind its shadow shield
+  'panel', // fold-out solar wing
+  'nozzle', // engine bell
+  'hab', // galley and habitation block
+  'bunk', // a crew bunk
+  'table', // the one table on the ship
+  'couch', // acceleration couch
+  'bay', // modular cargo bay
+  'locker', // spares locker
+])
+export type Glyph = z.infer<typeof Glyph>
+
+/**
+ * Furniture the simulation does not model but the player expects to see: bunks,
+ * a table, empty cargo bays. Data, on the same footing as parts (SV-4), so a
+ * refit changes JSON rather than JSX.
+ */
+export const FixtureDef = z.object({
+  glyph: Glyph,
+  count: z.number().int().positive().default(1),
+})
+export type FixtureDef = z.infer<typeof FixtureDef>
+
 export const RoomDef = z.object({
   id: z.string(),
   name: z.string(),
@@ -26,6 +65,13 @@ export const RoomDef = z.object({
   short: z.string(),
   /** Position in the vertical stack, 0 = nose. §3.1 */
   deck: z.number().int().nonnegative(),
+  /**
+   * Relative height of this deck in the cross-section (SV-2). A cargo hold
+   * should look like a hold and a cockpit like a cockpit; that is proportion,
+   * not balance, but it belongs beside the room it describes.
+   */
+  deckUnits: z.number().positive().default(1),
+  fixtures: z.array(FixtureDef).default([]),
   blurb: z.string(),
 })
 export type RoomDef = z.infer<typeof RoomDef>
@@ -74,6 +120,8 @@ export const PartDef = z.object({
   switchable: z.boolean().default(true),
   /** Starts online? */
   startsEnabled: z.boolean().default(true),
+  /** How it draws itself in the cross-section (SV-3). */
+  glyph: Glyph,
   provides: PartProvides,
 
   // --- condition & maintenance (§3.3) ---
@@ -127,6 +175,13 @@ export const CrewDef = z.object({
   role: z.string(),
   age: z.number().int().positive(),
   watch: Watch,
+  /**
+   * Where they stand their watch when no work order has them elsewhere
+   * (SV-8). The engineer lives in Machinery, the medic does his rounds from
+   * Quarters. Their location is never stored -- this is one of the three
+   * inputs it is derived from.
+   */
+  stationRoomId: z.string(),
   /** 1-10, slow-changing (§4.1). */
   stats: z.object({
     strength: z.number().int().min(1).max(10),
