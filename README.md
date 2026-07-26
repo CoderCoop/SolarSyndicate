@@ -95,6 +95,21 @@ line — never a weakened rule or a skipped hook. If a real credential ever
 reaches history, even briefly, treat it as compromised and rotate it; deleting
 the file does not un-leak it.
 
+## Secrets
+
+Three layers, none trusted alone:
+
+| Layer | What it is |
+| --- | --- |
+| pre-commit | gitleaks blocks secrets before they enter history — `pre-commit install` once per clone |
+| CI | a full-history gitleaks scan on every push and pull request |
+| Platform | GitHub secret scanning with push protection (repo settings, see `infra/`) |
+
+A genuine false positive gets an inline `gitleaks:allow` marker on the offending
+line — never a weakened rule or a skipped hook. If a real credential ever
+reaches history, even briefly, treat it as compromised and rotate it; deleting
+the file does not un-leak it.
+
 ## Layout
 
 ```
