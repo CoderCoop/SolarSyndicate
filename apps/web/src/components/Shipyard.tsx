@@ -100,6 +100,36 @@ export function Shipyard({
             </li>
           </ul>
 
+          {/* The trade-in is the one place the *state* of your ship turns into
+              money, so it is never quoted without its reasoning. */}
+          <div className="survey">
+            <p className="survey__title">The surveyor’s walk-round</p>
+            <ul className="survey__lines">
+              <li>
+                <span>Condition</span>
+                <strong>{Math.round(offer.survey.conditionPct)}%</strong>
+              </li>
+              <li>
+                <span>Tune</span>
+                <strong>{Math.round(offer.survey.tunePct)}%</strong>
+              </li>
+              <li>
+                <span>Failed</span>
+                <strong className={offer.survey.brokenCount > 0 ? 'is-bad' : ''}>
+                  {offer.survey.brokenCount}
+                </strong>
+              </li>
+            </ul>
+            <div className="survey__bar" aria-hidden="true">
+              <div className="survey__fill" style={{ width: `${offer.survey.factor * 100}%` }} />
+            </div>
+            <p className="survey__verdict">
+              {Math.round(offer.survey.factor * 100)}% of book —{' '}
+              {credits(offer.tradeInCr)} against {credits(offer.survey.bookValueCr)} at nameplate.
+            </p>
+            <p className="survey__note">{offer.survey.verdict}</p>
+          </div>
+
           {offer.affordable ? (
             <>
               <button

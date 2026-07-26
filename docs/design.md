@@ -594,15 +594,25 @@ trajectory choice is genuinely low-stakes. The interesting version of that
 decision lives on interplanetary crossings, where stretching the ellipse costs
 delta-v steeply (Earth→Phobos: 9.62 km/s at minimum energy, 14.93 express).
 
-⚠ **Open, and found by flying it:** on a 259-day crossing the allowance
-currently *rewards neglect on the spares line*. A tended ship spends its whole
-11-unit spares budget on repairs and scores 0 there; a ship left alone spends
-none and banks 9,680 cr — while arriving with a dead reactor, four broken
-systems and no way home. The punishment is real but it is entirely deferred,
-and the settlement reads backwards at the moment the player looks at it.
-Deliberately not patched by inflating the spares allowance, because the honest
-fix is that a broken part should be a *liability on the books* — asset
-valuation, which is a mechanic rather than a number. Decide before M4.
+**Neglect is priced when you come to sell.** Found by flying the thing: the
+allowance used to *reward* skipping repairs. A tended ship spent its whole
+spares budget and scored nothing on that line; a neglected one spent none and
+banked the lot, while arriving with a dead reactor and no way home. The
+punishment was real but entirely deferred, and the settlement read backwards at
+the moment the player looked at it.
+
+The fix is not a bigger spares allowance — that papers over the sign. It is
+that **the ship is an asset and a yard surveys it**. Trade-in is book value
+scaled by what a surveyor finds: mean condition at 80% of the weighting, mean
+tune at 20%, and a further deduction per failed system, which has to be made
+good before anyone else will fly her. A wreck still fetches its scrap floor
+(35% of book), because TR-21 says consequences are financial and never a wall,
+and nobody pays over book for a used hull.
+
+On a single five-day Luna run that is worth about **8,500 cr against** neglect:
+1,600 banked on the allowance, 10,100 lost on the survey. An invariant test
+asserts the sign, because if it ever flips the game is once again paying people
+to run their ship into the ground.
 
 **Still open, and deliberately so:** the Belt needs 14.9 km/s and ~148 t of
 propellant, which no single-stage NTR of this class reaches. §10.2 already puts

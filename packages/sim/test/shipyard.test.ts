@@ -12,10 +12,13 @@ import {
   advanceTo,
   applyCommand,
   createWorld,
+  lastSettlement,
   ledgerView,
   levelAt,
   shipyardOffers,
+  surveyShip,
   transferOptions,
+  workOrderViews,
 } from '../src/index.js'
 import type { SimState } from '../src/types.js'
 
@@ -58,11 +61,16 @@ describe('a yard is a place, not a menu', () => {
 })
 
 describe('the price is a difference, not a sticker', () => {
-  it('allows the old hull against the new one', () => {
+  it('allows the old hull against the new one, at what it surveys at', () => {
     const offer = shipyardOffers(atTheYard())[0]!
-    expect(offer.tradeInCr).toBe(getHull('hull.kestrel').tradeInCr)
+    const book = getHull('hull.kestrel').bookValueCr
+
     expect(offer.netCr).toBe(offer.priceCr - offer.tradeInCr)
     expect(offer.netCr).toBeLessThan(offer.priceCr)
+    // A thirty-one-year-old hauler with a characterful maintenance log does not
+    // fetch book, and the offer says so rather than quoting the brochure.
+    expect(offer.tradeInCr).toBeLessThan(book)
+    expect(offer.tradeInCr).toBe(offer.survey.tradeInCr)
   })
 
   it('says how far short the money is, rather than just refusing', () => {
@@ -191,5 +199,152 @@ describe('what the hull is actually for', () => {
       command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.ceres.medical' },
     })
     expect(transferOptions(belt).some((o) => o.feasible)).toBe(false)
+  })
+})
+
+describe('neglect is priced when you come to sell', () => {
+  /** Drive every system down to `condition`, optionally breaking them. */
+  function worn(condition: number, broken = false): SimState {
+    const s = structuredClone(atTheYard())
+    for (const part of s.ship.parts) {
+      part.condition.value = condition
+      part.condition.rate = 0
+      part.broken = broken
+      if (broken) part.enabled = false
+    }
+    return advanceTo(s, 0)
+  }
+
+  it('pays less for a ship that has been run down', () => {
+    // The whole point. Before this, skipping repairs banked the unspent spares
+    // budget at settlement and the wrecked ship it produced cost nothing.
+    const kept = surveyShip(worn(95), 0)
+    const run = surveyShip(worn(40), 0)
+
+    expect(run.tradeInCr).toBeLessThan(kept.tradeInCr)
+    expect(kept.factor).toBeGreaterThan(run.factor)
+  })
+
+  it('deducts again for anything actually failed', () => {
+    // A broken system is worse than a worn one: it loses condition on the way
+    // down *and* has to be replaced before anyone else will fly her.
+    const sameCondition = 20
+    const worn20 = surveyShip(worn(sameCondition, false), 0)
+    const failed20 = surveyShip(worn(sameCondition, true), 0)
+
+    expect(failed20.brokenCount).toBeGreaterThan(0)
+    expect(failed20.tradeInCr).toBeLessThanOrEqual(worn20.tradeInCr)
+    expect(failed20.verdict).toMatch(/failed system/)
+  })
+
+  it('never pays over book, however well kept', () => {
+    const pristine = structuredClone(atTheYard())
+    for (const part of pristine.ship.parts) {
+      part.condition.value = 100
+      part.condition.rate = 0
+      part.tune.value = 100
+      part.tune.rate = 0
+    }
+    const survey = surveyShip(advanceTo(pristine, 0), 0)
+    expect(survey.factor).toBeLessThanOrEqual(1)
+    expect(survey.tradeInCr).toBeLessThanOrEqual(getHull('hull.kestrel').bookValueCr)
+  })
+
+  it('still pays something for a wreck, because it is still metal', () => {
+    // TR-21's shape again: consequences are financial, never a wall. A ruined
+    // ship must not leave the player with an asset worth nothing at all.
+    const survey = surveyShip(worn(0, true), 0)
+    expect(survey.tradeInCr).toBeGreaterThan(0)
+    expect(survey.factor).toBeCloseTo(0.35, 2)
+    expect(survey.verdict).toMatch(/failed system/)
+  })
+
+  it('weighs wear above tune, since that is what a surveyor measures', () => {
+    const base = structuredClone(atTheYard())
+    const set = (s: SimState, cond: number, tune: number) => {
+      const c = structuredClone(s)
+      for (const p of c.ship.parts) {
+        p.condition.value = cond
+        p.condition.rate = 0
+        p.tune.value = tune
+        p.tune.rate = 0
+      }
+      return advanceTo(c, 0)
+    }
+    const wornButSweet = surveyShip(set(base, 40, 100), 0)
+    const soundButDrifted = surveyShip(set(base, 100, 40), 0)
+
+    expect(soundButDrifted.factor).toBeGreaterThan(wornButSweet.factor)
+  })
+
+  it('costs real money at the yard, not a rounding error', () => {
+    // It has to outweigh what neglect saves elsewhere -- the spares line banks
+    // under 10,000 cr on a long crossing, so this cannot be smaller than that.
+    const kept = surveyShip(worn(95), 0).tradeInCr
+    const run = surveyShip(worn(30), 0).tradeInCr
+    expect(kept - run).toBeGreaterThan(30_000)
+  })
+})
+
+describe('the incentive points the right way', () => {
+  /**
+   * The invariant this whole mechanic exists for.
+   *
+   * Before the survey, skipping repairs was *profitable*: the unspent spares
+   * budget came back at settlement and the wrecked ship it produced cost
+   * nothing on the books. The punishment existed — a broken ship cannot take
+   * the next job — but it was entirely deferred, and the settlement read
+   * backwards at the moment the player looked at it.
+   *
+   * Now the ship is an asset that gets surveyed. If this test ever fails, the
+   * game is once again paying people to neglect their ship.
+   */
+  function flyLuna(tend: boolean): { allowanceCr: number; tradeInCr: number } {
+    let s = advanceTo(structuredClone(createWorld(20260726, T0)), 0)
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'DEPART', optionId: transferOptions(s).find((o) => o.feasible)!.id },
+    })
+
+    const arrivesAt = s.voyage!.arrivesAt
+    if (tend) {
+      // A conscientious desk: look in twice a day, service the worst thing.
+      for (let t = s.now + 43_200; t < arrivesAt; t += 43_200) {
+        s = advanceTo(s, t)
+        if (workOrderViews(s).length > 0) continue
+        const worst = [...s.ship.parts]
+          .map((p) => ({ p, c: levelAt(p.condition, t) }))
+          .sort((a, b) => a.c - b.c)[0]!
+        if (worst.p.broken) {
+          s = applyCommand(s, { at: t, command: { kind: 'QUEUE_WORK_ORDER', partId: worst.p.id, orderKind: 'repair' } })
+        } else if (worst.c < 80) {
+          s = applyCommand(s, { at: t, command: { kind: 'QUEUE_WORK_ORDER', partId: worst.p.id, orderKind: 'service' } })
+        }
+      }
+    }
+
+    s = advanceTo(s, arrivesAt + 60)
+    return {
+      allowanceCr: lastSettlement(s)!.allowanceCr,
+      tradeInCr: surveyShip(s, s.now).tradeInCr,
+    }
+  }
+
+  it('makes neglect cost more than it saves', () => {
+    const tended = flyLuna(true)
+    const neglected = flyLuna(false)
+
+    // Neglect still banks the unspent maintenance budget -- that part is real.
+    expect(neglected.allowanceCr).toBeGreaterThan(tended.allowanceCr)
+    // And loses more than that on the ship itself.
+    expect(neglected.tradeInCr).toBeLessThan(tended.tradeInCr)
+
+    const gained = neglected.allowanceCr - tended.allowanceCr
+    const lost = tended.tradeInCr - neglected.tradeInCr
+    expect(lost).toBeGreaterThan(gained)
   })
 })

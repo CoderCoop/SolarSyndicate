@@ -9,6 +9,26 @@ means here.
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-07-26
+
+### Fixed
+
+- **Neglect is priced when you come to sell.** The allowance used to reward
+  skipping repairs: a tended ship spent its whole spares budget and scored
+  nothing, a neglected one banked the lot, and the wrecked ship it produced cost
+  nothing on the books. Trade-in is now book value scaled by a survey — mean
+  condition at 80% of the weighting, tune at 20%, a further deduction per failed
+  system, and a 35% scrap floor because a wreck is still metal. On one Luna run
+  that is ~8,500 cr against neglect, and an invariant test asserts the sign.
+- The purchase card shows the surveyor's walk-round, so the trade-in is never a
+  bare number.
+
+### Changed
+
+- `HullDef.tradeInCr` is now `bookValueCr` — the *undamaged* figure, which the
+  survey scales. The old name implied a ship was worth the same however it had
+  been treated, which was exactly the bug.
+
 ## [0.4.0] — 2026-07-26
 
 A minor by the stated rule: it changes what the player can reach. Mars.

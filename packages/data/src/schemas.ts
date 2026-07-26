@@ -311,14 +311,19 @@ export const HullDef = z.object({
    */
   fitOut: z.array(z.string()),
   /**
-   * What a yard charges for this hull, and what it allows against an old one.
+   * What a yard charges for this hull, and what one in nameplate condition is
+   * worth against a purchase.
    *
-   * Trade-in is a property of the hull being given up, not of the one being
-   * bought, so it lives here rather than on the transaction: a Kestrel is worth
-   * what a Kestrel is worth whatever you replace it with.
+   * `bookValueCr` is the *undamaged* figure. What a ship actually fetches is
+   * that number after a survey (see `surveyShip`): a hull that has been run
+   * into the ground is worth a fraction of book, and that is the whole point —
+   * neglect has to cost money somewhere the player can see it.
+   *
+   * Book value belongs to the hull being given up, not the one being bought: a
+   * Kestrel is worth what a Kestrel is worth whatever you replace it with.
    */
   priceCr: z.number().positive(),
-  tradeInCr: z.number().nonnegative(),
+  bookValueCr: z.number().nonnegative(),
   blurb: z.string(),
 })
 export type HullDef = z.infer<typeof HullDef>
@@ -516,7 +521,26 @@ export const TuneTuning = z.object({
 })
 export type TuneTuning = z.infer<typeof TuneTuning>
 
+/**
+ * How a yard values a used hull. Design doc §6.2.
+ *
+ * A ship is an asset, and running one into the ground has to cost money
+ * somewhere the player can see. Without this the settlement rewarded neglect on
+ * the spares line -- skip the repairs, bank the unspent budget, and the only
+ * punishment was a wrecked ship you were not otherwise charged for.
+ */
+export const SurveyTuning = z.object({
+  /** Fraction of book a hull fetches with everything broken: scrap and paperwork. */
+  scrapFloor: z.number().min(0).max(1),
+  /** How much of the survey is wear, the rest being how well she has been run. */
+  conditionWeight: z.number().min(0).max(1),
+  /** Deducted per failed system, on top of the condition it lost getting there. */
+  brokenDeduction: z.number().min(0).max(1),
+})
+export type SurveyTuning = z.infer<typeof SurveyTuning>
+
 export const Tuning = z.object({
+  survey: SurveyTuning,
   attendance: AttendanceTuning,
   tune: TuneTuning,
 })
