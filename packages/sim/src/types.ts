@@ -8,6 +8,7 @@
 import type { Watch } from '@solsyn/data'
 import type { ContractState } from './contracts.js'
 import type { LedgerEntry } from './ledger.js'
+import type { Settlement } from './reconcile.js'
 import type { VoyageState } from './voyage.js'
 import type { GameTime } from './time.js'
 
@@ -198,6 +199,8 @@ export interface SimState {
   contract?: ContractState
   /** The crossing under way, if the ship is not berthed. */
   voyage?: VoyageState
+  /** How the last delivery settled, for the arrival screen. */
+  settlement?: Settlement
   /** Bounded ring of recent dispatches, newest last. */
   log: LogEntry[]
 }

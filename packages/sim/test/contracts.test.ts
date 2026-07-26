@@ -12,13 +12,14 @@
  * budget" is a question asked when choosing, not discovered on arrival.
  */
 import { describe, expect, it } from 'vitest'
-import { content } from '@solsyn/data'
+import { content, getPort } from '@solsyn/data'
 import {
   advanceTo,
   applyCommand,
   contractBoard,
   activeContract,
   createWorld,
+  hohmannTransfer,
   ledgerView,
 } from '../src/index.js'
 import { DAY } from '../src/time.js'
@@ -78,14 +79,38 @@ describe('the allowance is stated before you accept', () => {
     expect(long.allowance.food).toBeGreaterThan(short.allowance.food)
   })
 
-  it('budgets roughly what four people actually need', () => {
-    // Sanity against the metabolic anchors: 3.5 kg water and 1.8 kg food per
-    // crew per day. An allowance wildly off those is a content bug, and the
-    // whole mechanic depends on it being a real budget rather than a token.
+  it('budgets the crossing, not the deadline', () => {
+    // The Guild budgets a competent run, not the worst case. Sizing to the
+    // deadline let a fast ship bank a large food credit for flying quickly --
+    // which rewards speed rather than efficiency, and swamped the signal the
+    // whole mechanic exists to send.
     for (const c of content.contracts) {
-      const crewDays = 4 * c.deadlineDays
-      expect(c.allowance.food).toBeGreaterThan(1.8 * crewDays * 0.5)
-      expect(c.allowance.food).toBeLessThan(1.8 * crewDays * 2)
+      const deadlineCrewDays = 4 * c.deadlineDays
+      expect(c.allowance.food).toBeLessThan(1.8 * deadlineCrewDays)
+    }
+  })
+
+  it('sets a deadline the physics can actually meet', () => {
+    // The invariant that would have caught a 96-day deadline on a crossing
+    // that takes 259: a contract nobody can deliver is a trap, and TR-3b
+    // forbids offering one.
+    for (const c of content.contracts) {
+      const from = getPort(c.fromPortId)
+      const to = getPort(c.toPortId)
+      if (from.bodyId === to.bodyId) continue
+      const crossing = hohmannTransfer(from.bodyId, to.bodyId).durationS / DAY
+      expect(c.deadlineDays).toBeGreaterThan(crossing)
+    }
+  })
+
+  it('still budgets enough to live on', () => {
+    // Sanity against the metabolic anchors (§3.2): 1.8 kg of food per crew per
+    // day. A token allowance would make the mechanic theatre in the other
+    // direction, so every run must cover at least a short crossing.
+    for (const c of content.contracts) {
+      expect(c.allowance.food).toBeGreaterThan(1.8 * 4 * 4)
+      expect(c.allowance.water).toBeGreaterThan(0)
+      expect(c.allowance.propellant).toBeGreaterThan(1_000)
     }
   })
 })
