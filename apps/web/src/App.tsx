@@ -33,9 +33,20 @@ import { LifeSupport } from './components/LifeSupport.js'
 import { ShipViewport } from './components/ShipViewport.js'
 import { StatusBar } from './components/StatusBar.js'
 import { WorkOrders } from './components/WorkOrders.js'
+import { discardWorld, reinstallApp } from './recover.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
 type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'log' | 'help'
+
+/**
+ * How long the boot screen waits before offering a way out of itself.
+ *
+ * Long enough that a cold start on a slow phone never sees it -- loading a save
+ * and catching a decade up is measured in hundreds of milliseconds -- and short
+ * enough that somebody staring at a screen that will never change is not left
+ * guessing.
+ */
+const BOOT_PATIENCE_MS = 6000
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ship', label: 'Ship' },
@@ -61,6 +72,15 @@ export function App() {
   const resetWorld = useGame((s) => s.resetWorld)
 
   const [tab, setTab] = useState<Tab>('ship')
+  const [bootSlow, setBootSlow] = useState(false)
+
+  useEffect(() => {
+    // Nothing is cancelled and nothing is declared failed -- if the world does
+    // arrive at second seven the panel simply goes away with the screen. This
+    // only adds a way out for a boot that is never going to finish.
+    const id = window.setTimeout(() => setBootSlow(true), BOOT_PATIENCE_MS)
+    return () => window.clearTimeout(id)
+  }, [])
 
   useEffect(() => {
     // A rejection here would leave the boot screen up for ever with nothing in
@@ -80,7 +100,39 @@ export function App() {
   if (status === 'loading' || !state) {
     return (
       <div className="boot">
-        <p>Reading the Local's books…</p>
+        <p className="boot__line">Reading the Local's books…</p>
+
+        {bootSlow && (
+          <section className="boot__stuck" aria-label="Recovery">
+            <h2 className="boot__title">This is taking longer than it should.</h2>
+            <p className="boot__why">
+              Two things can hold it up here, and each has its own way out. Neither touches
+              anything but this browser.
+            </p>
+            <button
+              type="button"
+              className="button button--primary boot__button"
+              onClick={() => void discardWorld()}
+            >
+              Start a new world
+            </button>
+            <p className="boot__note">
+              Discards the saved ship. Use this if the game was working and stopped after an
+              update.
+            </p>
+            <button
+              type="button"
+              className="button boot__button"
+              onClick={() => void reinstallApp()}
+            >
+              Fetch the game again
+            </button>
+            <p className="boot__note">
+              Keeps the ship, drops the copy of the game stored for offline play and pulls a
+              fresh one. Use this if the same fault survives everything else.
+            </p>
+          </section>
+        )}
       </div>
     )
   }

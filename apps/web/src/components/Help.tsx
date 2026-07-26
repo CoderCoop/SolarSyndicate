@@ -137,6 +137,10 @@ const TOPICS: { section: string; items: Topic[] }[] = [
         a: '720× real time — one real minute is half a game day, and a watch turns over every 40 real seconds. A flyable crossing takes 7 to 10 real minutes.',
       },
       {
+        q: 'The game is stuck on its loading screen.',
+        a: 'Wait six seconds and it will offer you two ways out. "Start a new world" throws away the saved ship — use it if the game worked and stopped after an update, which means the save is from a format this build cannot read. "Fetch the game again" keeps the ship and drops the copy of the game kept for offline play, which is what to use if the same fault comes back however many times you reload. Neither touches anything outside this browser.',
+      },
+      {
         q: 'What happens while the app is closed?',
         a: 'Exactly the same simulation, fast-forwarded. There is no separate offline calculation and nothing is paused. Come back after an hour and thirty game days have passed, so leave the ship with margin — the return screen tells you what happened while you were gone.',
       },
