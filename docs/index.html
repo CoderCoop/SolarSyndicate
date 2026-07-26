@@ -286,5 +286,20 @@ pnpm dev              # http://localhost:5173</code></pre>
   </div>
 </footer>
 
+<script>
+  // Belt and braces alongside /sw.js: if a worker from when the game lived at
+  // the site root is still registered, drop it and reload once. Anything
+  // scoped to /play/ is the game's own and is left alone.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (regs) {
+      var stale = regs.filter(function (r) { return r.scope.indexOf('/play/') === -1 })
+      if (!stale.length || sessionStorage.getItem('sw-cleared')) return
+      Promise.all(stale.map(function (r) { return r.unregister() })).then(function () {
+        sessionStorage.setItem('sw-cleared', '1')
+        location.reload()
+      })
+    })
+  }
+</script>
 </body>
 </html>

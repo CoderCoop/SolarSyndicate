@@ -53,7 +53,7 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir -p _site
-          cp -r docs/index.html docs/img _site/
+          cp -r docs/index.html docs/sw.js docs/img _site/
           cp -r apps/web/dist _site/play
           find _site -type f | sort | sed 's/^/  /'
 

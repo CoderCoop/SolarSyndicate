@@ -11,6 +11,17 @@ export default tseslint.config(
     },
   },
 
+  // Service workers run in their own global scope, not a window.
+  {
+    files: ['docs/sw.js'],
+    languageOptions: {
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+      },
+    },
+  },
+
   // Build-time and verification scripts run in Node, not the browser.
   {
     files: ['**/scripts/**/*.mjs', '**/*.config.{js,mjs,ts}'],
