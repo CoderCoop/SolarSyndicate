@@ -46,18 +46,11 @@ resource "github_repository" "this" {
   has_projects = false
 
   # --- merge policy -------------------------------------------------------
-  #
-  # Squash is off deliberately. It collapses a branch into a single
-  # GitHub-authored commit, which destroys per-commit authorship and the
-  # Co-Authored-By trailers. Rebase keeps each commit and its author.
-  #
-  # delete_branch_on_merge is the setting that actually matters day to day:
-  # with the remote branch gone after a merge, recreating it from main is a
-  # fresh push rather than a force. That is what removes the need to rewrite
-  # history on every follow-up change.
-  allow_rebase_merge     = true
+  # GitHub defaults, plus branch cleanup on merge so a merged branch does not
+  # linger and diverge.
   allow_merge_commit     = true
-  allow_squash_merge     = false
+  allow_squash_merge     = true
+  allow_rebase_merge     = true
   allow_auto_merge       = true
   delete_branch_on_merge = true
 
