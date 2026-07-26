@@ -6,6 +6,7 @@
     "deck": 0,
     "deckUnits": 1.1,
     "fixtures": [{ "glyph": "couch", "count": 2 }],
+    "tendedBySkill": "piloting",
     "blurb": "Helm, comms, and the sensor mast. Two acceleration couches, one of them usually occupied."
   },
   {
@@ -18,6 +19,7 @@
       { "glyph": "bunk", "count": 6 },
       { "glyph": "table", "count": 1 }
     ],
+    "tendedBySkill": "medicine",
     "blurb": "Six bunks, a galley, and the only table on the ship."
   },
   {
@@ -27,6 +29,7 @@
     "deck": 2,
     "deckUnits": 1.5,
     "fixtures": [],
+    "tendedBySkill": "lifeSupport",
     "blurb": "Scrubbers, recyclers, and a hydroponics rack that smells faintly of wet soil."
   },
   {
@@ -36,6 +39,7 @@
     "deck": 3,
     "deckUnits": 1.8,
     "fixtures": [{ "glyph": "bay", "count": 4 }],
+    "tendedBySkill": "mechanics",
     "blurb": "Four modular bays. Empty, which is the problem."
   },
   {
@@ -45,6 +49,7 @@
     "deck": 4,
     "deckUnits": 1.3,
     "fixtures": [{ "glyph": "locker", "count": 3 }],
+    "tendedBySkill": "mechanics",
     "blurb": "Workshop, spares lockers, battery bank, and the thermal loop pumps."
   },
   {
@@ -54,6 +59,7 @@
     "deck": 5,
     "deckUnits": 1.2,
     "fixtures": [],
+    "tendedBySkill": "mechanics",
     "blurb": "Shielded fission plant. The shadow shield is why the tanks sit where they do."
   },
   {
@@ -63,6 +69,7 @@
     "deck": 6,
     "deckUnits": 1,
     "fixtures": [],
+    "tendedBySkill": "mechanics",
     "blurb": "Nuclear thermal cluster, cold. Preheating takes hours and a great deal of power."
   }
 ]

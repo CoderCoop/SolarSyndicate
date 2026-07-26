@@ -1,0 +1,9 @@
+{
+  "attendance": {
+    "outputBonusMax": 0.06,
+    "closureBonusMax": 0.03,
+    "wearScaleSkilled": 0.55,
+    "wearScaleUnskilled": 1.0,
+    "wearScaleUnattended": 1.15
+  }
+}

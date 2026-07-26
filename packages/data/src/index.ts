@@ -11,6 +11,7 @@ import hullsRaw from './content/hulls.json' with { type: 'json' }
 import crewRaw from './content/crew.json' with { type: 'json' }
 import bodiesRaw from './content/bodies.json' with { type: 'json' }
 import portsRaw from './content/ports.json' with { type: 'json' }
+import tuningRaw from './content/tuning.json' with { type: 'json' }
 import {
   ContentPack,
   type BodyDef,
@@ -30,6 +31,7 @@ export const content: ContentPack = ContentPack.parse({
   crew: crewRaw,
   bodies: bodiesRaw,
   ports: portsRaw,
+  tuning: tuningRaw,
 })
 
 const roomsById = new Map(content.rooms.map((r) => [r.id, r]))
@@ -79,6 +81,9 @@ export function getCrewDef(id: string): CrewDef {
 export function partsForRoom(roomId: string): PartDef[] {
   return content.parts.filter((p) => p.roomId === roomId)
 }
+
+/** Attendance coefficients (spec 004 RF-38). Balance is a JSON edit. */
+export const ATTENDANCE = content.tuning.attendance
 
 /** The starter hull for M0. Session zero will make this a guild-driven choice (§10.1). */
 export const STARTER_HULL_ID = 'hull.kestrel'

@@ -12,13 +12,8 @@
  * turns over, a component fails.
  */
 import { getHull, getPart, SHED_ORDER, type PartProvides, type PowerPriority } from '@solsyn/data'
-import {
-  activityLoad,
-  fatigueRatePerSecond,
-  lifeSupportBonus,
-  mechanicBonuses,
-  METABOLIC,
-} from './crew.js'
+import { attendanceFor, closureBonusFor, outputScaleFor } from './attendance.js'
+import { activityLoad, fatigueRatePerSecond, METABOLIC } from './crew.js'
 import { pushLog } from './log.js'
 import { boundTime, levelAt, settle } from './resources.js'
 import { cancelKind, schedule } from './queue.js'
@@ -106,7 +101,7 @@ export function partPowerKw(state: SimState, part: PartState, t: GameTime): numb
     return def.powerKw
   }
 
-  const { outputScale } = mechanicBonuses(state)
+  const outputScale = outputScaleFor(attendanceFor(state, part.roomId, t))
   const derate = state.ship.thermalTrip && def.provides.thermalWasteKw ? DERATE_SCALE : 1
   return def.powerKw * partScale(state, part, t) * outputScale * derate
 }
@@ -207,7 +202,10 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
     }
     // Best recycler wins rather than summing -- they are one loop.
     if (p.waterRecycleFraction) {
-      recycleFraction = Math.max(recycleFraction, p.waterRecycleFraction * scale + lifeSupportBonus(state))
+      recycleFraction = Math.max(
+        recycleFraction,
+        p.waterRecycleFraction * scale + closureBonusFor(attendanceFor(state, part.roomId, t)),
+      )
     }
     if (def.powerKw < 0) electricalLoadKw += -def.powerKw
   }

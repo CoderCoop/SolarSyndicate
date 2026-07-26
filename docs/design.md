@@ -244,6 +244,41 @@ to — **crew quality must be legible in the numbers the player already watches*
 Because you're remote, these multipliers are the *only* way crew quality reaches
 you — you never fly a better line yourself. Hiring is the skill ceiling of the game.
 
+**Attendance (decided, spec 004).** A multiplier only applies while that person
+is **on watch and stationed in the room the system is in** — by the watch bill or
+by an active work order. Being aboard is not enough; being asleep in the same
+compartment is not enough. This is what makes §4.3's schedule the mechanism it is
+described as rather than a formality, and it is why the roster is an allocation
+problem: with three watches and a small crew, most rooms are unattended most of
+the time, and you are choosing *which* systems get looked after.
+
+The contribution scales with the person's current effectiveness as well as their
+skill, so fatigue, cabin CO₂ and cabin temperature all feed back into it. A tired
+technician in a hot room is worth less than a rested one, which closes the loop
+between §3.2's networks and the people working inside them.
+
+**Presence buys condition, not throughput.** "Keeping the systems in good
+operational status" is a claim about status *over time*, so the large term is
+wear, not output:
+
+| | Effect at skill 100 × effectiveness 1.0 |
+|---|---|
+| Output | +6% of rated |
+| Loop closure | +3 percentage points |
+| **Wear** | **×0.55** — against ×1.0 for an unskilled hand and ×1.15 for a deserted room |
+
+A part's rated figures are **what it delivers unattended**. An unattended ship
+runs to spec indefinitely and never decays toward a worse steady state, so §7.4's
+ban on punishing absence holds by construction rather than by remembering to
+check. The deserted-room penalty is deliberately mild — 15% faster wear is weeks
+of drift, visible in the condition bar long before it is a failure, and always
+recoverable with a work order. A reason to staff a watch, never a punishment for
+closing the app.
+
+Upgrades raise the **base**; crew raise the **multiplier**. Keeping them on
+separate terms means neither obsoletes the other: a superb technician cannot
+substitute for a worn-out recycler, and a new recycler still runs better tended.
+
 ### 4.3 Shifts & schedule
 
 The ship runs a 24 h clock with a 3-shift watch bill (or 2-shift if understaffed —
