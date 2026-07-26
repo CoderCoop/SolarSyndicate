@@ -76,6 +76,21 @@ The build uses relative asset paths so the same artifact runs from a project
 subpath, the domain root, or straight off disk — and `pnpm verify` serves it
 from a subpath so that stays true.
 
+## Secrets
+
+Three layers, none trusted alone:
+
+| Layer | What it is |
+| --- | --- |
+| pre-commit | gitleaks blocks secrets before they enter history — `pre-commit install` once per clone |
+| CI | a full-history gitleaks scan on every push and pull request |
+| Platform | GitHub secret scanning with push protection (repo settings, see `infra/`) |
+
+A genuine false positive gets an inline `gitleaks:allow` marker on the offending
+line — never a weakened rule or a skipped hook. If a real credential ever
+reaches history, even briefly, treat it as compromised and rotate it; deleting
+the file does not un-leak it.
+
 ## Layout
 
 ```
