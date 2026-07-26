@@ -7,7 +7,10 @@
  * asleep in her bunk improved the water loop exactly as much as one standing
  * at the recycler. Assignment was decorative.
  *
- * The rule now is presence. A hand counts for a room only while on watch and
+ * The rule now is presence, and it buys two separate things: slower wear
+ * here, and -- through tune.ts -- a system that stays in adjustment.
+ *
+ * A hand counts for a room only while on watch and
  * stationed there -- by their watch bill or by an active work order -- and
  * their contribution scales with current effectiveness, so fatigue, cabin CO2
  * and cabin temperature all feed back into it.
@@ -70,22 +73,6 @@ export function attendanceForPart(state: SimState, roomId: string, t: GameTime):
 }
 
 /**
- * Output multiplier from attendance. Always >= 1: a rated part is what you get
- * with nobody watching it, and someone watching can only help (RF-35, RF-36).
- */
-export function outputScaleFor(a: Pick<Attendance, 'quality'>): number {
-  return 1 + a.quality * ATTENDANCE.outputBonusMax
-}
-
-/**
- * Loop-closure bonus, in absolute fraction. Added to the part's rated closure,
- * so 0.97 rated becomes at most 1.00 before the hard cap elsewhere.
- */
-export function closureBonusFor(a: Pick<Attendance, 'quality'>): number {
-  return a.quality * ATTENDANCE.closureBonusMax
-}
-
-/**
  * Wear multiplier. This is where presence actually pays, because "keeping the
  * systems in good operational status" is a claim about condition over time,
  * not about instantaneous throughput.
@@ -106,16 +93,14 @@ export function attendanceView(
   state: SimState,
   roomId: string,
   t: GameTime,
-): Attendance & { outputScale: number; wearScale: number; closureBonus: number; name?: string } {
+): Attendance & { wearScale: number; name?: string } {
   const a = attendanceFor(state, roomId, t)
   const crew: CrewState | undefined = a.crewId
     ? state.crew.find((c) => c.id === a.crewId)
     : undefined
   return {
     ...a,
-    outputScale: outputScaleFor(a),
     wearScale: wearScaleFor(a),
-    closureBonus: closureBonusFor(a),
     ...(crew ? { name: getCrewDef(crew.defId).name } : {}),
   }
 }

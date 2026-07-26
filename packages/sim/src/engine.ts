@@ -15,6 +15,7 @@ import {
   getHull,
   getPart,
   STARTER_HULL_ID,
+  TUNE,
   type Glyph,
 } from '@solsyn/data'
 import {
@@ -39,6 +40,7 @@ import {
 import { peekDue, pop, schedule } from './queue.js'
 import { fillFraction, levelAt, makeReservoir, settle } from './resources.js'
 import { DAY, formatDuration, gameTimeFromUtc, type GameTime } from './time.js'
+import { resolveTune } from './tune.js'
 import { applyThreshold, conditionLabel, resolveWear } from './wear.js'
 import {
   cancelWorkOrder,
@@ -85,6 +87,9 @@ export function createWorld(seed: number, utcMs: number): SimState {
       // A thirty-one-year-old hauler with a "characterful" maintenance log
       // does not start at 100%.
       condition: makeReservoir(startingCondition(def.id), 0, 100, t0),
+      // Delivered exactly at spec: the nameplate is what you get on day one,
+      // and every change from there is something you did or failed to do.
+      tune: makeReservoir(TUNE.specTune, 0, 100, t0),
     }))
 
   const crew: CrewState[] = content.crew.map((def) => ({
@@ -166,6 +171,11 @@ function scheduleAt(state: SimState, at: GameTime, kind: SimEvent['kind'], ref?:
  * ordering, one place, so a new system can only be wired in correctly.
  */
 function resolveAll(state: SimState, at: GameTime): void {
+  // Tune first: it is an input to output, so networks must see the settled
+  // value rather than last resolve's. Then wear (which reads attendance), then
+  // networks (which read condition and tune), then work orders (which read the
+  // environment the crew are working in).
+  resolveTune(state, at)
   resolveWear(state, at)
   resolveNetworks(state, at)
   resolveWorkOrders(state, at)

@@ -250,10 +250,6 @@ export type PortDef = z.infer<typeof PortDef>
  * Presence is upside -- a little output, and mostly slower wear.
  */
 export const AttendanceTuning = z.object({
-  /** Fractional lift to rated output at quality 1. */
-  outputBonusMax: z.number().min(0).max(0.5),
-  /** Percentage points of loop closure added at quality 1, as a fraction. */
-  closureBonusMax: z.number().min(0).max(0.2),
   /** Wear multiplier with a quality-1 hand on station. */
   wearScaleSkilled: z.number().positive(),
   /** Wear multiplier with someone present but unskilled. */
@@ -267,8 +263,40 @@ export const AttendanceTuning = z.object({
 })
 export type AttendanceTuning = z.infer<typeof AttendanceTuning>
 
+/**
+ * Tune. Spec 004 RF-36.
+ *
+ * The second axis, orthogonal to physical wear: gunk in a line, a hose outside
+ * its specified diameter, setpoints never re-trimmed for the humidity the ship
+ * actually runs at, a fungus in the root system nobody spotted. Anyone can run
+ * the plant; a skilled operator *notices*. So tune falls through inattention
+ * and rises through assignment -- never through a work order, which is what
+ * fixes the other axis.
+ */
+export const TuneTuning = z.object({
+  /** Tune level at which a part delivers exactly its rated figures. */
+  specTune: z.number().min(1).max(99),
+  /**
+   * Output multiplier at zero tune. The fair-play floor (RF-35a): a wholly
+   * neglected ship is inefficient, never non-viable, and never spiralling.
+   */
+  outputAtZeroTune: z.number().min(0.5).max(1),
+  /** Output multiplier at tune 100 -- above the nameplate, which is the point. */
+  outputAtFullTune: z.number().min(1).max(1.5),
+  /** Tune lost per game day while running unattended. */
+  decayPerDayUnattended: z.number().positive(),
+  /** Tune gained per game day, per unit of operator quality. */
+  gainPerDayPerQuality: z.number().positive(),
+  /** Tune an operator of quality 0 can hold: they keep it running, no more. */
+  ceilingUnskilled: z.number().min(0).max(100),
+  /** Tune an operator of quality 1 can hold. */
+  ceilingSkilled: z.number().min(0).max(100),
+})
+export type TuneTuning = z.infer<typeof TuneTuning>
+
 export const Tuning = z.object({
   attendance: AttendanceTuning,
+  tune: TuneTuning,
 })
 export type Tuning = z.infer<typeof Tuning>
 

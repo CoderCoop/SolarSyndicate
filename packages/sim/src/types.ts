@@ -9,7 +9,7 @@ import type { Watch } from '@solsyn/data'
 import type { GameTime } from './time.js'
 
 /** Bump when the shape changes; add a migration in persistence. §8.3 */
-export const SIM_STATE_VERSION = 2
+export const SIM_STATE_VERSION = 3
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -58,6 +58,13 @@ export interface PartState {
   broken: boolean
   /** 0-100. Degrades output before it fails outright. */
   condition: Reservoir
+  /**
+   * 0-100. How well adjusted it is, as distinct from how worn (spec 004
+   * RF-36). Falls through inattention, rises only through assignment. At
+   * TUNE.specTune the part delivers its nameplate figures; a good enough
+   * operator takes it above them.
+   */
+  tune: Reservoir
   /** Next condition threshold we have scheduled an event for, or undefined. */
   nextThreshold?: number
 }

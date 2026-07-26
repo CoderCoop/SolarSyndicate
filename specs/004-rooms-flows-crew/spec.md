@@ -254,15 +254,70 @@ after someone leaves station, because there is no deficit to paper over. §7.4
 holds by construction: absence can never kill, never spiral, and never make the
 ship worse than the hardware you bought.
 
-### Presence is a small, immediate efficiency bonus
+### Tune: the second axis, separate from wear
 
-- **RF-36** A crew member on watch and stationed in a system's room adds up to
-  **+3 percentage points** of loop closure, or **+6%** of rated output, at skill
-  100 and effectiveness 1.0. It scales linearly with `skill / 100` and with
-  `crewEffectiveness`, and it is never negative.
+An earlier draft made the efficiency term **instantaneous** — present, therefore
+better, right now. That is the wrong physics for what actually happens to a
+machine nobody is watching.
 
-Enough to see in the flow diagram when a watch turns over. Not enough that an
-unattended run is in trouble.
+A water recycler does not simply wear out. Gunk builds up in a line. A hose
+sits slightly outside its specified diameter and nobody measures it. Cabin
+humidity drifts and the setpoints were never re-trimmed for it. In hydroponics:
+a fungus takes hold in the root system and wants the medium sterilised; this
+particular batch of seed needs lower light for a few days after germination or
+half the seedlings die. **Anyone can run the plant. A skilled operator notices.**
+
+So efficiency is a *second state variable*, orthogonal to condition:
+
+| | **Condition** | **Tune** |
+|---|---|---|
+| What it is | Physical wear | Accumulated small inefficiencies |
+| Falls because | The part is running | Nobody is paying attention |
+| Rises because | A **work order** — labour-hours and spares | A skilled hand is **on station** |
+| Ceiling | Rated | *Above* rated, with a good enough operator |
+| Failure mode | Breaks outright | Quietly costs you margin |
+
+- **RF-36** Every part carries a **tune** level, 0–100, independent of
+  condition. At `specTune` it delivers exactly its rated figures. Below that it
+  underperforms; above it, it beats the nameplate.
+- **RF-36a** Tune **decays while unattended** and while the part is running,
+  toward zero, at a rate slow enough to be a voyage-length concern rather than a
+  daily one.
+- **RF-36b** Tune **climbs while a hand is on station**, at a rate proportional
+  to their quality, toward a ceiling *also* set by their quality. An unskilled
+  operator can hold a system somewhat below spec — they keep it running but do
+  not spot anything. A specialist holds it above spec. Only a very good one
+  reaches 100.
+- **RF-36c** Tune multiplies **output**, never input. A better-tuned
+  electrolysis unit returns more oxygen for the same water — which is what
+  "operating at maximum efficiency" means, and why `waterUseKgPerDay` must stay
+  unscaled.
+- **RF-36d** Tune and condition are shown separately, and are separately
+  actionable: a work order fixes condition, and only assignment fixes tune.
+
+This is a strictly better fit for the reservoir architecture than the
+instantaneous version: tune is `(value, rate, since)` like every other level,
+its rate changes only when attendance changes, and attendance changes only at
+watch turnover and work-order events — which already re-resolve. Reads clamp to
+the bounds, so a plateau needs no scheduled event at all.
+
+### What this costs the "rated means unattended" rule
+
+RF-35 said a part's rated figures are what it delivers unattended, full stop.
+With tune that is no longer literally true: a neglected system does drift below
+spec. The fair-play guarantee has to be restated, and it is now a **floor**
+rather than a fixed point:
+
+- **RF-35a** Tune decay is bounded. At zero tune a part still delivers a stated
+  fraction of rated output — enough that a completely unattended ship is
+  inefficient, never non-viable. There is no spiral: tune stops falling, and
+  putting a competent hand back on station recovers it.
+- **RF-35b** The ship's starting stores and margins are set against the
+  **floor**, not against spec, so an unattended run is survivable by
+  construction (§7.4).
+
+The ship is delivered at exactly `specTune`, so the nameplate is what you get on
+day one and every change from there is something you did or failed to do.
 
 ### Presence is a larger, cumulative wear effect
 

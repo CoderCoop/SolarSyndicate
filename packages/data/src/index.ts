@@ -85,6 +85,9 @@ export function partsForRoom(roomId: string): PartDef[] {
 /** Attendance coefficients (spec 004 RF-38). Balance is a JSON edit. */
 export const ATTENDANCE = content.tuning.attendance
 
+/** Tune coefficients (spec 004 RF-36). */
+export const TUNE = content.tuning.tune
+
 /** The starter hull for M0. Session zero will make this a guild-driven choice (§10.1). */
 export const STARTER_HULL_ID = 'hull.kestrel'
 
