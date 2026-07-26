@@ -9,7 +9,14 @@
     "switchable": false,
     "startsEnabled": true,
     "glyph": "core",
-    "provides": { "thermalWasteKw": 66.0 },
+    "fitting": "floor",
+    "sizeM": {
+      "w": 2.2,
+      "h": 1.7
+    },
+    "provides": {
+      "thermalWasteKw": 66.0
+    },
     "wearPerDay": 0.34,
     "serviceHours": 9,
     "repairHours": 26,
@@ -27,6 +34,11 @@
     "switchable": true,
     "startsEnabled": true,
     "glyph": "panel",
+    "fitting": "wall",
+    "sizeM": {
+      "w": 1.7,
+      "h": 0.8
+    },
     "provides": {},
     "wearPerDay": 0.13,
     "serviceHours": 3,
@@ -44,6 +56,11 @@
     "switchable": false,
     "startsEnabled": true,
     "glyph": "battery",
+    "fitting": "floor",
+    "sizeM": {
+      "w": 1.4,
+      "h": 0.9
+    },
     "provides": {},
     "wearPerDay": 0.06,
     "serviceHours": 4,
@@ -61,7 +78,14 @@
     "switchable": false,
     "startsEnabled": true,
     "glyph": "column",
-    "provides": { "co2ScrubKgPerDay": 5.2 },
+    "fitting": "floor",
+    "sizeM": {
+      "w": 1.0,
+      "h": 1.8
+    },
+    "provides": {
+      "co2ScrubKgPerDay": 5.2
+    },
     "wearPerDay": 0.52,
     "serviceHours": 5,
     "repairHours": 13,
@@ -79,7 +103,15 @@
     "switchable": false,
     "startsEnabled": true,
     "glyph": "column",
-    "provides": { "o2KgPerDay": 4.1, "waterUseKgPerDay": 4.6 },
+    "fitting": "floor",
+    "sizeM": {
+      "w": 0.9,
+      "h": 1.6
+    },
+    "provides": {
+      "o2KgPerDay": 4.1,
+      "waterUseKgPerDay": 4.6
+    },
     "wearPerDay": 0.44,
     "serviceHours": 6,
     "repairHours": 15,
@@ -97,7 +129,14 @@
     "switchable": true,
     "startsEnabled": true,
     "glyph": "column",
-    "provides": { "waterRecycleFraction": 0.97 },
+    "fitting": "wall",
+    "sizeM": {
+      "w": 1.1,
+      "h": 0.9
+    },
+    "provides": {
+      "waterRecycleFraction": 0.97
+    },
     "wearPerDay": 0.41,
     "serviceHours": 5,
     "repairHours": 12,
@@ -114,6 +153,11 @@
     "switchable": true,
     "startsEnabled": true,
     "glyph": "tray",
+    "fitting": "floor",
+    "sizeM": {
+      "w": 2.0,
+      "h": 1.5
+    },
     "provides": {
       "foodKgPerDay": 0.9,
       "o2KgPerDay": 0.4,
@@ -136,7 +180,14 @@
     "switchable": false,
     "startsEnabled": true,
     "glyph": "pump",
-    "provides": { "heatRejectKw": 115.0 },
+    "fitting": "wall",
+    "sizeM": {
+      "w": 1.3,
+      "h": 1.0
+    },
+    "provides": {
+      "heatRejectKw": 115.0
+    },
     "wearPerDay": 0.29,
     "serviceHours": 7,
     "repairHours": 18,
@@ -154,6 +205,11 @@
     "switchable": true,
     "startsEnabled": true,
     "glyph": "console",
+    "fitting": "floor",
+    "sizeM": {
+      "w": 1.1,
+      "h": 0.9
+    },
     "provides": {},
     "wearPerDay": 0.09,
     "serviceHours": 2,
@@ -171,6 +227,11 @@
     "switchable": true,
     "startsEnabled": true,
     "glyph": "dish",
+    "fitting": "wall",
+    "sizeM": {
+      "w": 0.9,
+      "h": 0.9
+    },
     "provides": {},
     "wearPerDay": 0.11,
     "serviceHours": 3,
@@ -188,6 +249,11 @@
     "switchable": true,
     "startsEnabled": true,
     "glyph": "hab",
+    "fitting": "floor",
+    "sizeM": {
+      "w": 1.4,
+      "h": 1.2
+    },
     "provides": {},
     "wearPerDay": 0.24,
     "serviceHours": 4,
@@ -205,6 +271,11 @@
     "switchable": true,
     "startsEnabled": false,
     "glyph": "nozzle",
+    "fitting": "floor",
+    "sizeM": {
+      "w": 1.5,
+      "h": 1.6
+    },
     "provides": {},
     "wearPerDay": 0.58,
     "serviceHours": 8,

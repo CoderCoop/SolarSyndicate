@@ -16,7 +16,9 @@ import {
   getPart,
   STARTER_HULL_ID,
   TUNE,
+  type Fitting,
   type Glyph,
+  type SizeM,
 } from '@solsyn/data'
 import {
   activityAt,
@@ -26,6 +28,7 @@ import {
   nextShiftBoundary,
   updateActivities,
 } from './crew.js'
+import { attendanceView } from './attendance.js'
 import { pushLog } from './log.js'
 import {
   lifeBalance,
@@ -40,7 +43,7 @@ import {
 import { peekDue, pop, schedule } from './queue.js'
 import { fillFraction, levelAt, makeReservoir, settle } from './resources.js'
 import { DAY, formatDuration, gameTimeFromUtc, type GameTime } from './time.js'
-import { resolveTune } from './tune.js'
+import { resolveTune, tuneLabel, tuneOf } from './tune.js'
 import { applyThreshold, conditionLabel, resolveWear } from './wear.js'
 import {
   cancelWorkOrder,
@@ -579,16 +582,20 @@ export interface RoomView {
   short: string
   blurb: string
   deck: number
-  /** Relative height of this deck in the cross-section (SV-2). */
-  deckUnits: number
-  /** Furniture the sim does not model but the schematic draws (SV-4). */
-  fixtures: { glyph: Glyph; count: number }[]
+  /** Deck head height in metres (RF-4). */
+  deckHeightM: number
+  /** Furniture the sim does not model but the room draws (SV-4, RF-3). */
+  fixtures: { glyph: Glyph; count: number; fitting: Fitting; sizeM: SizeM }[]
+  /** Who is tending this room right now, and what that is worth (RF-27). */
+  attendance: { attended: boolean; quality: number; wearScale: number; name?: string }
   parts: {
     id: string
     name: string
     blurb: string
-    /** How this part draws itself (SV-3). */
+    /** How this part draws itself, and where it sits (SV-3, RF-3). */
     glyph: Glyph
+    fitting: Fitting
+    sizeM: SizeM
     /** Rated power from the catalogue. */
     powerKw: number
     /** What it is actually contributing now, after condition and derate. */
@@ -600,6 +607,9 @@ export interface RoomView {
     priority: string
     condition: number
     conditionLabel: string
+    /** 0-100, and separate from condition: adjustment, not wear (RF-36). */
+    tune: number
+    tuneLabel: string
     hasWorkOrder: boolean
   }[]
   netKw: number
@@ -656,8 +666,12 @@ export function roomViews(state: SimState): RoomView[] {
             broken: p.broken,
             switchable: pd.switchable,
             priority: pd.priority,
+            fitting: pd.fitting,
+            sizeM: pd.sizeM,
             condition,
             conditionLabel: conditionLabel(condition),
+            tune: tuneOf(p, t),
+            tuneLabel: tuneLabel(tuneOf(p, t)),
             hasWorkOrder: openOrders.has(p.id),
           }
         })
@@ -667,8 +681,17 @@ export function roomViews(state: SimState): RoomView[] {
         short: def.short,
         blurb: def.blurb,
         deck: def.deck,
-        deckUnits: def.deckUnits,
+        deckHeightM: def.deckHeightM,
         fixtures: def.fixtures,
+        attendance: (() => {
+          const a = attendanceView(state, room.id, t)
+          return {
+            attended: a.attended,
+            quality: a.quality,
+            wearScale: a.wearScale,
+            ...(a.name ? { name: a.name } : {}),
+          }
+        })(),
         // Strip the flow terms: they belong to the room, not to the part rows
         // the UI already renders.
         parts: parts.map(({ heatKw: _h, waterKgPerDay: _w, ...rest }) => rest),

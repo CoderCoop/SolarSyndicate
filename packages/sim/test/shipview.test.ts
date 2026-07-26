@@ -88,10 +88,30 @@ describe('crew are somewhere', () => {
 })
 
 describe('rooms carry what the schematic needs', () => {
-  it('gives every part a glyph and every room a height', () => {
+  it('gives every room a real height and every part a real size', () => {
+    // Spec 004 RF-3, RF-4: proportions come from data, in metres, so a person
+    // can be drawn against the same grid as the machinery.
     for (const room of roomViews(world())) {
-      expect(room.deckUnits).toBeGreaterThan(0)
-      for (const part of room.parts) expect(part.glyph).toBeTruthy()
+      expect(room.deckHeightM).toBeGreaterThan(1.8)
+      expect(room.deckHeightM).toBeLessThan(6)
+      for (const part of room.parts) {
+        expect(part.glyph).toBeTruthy()
+        expect(part.fitting).toMatch(/floor|wall|ceiling/)
+        expect(part.sizeM.w).toBeGreaterThan(0)
+        expect(part.sizeM.h).toBeGreaterThan(0)
+        // Nothing may be taller than the deck it stands in.
+        if (part.fitting === 'floor') expect(part.sizeM.h).toBeLessThan(room.deckHeightM)
+      }
+    }
+  })
+
+  it('publishes both health axes for every part', () => {
+    for (const room of roomViews(world())) {
+      for (const part of room.parts) {
+        expect(part.condition).toBeGreaterThanOrEqual(0)
+        expect(part.tune).toBeGreaterThanOrEqual(0)
+        expect(part.tuneLabel).toBeTruthy()
+      }
     }
   })
 
