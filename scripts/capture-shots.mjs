@@ -124,11 +124,19 @@ await shot('away-report', async (page, context) => {
   return back
 }, { height: 900 })
 
-// The roster: four people on a watch bill.
+// The roster: the whole stat block, and a watch drawn as a day.
 await shot('crew', async (page) => {
   await page.click('.tabs__btn:has-text("Crew")')
-  await page.waitForSelector('.roster')
-})
+  await page.waitForSelector('.watchstrip')
+}, { height: 1700 })
+
+// The water channel: a loop drawn as a loop, with the counterfactual stated.
+await shot('flows-water', async (page) => {
+  await page.click('.tabs__btn:has-text("Flows")')
+  await page.waitForSelector('.chans')
+  await page.click('.chans__btn:has-text("Water")')
+  await page.waitForSelector('.fnode--return')
+}, { height: 1400 })
 
 // The ship as rooms, for the changelog: interiors drawn from content, crew
 // standing in the room they are actually in, at human scale.

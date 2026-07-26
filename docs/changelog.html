@@ -138,100 +138,124 @@
 <div class="wrap log">
 
   <!-- ============================================================ -->
-  <article class="entry entry--plan">
-    <p class="stamp"><b>Spec 004</b> <span>Rooms, flows and people</span> <span class="state state--planned">approved · building</span></p>
-    <h2>Rooms that look like rooms</h2>
+  <article class="entry entry--ship">
+    <p class="stamp"><b>Spec 004</b> <span class="pr">#19</span> <span class="state state--shipped">shipped</span></p>
+    <h2>A skill model borrowed rather than invented</h2>
     <p>
-      The schematic drew every component as an abstract mark. It generated
-      cleanly from data and it was legible — but a cylinder reads as a cylinder,
-      not as a CO₂ scrubber you could walk up to and service. Three things
-      followed from that, and one gameplay problem sat behind all of them.
+      "Life support" was never a skill. It is a <em>system</em> — and calling it
+      a skill was the symptom of a model that had collapsed three different
+      things into one number. The fix was to stop inventing and go and find
+      classifications that already exist.
     </p>
 
-    <div class="shots">
-      <figure>
-        <img src="img/mockup-004-elevation.png" alt="Mockup: Life Support, Quarters and the Reactor deck drawn as interior elevations with equipment standing on a grated floor and crew at human scale.">
-        <figcaption><b>Chosen — Elevation.</b> Back wall, ceiling conduit, grated
-        floor. The scrubber is visibly two amine beds on a plinth. A crew figure
-        is 1.7&nbsp;m, which sets the scale for everything else.</figcaption>
-      </figure>
-      <figure>
-        <img src="img/mockup-004-dimetric.png" alt="Mockup: the same room drawn in dimetric projection, with equipment showing a top face and a side face.">
-        <figcaption><b>Rejected — Dimetric.</b> More object-like, and it eats the
-        viewport: four machines no longer fit across a phone, and every part
-        becomes three faces with overlap ordering to resolve.</figcaption>
-      </figure>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Layer</th><th>What it is</th><th>Taken from</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Knowledge</td>
+            <td>Mechanical, Electronics, Physics, Chemistry, Biology, Medicine</td>
+            <td><a href="https://www.onetcenter.org/content.html">O*NET Content Model</a> domains</td>
+          </tr>
+          <tr>
+            <td>Skills</td>
+            <td>Operation Monitoring, Equipment Maintenance, Troubleshooting, Repairing, Quality Control, Judgment</td>
+            <td>O*NET Cross-Functional <strong>Technical</strong> cluster, verbatim</td>
+          </tr>
+          <tr>
+            <td>Qualifications</td>
+            <td>ECLSS, EPS, TCS, PROP, GNC, EVA, CMO</td>
+            <td>STCW-style endorsements over real ISS system names</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="decision">
-      <h3>Decision · elevation over dimetric</h3>
+      <h3>Decision · borrow the taxonomy, do not invent one</h3>
       <p>
-        Projection looks more like a game and costs horizontal space. On a
-        portrait mobile game that is the wrong trade — the same four machines
-        stop fitting, and the per-part drawing cost roughly triples.
+        These were not chosen to fit the game and justified afterwards. O*NET
+        defines <strong>Operation Monitoring</strong> as <em>"watching gauges,
+        dials, or other indicators to make sure a machine is working
+        properly"</em> — which describes the tune mechanic almost word for word,
+        in a US Department of Labor taxonomy that predates this project by
+        decades.
       </p>
-      <p class="against">Rejected: dimetric projection, and a full-perspective interior.</p>
+      <p>
+        The split is the point. Keeping a system sweet, spotting that something
+        is wrong, and putting it right are three different competences. You can
+        watch it work: the ship's medic gets the scrubber <em>service</em> over
+        the captain, because his Equipment Maintenance is higher — and would
+        lose a <em>repair</em> to the chief engineer badly.
+      </p>
+      <p class="against">
+        Rejected: one flat "mechanics" number; and a longer skill list with
+        "botany" and "nuclear" as separate skills, which proliferates without
+        adding meaning.
+      </p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · rooms ask for knowledge, not for a skill</h3>
+      <p>
+        A room declares a <strong>weighted knowledge requirement</strong> plus
+        the endorsement that certifies you for it. The engine room is part
+        physics and part mechanical; saying so in data beats inventing a
+        "nuclear engineering" skill that nothing else uses. An uncertificated
+        hand is discounted rather than refused — a short-handed ship has to stay
+        playable.
+      </p>
     </div>
 
     <div class="shots">
       <figure>
-        <img src="img/mockup-004-station-card.png" alt="Mockup: tapping the failed scrubber opens a detail card beneath the room showing condition, draw, blurb and a repair action.">
-        <figcaption>Tapping a machine opens <em>that machine</em>, held highlighted
-        above its card — instead of expanding a list of four and making you find
-        the one you were already looking at.</figcaption>
+        <img src="img/crew.png" alt="A crew card: a 24-hour watch strip, six skills, six knowledge domains, six attributes, endorsements and the current assignment.">
+        <figcaption>The 24-hour strip is the answer to "what is B watch": eight
+        asleep, eight on, eight off, with a marker at the current hour. The
+        letter stops mattering.</figcaption>
       </figure>
       <figure>
-        <img src="img/mockup-004-flows-water.png" alt="Mockup: the water flow channel, showing the tank feeding crew, electrolysis and hydroponics, with a dashed return edge from the recycler.">
-        <figcaption>Water is a <em>loop</em>. The Life tab says "86.1% loop
-        closure" and gives no cause; here the 2&nbsp;kg/day the hydroponics locks
-        into plants visibly leaves the circuit.</figcaption>
+        <img src="img/flows-water.png" alt="The water flow channel: the recycler drawn as a return of 18.3 of 21.5 kg per day, with the hydroponics draw annotated as food rather than loss.">
+        <figcaption>Water, as connections rather than as a level. The recycler
+        returns 18.3 of 21.5&nbsp;kg/day; the 2&nbsp;kg the rack locks into
+        plants is food, not loss.</figcaption>
       </figure>
     </div>
 
     <div class="decision">
       <h3>Decision · the flow overlay is deleted, not fixed</h3>
       <p>
-        Three parallel lines in a 12-unit margin can encode how much passes each
-        deck and nothing else, because there is nowhere to route an edge
-        sideways. Flow views exist to show what connects to what. It becomes its
-        own view with <strong>one channel per Life gauge, plus power</strong> —
-        eight in total — with named nodes, ranked consumers, buffers off to one
-        side, and returns drawn as returns.
+        Three lines in a twelve-unit margin can encode how much passes each deck
+        and nothing else, because there is nowhere to route an edge sideways.
+        Flow views exist to show what connects to what. It became its own view
+        with <strong>eight channels — one per Life gauge, plus power</strong>,
+        each using the same grammar: sources in, returns back, consumers ranked
+        by magnitude, a buffer absorbing the difference.
       </p>
-      <p class="against">
-        Nothing is lost: per-deck magnitude was already printed in every deck
-        header, which was the only thing the overlay communicated successfully.
+      <p>
+        Water is why it was worth building. The Life tab reports "86.1% loop
+        closure" and gives no cause; the diagram shows the missing eleven points
+        leaving the loop as plant matter. The footer states the counterfactual
+        outright: <strong>recycler offline is −21.5&nbsp;kg/day and 37 days of
+        tank.</strong>
       </p>
+      <p class="against">Nothing was lost: per-deck magnitude was already printed in every deck header.</p>
     </div>
 
-    <figure class="narrow">
-      <img src="img/mockup-004-crew.png" alt="Mockup: a crew card showing a 24-hour watch strip, five skill bars, six attributes, and the current assignment with its labour arithmetic.">
-      <figcaption>A 24-hour strip per person — eight asleep, eight on, eight off,
-      with a marker at the current time. "B watch" stops being a letter and
-      becomes the block that is lit.</figcaption>
-    </figure>
-
-    <div class="decision">
-      <h3>Decision · crew must be present to matter</h3>
+    <div class="decision bug">
+      <h3>Balance · the specialist was losing ground on her own loop</h3>
       <p>
-        The design says equipment <em>and crew</em> determine how well the
-        networks run. Equipment already did — condition derates output on a
-        0.62–1.0 curve. Crew did not: the life-support bonus capped at
-        <strong>+1.5 percentage points</strong> of closure and read the best
-        skill <em>aboard</em>, so a technician asleep in her bunk improved the
-        water loop exactly as much as one standing at the recycler.
+        Found by running the world out to 30, 120 and 365 days rather than by a
+        failing test. Under the new model the ship's life-support technician sat
+        <em>just below</em> break-even — eight hours of tending at quality 0.44
+        against sixteen hours of decay — so the one person qualified to keep the
+        recycler sweet was slowly losing to it.
       </p>
       <p>
-        Now a crew member contributes only while <strong>on watch and stationed
-        in that system's room</strong>, scaled by their current effectiveness so
-        fatigue and bad air feed back into it. Upgrade tiers raise the
-        <em>base</em>; crew raise the <em>multiplier</em> — so a superb
-        technician cannot substitute for a worn-out recycler, and a new recycler
-        still runs better tended.
-      </p>
-      <p class="against">
-        Constraint kept: efficiency changes only at moments the simulation
-        already re-resolves, so offline catch-up stays bit-identical.
+        Tune gain went from 6 to 10 per day per unit of quality, putting
+        break-even at 0.30. A qualified specialist now holds their system at
+        about spec, a better one takes it past, and an unqualified stand-in
+        still beats nobody.
       </p>
     </div>
 
@@ -239,6 +263,83 @@
       <a href="mockups/004-rooms-flows-crew.html">Full mockup</a> ·
       <a href="https://github.com/CoderCoop/SolarSyndicate/blob/main/specs/004-rooms-flows-crew/spec.md">Spec 004</a>
     </p>
+  </article>
+
+  <!-- ============================================================ -->
+  <article class="entry entry--ship">
+    <p class="stamp"><b>Spec 004</b> <span class="pr">#18</span> <span class="state state--shipped">shipped</span></p>
+    <h2>Rooms that look like rooms, and a second axis for wear</h2>
+    <p>
+      The schematic drew every component as an abstract mark. It generated
+      cleanly from data and it was legible — but a cylinder reads as a cylinder,
+      not as a CO₂ scrubber you could walk up to and service.
+    </p>
+
+    <div class="shots">
+      <figure>
+        <img src="img/ship-rooms.png" alt="The ship as rooms: interiors with grated decks, conduit trays, equipment at real size and crew drawn as figures at human scale.">
+        <figcaption>Interior elevations. Parts declare a fitting and their real
+        size in metres; a crew figure is drawn against the same grid, so a
+        scrubber is the size a scrubber is next to a 1.7&nbsp;m person.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/station-card.png" alt="A machine opened in place: the reactor held highlighted above its card, showing condition and tune as separate bars with separate explanations.">
+        <figcaption>Tapping a machine opens that machine, held highlighted above
+        its card — instead of expanding a list of four and making you find the
+        one you were looking at.</figcaption>
+      </figure>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · elevation over dimetric</h3>
+      <p>
+        Projection looks more like a game and costs horizontal space: the same
+        four machines stop fitting across a phone, and every part becomes three
+        faces with overlap ordering to resolve. On a portrait mobile game that is
+        the wrong trade.
+      </p>
+      <p class="against">Rejected: dimetric projection, and a full-perspective interior.</p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · condition and tune are different problems</h3>
+      <p>
+        A water recycler does not simply wear out. Gunk builds up in a line. A
+        hose sits slightly outside its specified diameter and nobody measures it.
+        A fungus takes hold in the root system, or a batch of seed needs lower
+        light for a few days after germination or half the seedlings die.
+        <strong>Anyone can run the plant; a skilled operator notices</strong> —
+        and a very good one runs it better than the manufacturer intended.
+      </p>
+      <p>
+        So efficiency became a second state variable. <strong>Condition</strong>
+        falls through use and is restored by a work order costing hours and
+        spares. <strong>Tune</strong> falls through inattention and is restored
+        only by assignment. A part can be mechanically sound and badly out of
+        adjustment, or freshly trimmed and about to break.
+      </p>
+      <p class="against">
+        Rejected: an instantaneous "someone is present, therefore better right
+        now" multiplier, which is the wrong physics for a machine nobody is
+        watching.
+      </p>
+    </div>
+
+    <div class="decision">
+      <h3>Decision · a floor, so absence is never punished</h3>
+      <p>
+        Tune decay is bounded: a wholly neglected system bottoms out at 0.86 of
+        rated rather than falling to nothing. Inefficient, never non-viable,
+        never spiralling, and recovered by putting someone back on it. Ships are
+        delivered exactly at spec, so the nameplate is what you get on day one
+        and every change from there is something you did or failed to do.
+      </p>
+      <p class="against">
+        This cost the earlier rule its literal form — "rated means unattended"
+        became a floor rather than a fixed point — which is recorded here rather
+        than quietly rewritten.
+      </p>
+    </div>
   </article>
 
   <!-- ============================================================ -->
