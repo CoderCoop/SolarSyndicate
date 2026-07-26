@@ -240,6 +240,16 @@ export const PartDef = z.object({
   switchable: z.boolean().default(true),
   /** Starts online? */
   startsEnabled: z.boolean().default(true),
+  /**
+   * What this part is a version of. Parts sharing a line are alternatives for
+   * the same job (spec 004 RF-30) -- a refit swaps one for another rather than
+   * adding a second.
+   */
+  line: z.string(),
+  /** Position within its line, 1 upward. Higher is better and dearer. */
+  tier: z.number().int().min(1).default(1),
+  /** Purchase price in credits. Unused until M2 gives the player money. */
+  priceCr: z.number().nonnegative().default(0),
   /** How it draws itself in the cross-section (SV-3). */
   glyph: Glyph,
   /** Where it sits in the room, and how big it really is (RF-3). */
@@ -284,6 +294,14 @@ export const HullDef = z.object({
   propellantCapacityKg: z.number().positive(),
   sparesCapacity: z.number().positive(),
   rooms: z.array(z.string()),
+  /**
+   * The parts this hull is delivered with, by id.
+   *
+   * Explicit rather than "every part whose room exists", because once a part
+   * has upgrade tiers that rule would fit all of them at once. A hull spec
+   * states its fit-out; a refit changes it.
+   */
+  fitOut: z.array(z.string()),
   blurb: z.string(),
 })
 export type HullDef = z.infer<typeof HullDef>

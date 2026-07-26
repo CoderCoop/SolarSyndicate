@@ -77,6 +77,17 @@ export function getCrewDef(id: string): CrewDef {
   return c
 }
 
+/**
+ * Every alternative for the same job, cheapest first (spec 004 RF-30).
+ *
+ * A refit swaps one of these for another rather than adding a second, which is
+ * why they share a `line`.
+ */
+export function upgradesFor(partDefId: string): PartDef[] {
+  const line = getPart(partDefId).line
+  return content.parts.filter((p) => p.line === line).sort((a, b) => a.tier - b.tier)
+}
+
 /** Parts installed in a room, in stable definition order. */
 export function partsForRoom(roomId: string): PartDef[] {
   return content.parts.filter((p) => p.roomId === roomId)
@@ -96,6 +107,14 @@ for (const hull of content.hulls) {
   for (const roomId of hull.rooms) getRoom(roomId)
 }
 for (const part of content.parts) getRoom(part.roomId)
+for (const hull of content.hulls) {
+  for (const id of hull.fitOut) {
+    const part = getPart(id)
+    if (!hull.rooms.includes(part.roomId)) {
+      throw new Error(`Hull ${hull.id} is fitted with ${id}, which needs a ${part.roomId}`)
+    }
+  }
+}
 for (const port of content.ports) getBody(port.bodyId)
 // Spec 003 SV-8: a crew member's default station must be a room that exists,
 // or they would be derived into a deck nobody can draw.

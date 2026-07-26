@@ -8,6 +8,9 @@
     "priority": "critical",
     "switchable": false,
     "startsEnabled": true,
+    "line": "reactor",
+    "tier": 1,
+    "priceCr": 1850000,
     "glyph": "core",
     "fitting": "floor",
     "sizeM": {
@@ -33,6 +36,9 @@
     "priority": "normal",
     "switchable": true,
     "startsEnabled": true,
+    "line": "solar",
+    "tier": 1,
+    "priceCr": 96000,
     "glyph": "panel",
     "fitting": "wall",
     "sizeM": {
@@ -55,6 +61,9 @@
     "priority": "critical",
     "switchable": false,
     "startsEnabled": true,
+    "line": "battery",
+    "tier": 1,
+    "priceCr": 148000,
     "glyph": "battery",
     "fitting": "floor",
     "sizeM": {
@@ -77,6 +86,9 @@
     "priority": "critical",
     "switchable": false,
     "startsEnabled": true,
+    "line": "scrubber",
+    "tier": 1,
+    "priceCr": 112000,
     "glyph": "column",
     "fitting": "floor",
     "sizeM": {
@@ -103,6 +115,9 @@
     "priority": "critical",
     "switchable": false,
     "startsEnabled": true,
+    "line": "electrolysis",
+    "tier": 1,
+    "priceCr": 168000,
     "glyph": "column",
     "fitting": "floor",
     "sizeM": {
@@ -129,6 +144,9 @@
     "priority": "high",
     "switchable": true,
     "startsEnabled": true,
+    "line": "recycler",
+    "tier": 1,
+    "priceCr": 134000,
     "glyph": "column",
     "fitting": "wall",
     "sizeM": {
@@ -153,6 +171,9 @@
     "priority": "low",
     "switchable": true,
     "startsEnabled": true,
+    "line": "hydroponics",
+    "tier": 1,
+    "priceCr": 74000,
     "glyph": "tray",
     "fitting": "floor",
     "sizeM": {
@@ -181,6 +202,9 @@
     "priority": "critical",
     "switchable": false,
     "startsEnabled": true,
+    "line": "thermal",
+    "tier": 1,
+    "priceCr": 402000,
     "glyph": "pump",
     "fitting": "wall",
     "sizeM": {
@@ -206,6 +230,9 @@
     "priority": "high",
     "switchable": true,
     "startsEnabled": true,
+    "line": "nav",
+    "tier": 1,
+    "priceCr": 88000,
     "glyph": "console",
     "fitting": "floor",
     "sizeM": {
@@ -228,6 +255,9 @@
     "priority": "normal",
     "switchable": true,
     "startsEnabled": true,
+    "line": "comms",
+    "tier": 1,
+    "priceCr": 66000,
     "glyph": "dish",
     "fitting": "wall",
     "sizeM": {
@@ -250,6 +280,9 @@
     "priority": "normal",
     "switchable": true,
     "startsEnabled": true,
+    "line": "hab",
+    "tier": 1,
+    "priceCr": 121000,
     "glyph": "hab",
     "fitting": "floor",
     "sizeM": {
@@ -272,6 +305,9 @@
     "priority": "low",
     "switchable": true,
     "startsEnabled": false,
+    "line": "engine",
+    "tier": 1,
+    "priceCr": 0,
     "glyph": "nozzle",
     "fitting": "floor",
     "sizeM": {
@@ -285,5 +321,118 @@
     "repairSpares": 3,
     "serviceSpares": 1,
     "blurb": "Brings the nuclear thermal cluster to readiness. Enormous draw, and you cannot burn without it."
+  },
+  {
+    "id": "life.scrubber.co2.mk2",
+    "name": "Regenerative CO2 Scrubber",
+    "roomId": "life-support",
+    "powerKw": -1.9,
+    "massKg": 610,
+    "priority": "critical",
+    "switchable": false,
+    "startsEnabled": true,
+    "line": "scrubber",
+    "tier": 2,
+    "priceCr": 258000,
+    "glyph": "column",
+    "fitting": "floor",
+    "sizeM": {
+      "w": 1.1,
+      "h": 1.9
+    },
+    "provides": {
+      "co2ScrubKgPerDay": 6.6,
+      "co2FloorPpm": 1500
+    },
+    "wearPerDay": 0.44,
+    "serviceHours": 5,
+    "repairHours": 14,
+    "repairSpares": 2,
+    "serviceSpares": 1,
+    "blurb": "Thermally regenerated bed: it bakes itself out on a cycle instead of being swapped. Heavier, thirstier, and it holds the cabin a good deal cleaner."
+  },
+  {
+    "id": "life.scrubber.co2.mk3",
+    "name": "Solid Amine Swing Bed",
+    "roomId": "life-support",
+    "powerKw": -2.6,
+    "massKg": 690,
+    "priority": "critical",
+    "switchable": false,
+    "startsEnabled": true,
+    "line": "scrubber",
+    "tier": 3,
+    "priceCr": 615000,
+    "glyph": "column",
+    "fitting": "floor",
+    "sizeM": {
+      "w": 1.2,
+      "h": 2.0
+    },
+    "provides": {
+      "co2ScrubKgPerDay": 7.4,
+      "co2FloorPpm": 1150
+    },
+    "wearPerDay": 0.33,
+    "serviceHours": 6,
+    "repairHours": 16,
+    "repairSpares": 3,
+    "serviceSpares": 1,
+    "blurb": "Two beds swinging against each other, one adsorbing while the other vents. Belt yards fit these to long-haul hulls and argue the price back on crew performance."
+  },
+  {
+    "id": "life.water.recycler.mk2",
+    "name": "Vapour Compression Recycler",
+    "roomId": "life-support",
+    "powerKw": -1.4,
+    "massKg": 470,
+    "priority": "high",
+    "switchable": true,
+    "startsEnabled": true,
+    "line": "recycler",
+    "tier": 2,
+    "priceCr": 312000,
+    "glyph": "column",
+    "fitting": "wall",
+    "sizeM": {
+      "w": 1.2,
+      "h": 1.0
+    },
+    "provides": {
+      "waterRecycleFraction": 0.983
+    },
+    "wearPerDay": 0.35,
+    "serviceHours": 6,
+    "repairHours": 14,
+    "repairSpares": 2,
+    "blurb": "Distillation under compression rather than filtration alone. 98.3% closure -- little more than a percentage point, and a percentage point here is weeks of range."
+  },
+  {
+    "id": "life.water.recycler.mk3",
+    "name": "Catalytic Closed Loop",
+    "roomId": "life-support",
+    "powerKw": -2.2,
+    "massKg": 560,
+    "priority": "high",
+    "switchable": true,
+    "startsEnabled": true,
+    "line": "recycler",
+    "tier": 3,
+    "priceCr": 740000,
+    "glyph": "column",
+    "fitting": "wall",
+    "sizeM": {
+      "w": 1.3,
+      "h": 1.1
+    },
+    "provides": {
+      "waterRecycleFraction": 0.989
+    },
+    "wearPerDay": 0.28,
+    "serviceHours": 7,
+    "repairHours": 17,
+    "repairSpares": 3,
+    "blurb": "Catalytic oxidation of the brine the others throw away. The last six tenths of a percent cost more than the first ninety-seven, which is how closure always goes.",
+    "serviceSpares": 1
   }
 ]

@@ -79,8 +79,10 @@ export function createWorld(seed: number, utcMs: number): SimState {
   const hull = getHull(STARTER_HULL_ID)
 
   const rooms = hull.rooms.map((roomId) => ({ id: roomId, defId: roomId }))
-  const parts: PartState[] = content.parts
-    .filter((def) => hull.rooms.includes(def.roomId))
+  // The hull's stated fit-out, not "everything that would fit" -- once a part
+  // has upgrade tiers the latter installs all of them at once (RF-30).
+  const parts: PartState[] = hull.fitOut
+    .map((id) => getPart(id))
     .map((def) => ({
       id: def.id,
       defId: def.id,
