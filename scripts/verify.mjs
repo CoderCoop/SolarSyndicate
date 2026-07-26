@@ -726,6 +726,107 @@ check('and the dismissal is remembered across a reload', (await page.$$('.instal
 check('no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
 
 // ---------------------------------------------------------------------------
+// A save this build cannot read (§8.3).
+//
+// The bug this exists for: 0.5.0 added guildId to SimState without moving
+// SIM_STATE_VERSION, so a save from the build before it claimed to be current,
+// loaded untouched, and threw on the first payroll of catch-up. That happens
+// during boot, where nothing caught it -- the game sat on "Reading the Local's
+// books..." for ever. Unit tests now stop that particular save from existing;
+// this proves the boot path survives one anyway, whatever the reason.
+//
+// Both shapes of unreadable save must end at a playable ship.
+// ---------------------------------------------------------------------------
+console.log('\n  -- a save this build cannot read --')
+
+for (const bad of [
+  { id: 'old', label: 'a save from an older format' },
+  { id: 'mislabelled', label: 'a save mislabelled as current' },
+]) {
+  const staleCtx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  })
+  const stale = await staleCtx.newPage()
+  const staleErrors = []
+  const staleWarnings = []
+  stale.on('pageerror', (e) => staleErrors.push(String(e)))
+  stale.on('console', (m) => {
+    if (m.type() === 'error') staleErrors.push(m.text())
+    if (m.type() === 'warning') staleWarnings.push(m.text())
+  })
+
+  await stale.goto(base, { waitUntil: 'networkidle' })
+  await stale.waitForSelector('.ship', { timeout: 10_000 })
+
+  // Damage the stored snapshot the way a version skew would.
+  /* eslint-disable no-undef */
+  await stale.evaluate(
+    (id) =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('solar-syndicate')
+        open.onerror = () => reject(open.error)
+        open.onsuccess = () => {
+          const db = open.result
+          const tx = db.transaction('saves', 'readwrite')
+          const store = tx.objectStore('saves')
+          const read = store.get('primary')
+          read.onsuccess = () => {
+            const record = read.result
+            if (id === 'old') {
+              // An honest old save: says what it is.
+              record.snapshot.version = 1
+            } else {
+              // The 0.5.0 bug: current version number, older shape.
+              delete record.snapshot.guildId
+              delete record.snapshot.standing
+            }
+            record.commands = []
+            // Long enough ago that catch-up crosses a day roll and draws wages,
+            // which is where the crash actually happened.
+            record.savedUtcMs -= 3_600_000
+            store.put(record)
+          }
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => reject(tx.error)
+        }
+      }),
+    bad.id,
+  )
+  /* eslint-enable no-undef */
+
+  let booted = true
+  await stale.reload({ waitUntil: 'networkidle' })
+  try {
+    await stale.waitForSelector('.ship', { timeout: 10_000 })
+  } catch {
+    booted = false
+  }
+
+  check(`${bad.label} still boots to a playable ship`, booted, booted ? '' : 'stuck on the loading screen')
+  check(
+    `  and says in the console why the world restarted`,
+    staleWarnings.some((w) => /Starting a new world/.test(w)),
+    staleWarnings.slice(0, 2).join(' | '),
+  )
+  check(`  without an uncaught error`, staleErrors.length === 0, staleErrors.slice(0, 2).join(' | '))
+
+  if (bad.id === 'mislabelled') {
+    check(
+      '  naming the field the save did not have',
+      staleWarnings.some((w) => /guildId/.test(w)),
+      staleWarnings.slice(0, 2).join(' | '),
+    )
+  }
+
+  await staleCtx.close()
+}
+
+// ---------------------------------------------------------------------------
 // Offline catch-up (§7.2, §7.4) -- the whole point of M0.
 //
 // Emulate the clock so real wall-time can jump while the app is closed. The

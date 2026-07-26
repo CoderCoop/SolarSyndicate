@@ -60,33 +60,49 @@ export const useGame = create<GameStore>((set, get) => ({
     void requestPersistentStorage()
 
     const now = Date.now()
-    const saved = await loadSave()
 
-    if (!saved) {
-      const fresh = createWorld(newSeed(), now)
-      await saveSnapshot(fresh, now)
-      set({ state: fresh, status: 'ready', awayReport: undefined })
-      return
+    let saved
+    try {
+      saved = await loadSave()
+    } catch (err) {
+      // Boot is the one place the game cannot afford to be strict. Whatever is
+      // wrong with the stored world -- a shape this build cannot read, a
+      // corrupt record, a catch-up that throws -- the answer is a playable
+      // ship, not a loading screen that never finishes. §7.4 in spirit: the
+      // player is never stranded.
+      console.error('Could not read the saved world; starting a new one.', err)
+      saved = undefined
     }
 
-    // Catch up. Same code path as live play -- there is no separate offline
-    // earnings calculation (§7.2).
-    const lastSeq = saved.state.log.at(-1)?.seq ?? 0
-    const beforeNow = saved.state.now
-    const caught = advanceToUtc(saved.state, now)
+    if (saved) {
+      try {
+        // Catch up. Same code path as live play -- there is no separate offline
+        // earnings calculation (§7.2).
+        const lastSeq = saved.state.log.at(-1)?.seq ?? 0
+        const beforeNow = saved.state.now
+        const caught = advanceToUtc(saved.state, now)
 
-    const awayRealMs = Math.max(0, now - saved.savedUtcMs)
-    const entries = entriesSince(caught, lastSeq)
+        const awayRealMs = Math.max(0, now - saved.savedUtcMs)
+        const entries = entriesSince(caught, lastSeq)
 
-    await saveSnapshot(caught, now)
-    set({
-      state: caught,
-      status: 'ready',
-      awayReport:
-        awayRealMs > 60_000 && entries.length > 0
-          ? { awayRealMs, gameSecondsElapsed: caught.now - beforeNow, entries }
-          : undefined,
-    })
+        await saveSnapshot(caught, now)
+        set({
+          state: caught,
+          status: 'ready',
+          awayReport:
+            awayRealMs > 60_000 && entries.length > 0
+              ? { awayRealMs, gameSecondsElapsed: caught.now - beforeNow, entries }
+              : undefined,
+        })
+        return
+      } catch (err) {
+        console.error('Could not catch the saved world up; starting a new one.', err)
+      }
+    }
+
+    const fresh = createWorld(newSeed(), now)
+    await saveSnapshot(fresh, now)
+    set({ state: fresh, status: 'ready', awayReport: undefined })
   },
 
   dispatch(command) {

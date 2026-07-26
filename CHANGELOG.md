@@ -9,6 +9,41 @@ means here.
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-07-26
+
+### Fixed
+
+- **The game could get stuck on "Reading the Local's books…".** 0.5.0 added
+  `guildId` and `standing` to `SimState` and did not move
+  `SIM_STATE_VERSION`, so a save written by 0.4.1 claimed to be current and
+  loaded untouched. The first payroll of catch-up then looked up a guild that
+  was not there and threw — on the boot path, where nothing caught it, so the
+  loading screen stayed up for ever with no way past it. `SIM_STATE_VERSION`
+  6 → 7; saves from before this build start a new world, which is what should
+  have happened all along.
+
+### Changed
+
+- **Loading a save checks its shape, not just its version number.** The version
+  is a claim; the shape is what is true, and when they disagree the shape wins.
+  A save missing a field this build requires is refused with the field named in
+  the console, rather than loaded into a crash later.
+- **Boot cannot hang.** Reading the save and catching it up are each caught, and
+  either failing starts a new world. Whatever is wrong with a stored world, the
+  answer is a playable ship — §7.4's "never strand the player", applied to the
+  one screen that had no way out of it.
+
+### Added
+
+- **Three tests so this cannot come back quietly.** The required fields of
+  `SimState` are a compiler-checked map, so adding one does not typecheck until
+  a human has looked at it. `stateShape()` fingerprints the whole structure and
+  a test compares it against the shape recorded for the current
+  `SIM_STATE_VERSION` — change the shape without bumping and the build fails,
+  with the remedy in the failure message. And the end-to-end pass now plants
+  both kinds of unreadable save in IndexedDB, an honest old one and one
+  mislabelled exactly as 0.5.0's was, and requires the game to boot anyway.
+
 ## [0.5.0] — 2026-07-26
 
 **M3 begins — guilds and crew hiring.** The four aboard used to be a fact of the
