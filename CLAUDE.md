@@ -2,10 +2,13 @@
 
 ## Workflow
 
-- **Always open a PR** for work on a branch, rather than leaving commits pushed
-  without one.
-- **Merge the PR once CI is green.** No need to ask first — this is a standing
-  instruction. If CI fails, fix it and push again rather than merging around it.
+Standard GitHub flow, no special cases:
+
+- **Branch, commit, push, open a PR.**
+- **Merge once CI is green** — squash by default. No need to ask first; this is
+  a standing instruction. If CI fails, fix it and push again rather than
+  merging around it.
+- After a merge, start the next change from a freshly updated `main`.
 - CI is `.github/workflows/ci.yml`: `pnpm check` (typecheck, lint, tests) plus
   the Chromium end-to-end pass. Both must pass.
 

@@ -53,14 +53,8 @@ workflow uses a fine-grained PAT stored as the `INFRA_TOKEN` secret:
 Until that secret exists the workflow skips with a notice rather than failing,
 so a missing token never blocks a merge.
 
-## The merge policy, and why
+## Merge policy
 
-`allow_squash_merge = false` is deliberate. Squashing collapses a branch into
-one GitHub-authored commit, discarding per-commit authorship and the
-`Co-Authored-By` trailers — which is precisely the attribution the repository
-cares about keeping.
-
-`delete_branch_on_merge = true` matters more than it looks. With the remote
-branch removed after a merge, recreating it from `main` is a fresh push instead
-of a force push, which removes the need to rewrite history on every follow-up
-change.
+All three merge methods stay enabled, as GitHub ships them.
+`delete_branch_on_merge` is on so merged branches are cleaned up rather than
+lingering and diverging from `main`.
