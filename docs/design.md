@@ -130,6 +130,26 @@ hydroponics rack). Crew members are visible in the rooms where they're stationed
 walking between decks via a central ladder/lift shaft. Tapping a room opens its
 detail panel (installed parts, assigned crew, local stats, work orders).
 
+**Visual direction (decided, spec 003).** Three styles were mocked up: blueprint
+*schematic*, illustrated *cutaway*, and a *flow* node-graph. Schematic won,
+with flow demoted to a toggleable overlay on top of it and cutaway rejected
+outright.
+
+The deciding argument was not which looked best — cutaway did — but which
+survives the game growing. Every object aboard draws itself from a small closed
+vocabulary of shapes, so the picture is *generated* from the same JSON that
+drives the simulation. A cutaway would have made each new component an art
+commission and quietly turned §9's content pipeline into an art pipeline. What
+the cutaway *was* right about is colour as meaning, and that was kept: warm
+where people rest, green where things grow, red where something has failed.
+
+The flow overlay makes pillar 1 literal — you can watch the reactor feed the
+scrubbers — but it answers a question asked *about* the ship, not instead of
+it, so it is a layer rather than a second view. It stays off until asked for.
+
+Ships are allowed to be taller than a screen. Scrolling through a vessel deck
+by deck is inspection, which is the activity this game is about.
+
 ### 3.2 Resource networks
 
 Five networks connect parts. Each is a per-tick balance of producers, consumers,

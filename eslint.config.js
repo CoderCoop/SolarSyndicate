@@ -35,6 +35,7 @@ export default tseslint.config(
         URL: 'readonly',
         // Evaluated inside the page by Playwright, not in Node.
         navigator: 'readonly',
+        getComputedStyle: 'readonly',
       },
     },
   },

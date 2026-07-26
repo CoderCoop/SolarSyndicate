@@ -175,7 +175,15 @@ button {
 }
 
 .ship__id {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
   padding: 18px 2px 12px;
+}
+
+.ship__titles {
+  flex: 1;
+  min-width: 0;
 }
 
 .ship__name {
@@ -245,7 +253,7 @@ button {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 13px 14px;
+  padding: 10px 14px 6px;
   background: none;
   border: 0;
   text-align: left;
@@ -312,6 +320,394 @@ button {
   margin: 0;
   font-size: 13px;
   color: var(--ink-faint);
+}
+
+/* ---------------------------------------------------------------- schematic */
+/*
+ * Spec 003. Blueprint line-art: everything is drawn, nothing is a picture.
+ * Line weight carries structure -- hull heaviest, fittings lightest -- and
+ * colour carries meaning on top of that, never instead of it (SV-5).
+ */
+
+.schema {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* The deck list's own border is the hull; this is the deck's interior. */
+.schema__hull rect {
+  fill: color-mix(in srgb, var(--bg-sunken) 55%, transparent);
+  stroke: none;
+}
+
+.schema__floor {
+  stroke: var(--line-bright);
+  stroke-width: 0.7;
+}
+
+.schema__ladder line {
+  stroke: var(--line);
+  stroke-width: 0.4;
+}
+
+/* --- glyphs --- */
+
+.glyph {
+  fill: none;
+  stroke: var(--glyph, var(--ink-faint));
+  stroke-width: 0.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 400ms ease;
+}
+
+.glyph--cool {
+  --glyph: #6f93ab;
+  --glyph-fill: rgba(79, 209, 217, 0.07);
+}
+
+/* Warm where people rest -- the one thing worth keeping from the cutaway. */
+.glyph--warm {
+  --glyph: #c69256;
+  --glyph-fill: rgba(232, 163, 61, 0.1);
+}
+
+.glyph--grow {
+  --glyph: #6aa87f;
+  --glyph-fill: rgba(111, 207, 143, 0.1);
+}
+
+.glyph--hot {
+  --glyph: #cf8f6b;
+  --glyph-fill: rgba(232, 120, 61, 0.1);
+}
+
+.glyph .g-fill {
+  fill: var(--glyph-fill);
+}
+
+.glyph .g-warm {
+  fill: rgba(232, 163, 61, 0.13);
+}
+
+.glyph .g-grow {
+  fill: rgba(111, 207, 143, 0.22);
+  stroke: none;
+}
+
+.glyph .g-lamp {
+  stroke: rgba(232, 163, 61, 0.5);
+  stroke-width: 1.1;
+}
+
+.glyph .g-hot {
+  fill: rgba(232, 120, 61, 0.4);
+  stroke: none;
+}
+
+/* Off: dimmed and struck through the middle. Shed: same, plus a dashed
+   outline, because the ship chose it rather than the player. */
+.glyph.is-off,
+.glyph.is-shed {
+  opacity: 0.34;
+}
+
+.glyph.is-shed {
+  stroke-dasharray: 2 1.6;
+}
+
+.glyph__off {
+  stroke: var(--glyph);
+  stroke-width: 0.6;
+}
+
+.glyph.is-broken {
+  --glyph: var(--red);
+  --glyph-fill: rgba(229, 103, 95, 0.12);
+  opacity: 1;
+}
+
+.glyph__x line {
+  stroke: var(--red);
+  stroke-width: 0.9;
+}
+
+/* --- crew markers --- */
+
+.marker {
+  cursor: pointer;
+}
+
+.marker__ring {
+  fill: color-mix(in srgb, var(--bg-sunken) 80%, transparent);
+  stroke: var(--ink-faint);
+  stroke-width: 0.7;
+}
+
+.marker__text {
+  font-size: 4.4px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  fill: var(--ink-dim);
+  stroke: none;
+}
+
+.marker--watch .marker__ring {
+  stroke: var(--cyan);
+  stroke-width: 1;
+  fill: color-mix(in srgb, var(--cyan) 15%, var(--bg-sunken));
+}
+
+.marker--watch .marker__text {
+  fill: var(--cyan);
+}
+
+.marker--off .marker__ring {
+  stroke: var(--amber);
+}
+
+.marker--off .marker__text {
+  fill: var(--amber);
+}
+
+/* Asleep: dashed ring, dimmed. Distinct in shape, not only in colour. */
+.marker--sleep .marker__ring {
+  stroke-dasharray: 1.6 1.4;
+  opacity: 0.55;
+}
+
+.marker--sleep .marker__text {
+  opacity: 0.5;
+}
+
+.marker:focus-visible {
+  outline: none;
+}
+
+.marker:focus-visible .marker__ring {
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+/* --- flow overlay (SV-13 to SV-16) --- */
+
+.flowtoggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  padding: 6px 11px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.flowtoggle.is-on {
+  color: var(--ink);
+  border-color: var(--cyan);
+}
+
+.flowtoggle__marks {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.flowtoggle__mark {
+  width: 2px;
+  height: 11px;
+  border-radius: 1px;
+  opacity: 0.45;
+}
+
+.flowtoggle.is-on .flowtoggle__mark {
+  opacity: 1;
+}
+
+.flowtoggle__mark--power {
+  background: var(--cyan);
+}
+
+.flowtoggle__mark--heat {
+  background: var(--red);
+}
+
+.flowtoggle__mark--water {
+  background: #6f9fe0;
+}
+
+.ship__legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 0 2px 10px;
+  font-size: 12px;
+}
+
+.legend::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+.legend--power {
+  color: var(--cyan);
+}
+.legend--power::before {
+  background: var(--cyan);
+}
+
+.legend--heat {
+  color: var(--red);
+}
+.legend--heat::before {
+  background: var(--red);
+}
+
+.legend--water {
+  color: #6f9fe0;
+}
+.legend--water::before {
+  background: #6f9fe0;
+}
+
+.ship__legend-note {
+  color: var(--ink-faint);
+}
+
+.flow__idle {
+  stroke: var(--line);
+  stroke-width: 0.4;
+  stroke-dasharray: 1 2;
+}
+
+.flow__trunk,
+.flow__branch {
+  fill: none;
+  stroke: var(--chan);
+  stroke-linecap: round;
+  stroke-dasharray: 4 3.2;
+  animation: flow-run 1.4s linear infinite;
+}
+
+/* Direction: outbound flows run up the trunk, inbound run down. */
+.flow__ch.is-out .flow__trunk,
+.flow__ch.is-out .flow__branch {
+  animation-direction: reverse;
+}
+
+.flow__head {
+  fill: var(--chan);
+  stroke: none;
+}
+
+.flow__ch--power {
+  --chan: var(--cyan);
+}
+
+.flow__ch--heat {
+  --chan: var(--red);
+}
+
+.flow__ch--water {
+  --chan: #6f9fe0;
+}
+
+@keyframes flow-run {
+  to {
+    stroke-dashoffset: -7.2;
+  }
+}
+
+/*
+ * SV-15: with motion suppressed the overlay stays usable. The dashes become a
+ * solid line and the arrowheads carry direction on their own.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .flow__trunk,
+  .flow__branch {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+/* --- crew card --- */
+
+.whois {
+  margin-top: 12px;
+  padding: 12px 14px 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius);
+}
+
+.whois__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.whois__initials {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+  border-radius: 50%;
+}
+
+.whois__names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.whois__role {
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.whois__close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-faint);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.whois__doing {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--cyan);
+}
+
+.whois__blurb {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  font-style: italic;
 }
 
 /* -------------------------------------------------------------------- parts */
