@@ -6,6 +6,7 @@
  * both the save format and (eventually) the wire format.
  */
 import type { Watch } from '@solsyn/data'
+import type { ContractState } from './contracts.js'
 import type { LedgerEntry } from './ledger.js'
 import type { GameTime } from './time.js'
 
@@ -88,6 +89,10 @@ export interface ShipState {
    * M2 casts off and this becomes false.
    */
   docked: boolean
+  /** Where the ship is berthed. Meaningful while docked (spec 002). */
+  portId: string
+  /** Cargo aboard, kg. Mass is delta-v (§5.2), so this is never free. */
+  cargoKg: number
   /** Cached for display; recomputed whenever the network resolves. */
   netPowerKw: number
   netHeatKw: number
@@ -187,6 +192,8 @@ export interface SimState {
   credits: number
   /** What moved it, newest first. */
   ledger: LedgerEntry[]
+  /** The run under way, if any. One ship, one contract. */
+  contract?: ContractState
   /** Bounded ring of recent dispatches, newest last. */
   log: LogEntry[]
 }
@@ -207,6 +214,8 @@ export type Command =
    * TR-21: a shortfall comes out of the balance, it does not block anything.
    */
   | { kind: 'SPEND'; credits: number; reason: string }
+  | { kind: 'ACCEPT_CONTRACT'; contractId: string }
+  | { kind: 'ABANDON_CONTRACT' }
 
 /** A command with the game time it was issued at. */
 export interface TimedCommand {

@@ -12,12 +12,14 @@ import crewRaw from './content/crew.json' with { type: 'json' }
 import bodiesRaw from './content/bodies.json' with { type: 'json' }
 import portsRaw from './content/ports.json' with { type: 'json' }
 import tuningRaw from './content/tuning.json' with { type: 'json' }
+import contractsRaw from './content/contracts.json' with { type: 'json' }
 import {
   ContentPack,
   type BodyDef,
   type CrewDef,
   type HullDef,
   type PartDef,
+  type ContractDef,
   type PortDef,
   type PortPrices,
   type RoomDef,
@@ -33,6 +35,7 @@ export const content: ContentPack = ContentPack.parse({
   bodies: bodiesRaw,
   ports: portsRaw,
   tuning: tuningRaw,
+  contracts: contractsRaw,
 })
 
 const roomsById = new Map(content.rooms.map((r) => [r.id, r]))
@@ -94,6 +97,19 @@ export function partsForRoom(roomId: string): PartDef[] {
   return content.parts.filter((p) => p.roomId === roomId)
 }
 
+const contractsById = new Map(content.contracts.map((c) => [c.id, c]))
+
+export function getContract(id: string): ContractDef {
+  const c = contractsById.get(id)
+  if (!c) throw new Error(`Unknown contract definition: ${id}`)
+  return c
+}
+
+/** Runs on offer at a port (TR-20). */
+export function contractsFrom(portId: string): ContractDef[] {
+  return content.contracts.filter((c) => c.fromPortId === portId)
+}
+
 /** What a port charges for a unit of a consumable (spec 002 TR-19). */
 export function priceAt(portId: string, key: keyof PortPrices): number {
   return getPort(portId).prices[key]
@@ -107,6 +123,9 @@ export const TUNE = content.tuning.tune
 
 /** The starter hull for M0. Session zero will make this a guild-driven choice (§10.1). */
 export const STARTER_HULL_ID = 'hull.kestrel'
+
+/** Where a new desk's ship is berthed. */
+export const STARTER_PORT_ID = 'port.gateway'
 
 // Content integrity: every part must live in a room its hull actually has.
 for (const hull of content.hulls) {
@@ -122,6 +141,12 @@ for (const hull of content.hulls) {
   }
 }
 for (const port of content.ports) getBody(port.bodyId)
+// A contract must run between real ports, and must actually go somewhere.
+for (const c of content.contracts) {
+  getPort(c.fromPortId)
+  getPort(c.toPortId)
+  if (c.fromPortId === c.toPortId) throw new Error(`Contract ${c.id} goes nowhere`)
+}
 // Spec 003 SV-8: a crew member's default station must be a room that exists,
 // or they would be derived into a deck nobody can draw.
 for (const crew of content.crew) getRoom(crew.stationRoomId)

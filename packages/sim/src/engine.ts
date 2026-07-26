@@ -15,6 +15,7 @@ import {
   getHull,
   getPart,
   STARTER_HULL_ID,
+  STARTER_PORT_ID,
   TUNE,
   type CrewDef,
   type Fitting,
@@ -30,6 +31,7 @@ import {
   updateActivities,
 } from './crew.js'
 import { attendanceView } from './attendance.js'
+import { abandonContract, acceptContract } from './contracts.js'
 import { OPENING_BALANCE_CR, post } from './ledger.js'
 import { pushLog } from './log.js'
 import {
@@ -134,6 +136,8 @@ export function createWorld(seed: number, utcMs: number): SimState {
         propellant: makeReservoir(hull.propellantCapacityKg * 0.41, 0, hull.propellantCapacityKg, t0),
         spares: makeReservoir(21, 0, hull.sparesCapacity, t0),
       },
+      portId: STARTER_PORT_ID,
+      cargoKg: 0,
       docked: true,
       netPowerKw: 0,
       netHeatKw: 0,
@@ -357,6 +361,18 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
 
     case 'CANCEL_WORK_ORDER': {
       if (cancelWorkOrder(state, command.workOrderId, at)) resolveAll(state, at)
+      break
+    }
+
+    case 'ACCEPT_CONTRACT': {
+      acceptContract(state, command.contractId, at)
+      resolveAll(state, at)
+      break
+    }
+
+    case 'ABANDON_CONTRACT': {
+      abandonContract(state, at)
+      resolveAll(state, at)
       break
     }
 
