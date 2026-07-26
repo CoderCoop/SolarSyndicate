@@ -1,0 +1,68 @@
+name: Repo settings
+
+on:
+  push:
+    branches: [main]
+    paths: ['infra/**', '.github/workflows/infra.yml']
+  pull_request:
+    paths: ['infra/**', '.github/workflows/infra.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: Plan and apply
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      # Formatting and syntax need no credentials, so they run on every PR
+      # and give useful feedback even when the token is absent.
+      - name: Check formatting
+        run: terraform -chdir=infra fmt -check -diff
+
+      - name: Validate
+        run: |
+          terraform -chdir=infra init -backend=false
+          terraform -chdir=infra validate
+
+      # The built-in GITHUB_TOKEN cannot administer repository settings, so
+      # this needs a fine-grained PAT (Administration only, this repo only).
+      # Without it we stop here rather than failing a merge.
+      - name: Check for credentials
+        id: creds
+        env:
+          INFRA_TOKEN: ${{ secrets.INFRA_TOKEN }}
+        run: |
+          if [ -z "$INFRA_TOKEN" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Skipping::INFRA_TOKEN is not set, so repository settings were not reconciled. See infra/README.md."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Every run re-adopts the repository through the import block and
+      # discards state afterwards, so there is nothing to store or drift.
+      - name: Plan
+        if: steps.creds.outputs.present == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.INFRA_TOKEN }}
+        run: |
+          terraform -chdir=infra init
+          terraform -chdir=infra plan -out=tfplan
+
+      - name: Apply
+        if: steps.creds.outputs.present == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.INFRA_TOKEN }}
+        run: terraform -chdir=infra apply -auto-approve tfplan

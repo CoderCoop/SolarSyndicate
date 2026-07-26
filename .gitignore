@@ -7,3 +7,11 @@ coverage/
 .vite/
 .verify-shots/
 dist-types/
+
+# Terraform: state never leaves the machine, tfvars never leave at all.
+infra/.terraform/
+infra/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+tfplan

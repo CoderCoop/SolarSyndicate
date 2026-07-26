@@ -116,7 +116,10 @@ the file does not un-leak it.
 packages/sim     the entire simulation — zero browser dependencies
 packages/data    content as JSON + zod schemas; every balance number lives here
 apps/web         the PWA (Vite + React)
-docs/design.md   the design document
+docs/            the project website, and design.md — the reasoning
+specs/           per-feature specifications; principles in .specify/memory/
+infra/           repository settings as Terraform
+ARCHITECTURE.md  how the code fits together
 ```
 
 ## The four rules that make the rest work
