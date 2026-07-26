@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar Syndicate — a spaceship management simulation</title>
+<meta name="description" content="You are not the captain. You are the guild. A near-future spaceship management sim that keeps running while the app is closed.">
+<link rel="icon" href="play/favicon.svg">
+<style>
+  :root{
+    --bg:#0b1015; --raised:#111a22; --sunken:#080d12;
+    --line:#1e2d3a; --line2:#2c4256;
+    --ink:#c9d8e3; --dim:#7d95a8; --faint:#4e6373;
+    --cyan:#4fd1d9; --amber:#e8a33d; --red:#e5675f; --green:#6fcf8f;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(rgba(79,209,217,.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(79,209,217,.03) 1px,transparent 1px);
+    background-size:32px 32px; background-attachment:fixed;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{line-height:1.25;letter-spacing:.01em}
+  h2{font-size:26px;margin:0 0 6px}
+  h3{font-size:17px;margin:0 0 6px}
+  p{margin:0 0 16px}
+  a{color:var(--cyan)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;
+    background:var(--sunken);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  pre{background:var(--sunken);border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;overflow-x:auto;margin:0 0 16px}
+  pre code{background:none;border:0;padding:0}
+  .lede{font-size:18px;color:var(--dim)}
+  .muted{color:var(--faint);font-size:14px}
+
+  header{padding:72px 0 44px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 14px}
+  header h1{font-size:clamp(34px,6vw,52px);margin:0 0 14px}
+  header .lede{max-width:60ch;font-size:20px}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px;align-items:center}
+  .btn{display:inline-block;padding:12px 22px;border-radius:10px;text-decoration:none;
+    border:1px solid var(--line2);color:var(--ink);font-size:15px}
+  .btn--primary{border-color:var(--cyan);color:var(--cyan);background:rgba(79,209,217,.08)}
+  .btn:hover{background:rgba(79,209,217,.14)}
+
+  section{padding:52px 0;border-bottom:1px solid var(--line)}
+  .grid{display:grid;gap:26px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .card{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .card p{margin:0;font-size:15px;color:var(--dim)}
+
+  figure{margin:0}
+  figure img{width:100%;height:auto;display:block;border:1px solid var(--line2);
+    border-radius:12px;background:var(--sunken)}
+  figcaption{font-size:14px;color:var(--faint);margin-top:10px}
+  .ba{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:26px}
+  .tag{display:inline-block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--faint);margin-bottom:10px}
+  .tag--good{color:var(--green);border-color:rgba(111,207,143,.45)}
+  .tag--bad{color:var(--amber);border-color:rgba(232,163,61,.45)}
+  .shot-narrow{max-width:420px}
+
+  table{width:100%;border-collapse:collapse;font-size:15px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--faint);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+
+  .install h3{margin-top:24px}
+  .why{color:var(--faint);font-size:14px;font-style:italic}
+
+  footer{padding:40px 0 64px;color:var(--faint);font-size:14px}
+  footer a{color:var(--dim)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Work in progress · milestone M1</p>
+    <h1>Solar Syndicate</h1>
+    <p class="lede">
+      A spaceship management simulation set in our solar system. You are not the
+      captain, and not a character at all — <strong>you are the guild</strong>,
+      working an operations desk. You hire the crew, authorise the money, and
+      set the policy the ship runs on. The people aboard are not you; they are
+      your responsibility.
+    </p>
+    <div class="cta">
+      <a class="btn btn--primary" href="play/">Play in your browser</a>
+      <a class="btn" href="https://github.com/CoderCoop/SolarSyndicate">Source on GitHub</a>
+      <span class="muted">No install, no account. Works offline.</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Why it exists</h2>
+    <p class="lede" style="max-width:66ch">
+      Most space games put you in the pilot's seat. This one asks a different
+      question: what is it like to be responsible for people you never meet,
+      aboard a machine you cannot touch, across distances where even a message
+      takes twenty minutes?
+    </p>
+    <div class="grid">
+      <div class="card">
+        <h3>Time runs without you</h3>
+        <p>One real hour is one game day. Close the tab and the crew keep
+        working, sleeping, and eating; parts keep wearing out. Reopening
+        replays what happened rather than pausing reality.</p>
+      </div>
+      <div class="card">
+        <h3>Honest physics</h3>
+        <p>Real values, uprated 25–50% for near-future tech. ISS-derived
+        metabolic rates, a 22 kWe reactor that dumps three times its output as
+        waste heat, water loops that close to 97% — and don't, once worn.</p>
+      </div>
+      <div class="card">
+        <h3>You manage, you don't fly</h3>
+        <p>Your instruments are hiring, the watch bill, spending, and orders
+        sent across a light-delay. Whether the ship flies well depends on who
+        you hired and what you asked of them.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What the game actually is</h2>
+    <p style="max-width:66ch">
+      The same ship, eight game-days apart. On the left, freshly signed over to
+      you. On the right, after being left with the engines drawing more power
+      than the ship can make — no disaster, no death, just a machine following
+      the consequences of a decision nobody came back to revisit.
+    </p>
+
+    <div class="ba">
+      <figure>
+        <span class="tag tag--good">Tended</span>
+        <img src="img/ship-tended.png" alt="The ship's cross-section with all systems nominal and power in surplus">
+        <figcaption>Power in surplus, CO<sub>2</sub> nominal, every system online.
+        Decks stack from bridge to engine bell — the ship under thrust is a building.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag tag--bad">Left alone for eight days</span>
+        <img src="img/ship-neglected.png" alt="The same ship showing a brownout banner and shed loads">
+        <figcaption>The battery emptied, so the ship shed its own lowest-priority
+        loads to hold life support — then told you, and waited. It will not
+        switch off anything the crew depend on.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Coming back</h2>
+    <div class="ba">
+      <figure class="shot-narrow">
+        <img src="img/away-report.png" alt="The return screen summarising events during the player's absence">
+        <figcaption>Return is a story, not a wall of red numbers. Worst news
+        first, repetition collapsed.</figcaption>
+      </figure>
+      <div>
+        <p>The rule the whole offline model is built around: <strong>nothing
+        permanent happens without warning and a decision you could have
+        made.</strong></p>
+        <p>Emergencies open a window for your authorisation. Unanswered, they
+        resolve on your standing orders and the ship's own interlocks —
+        conservative by default, costly but survivable. The ship protects
+        itself; it just charges you for it.</p>
+        <p class="muted">Crew ageing, ambitions and permadeath arrive in a
+        later milestone. Today the ship can be wrecked; the crew can only be
+        worn down.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>The crew are people, not slots</h2>
+    <div class="ba">
+      <figure class="shot-narrow">
+        <img src="img/crew.png" alt="The crew roster showing four crew with health, fatigue and watch assignments">
+        <figcaption>Four hands on a three-watch rotation: eight on, eight off,
+        eight asleep.</figcaption>
+      </figure>
+      <div>
+        <p>Everyone has stats, skills, health and fatigue, and a metabolism that
+        tracks what they are actually doing — four people asleep are a
+        measurably smaller load than four people working.</p>
+        <p>Their quality reaches you only through numbers you already watch.
+        Order a repair at ship midnight and your best engineer is asleep, so the
+        captain picks it up at a third of her skill and takes twice as long. The
+        fix is not a button; it is the watch bill.</p>
+        <p>Jobs hand over between watches and move at the pace of whoever holds
+        the spanner — and slow down further if the air has gone bad.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="install">
+  <div class="wrap">
+    <h2>Getting it</h2>
+    <p style="max-width:66ch">It runs in any modern browser with nothing
+    installed. Installing it is optional and only changes how it launches —
+    the game itself is identical, and works offline either way once loaded.</p>
+
+    <h3>Any browser</h3>
+    <p>Open <a href="play/">the game</a>. That's the whole step. State is saved
+    locally in your browser, so the ship keeps running between visits.</p>
+
+    <h3>iPhone / iPad</h3>
+    <p>Open it in <strong>Safari</strong>, then Share → <em>Add to Home
+    Screen</em>.</p>
+    <p class="why">Why this differs: iOS only permits installing a web app from
+    Safari's share sheet — Chrome and Firefox on iOS cannot do it, because they
+    are all Safari underneath with that capability withheld. Installing is also
+    a prerequisite for notifications on iOS 16.4+, which a game you check on
+    twice a day will eventually want.</p>
+
+    <h3>Android</h3>
+    <p>Chrome usually offers an install prompt; otherwise menu → <em>Add to
+    Home screen</em> / <em>Install app</em>.</p>
+    <p class="why">Why this differs: Chrome supports the install prompt, so
+    Android can offer installation rather than hiding it in a share menu.</p>
+
+    <h3>Desktop</h3>
+    <p>Chrome and Edge show an install icon in the address bar. Firefox and
+    Safari on desktop have no equivalent — bookmark it instead; nothing is
+    lost.</p>
+    <p class="why">Why this differs: desktop Firefox removed its site-install
+    feature, and Safari's is Mac-only and inconsistent, so a bookmark is the
+    honest advice rather than instructions that won't work.</p>
+
+    <h3>From source</h3>
+    <pre><code>git clone https://github.com/CoderCoop/SolarSyndicate
+cd SolarSyndicate
+pnpm install
+pre-commit install    # secret scanning before commits
+pnpm dev              # http://localhost:5173</code></pre>
+    <p class="why">Why this differs: contributors need the pre-commit hook,
+    which players obviously don't. <code>pnpm check</code> runs the tests;
+    <code>pnpm verify</code> drives the built app in a real browser.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Where it's up to</h2>
+    <table>
+      <tr><th>Milestone</th><th>State</th><th>What it added</th></tr>
+      <tr><td>M0 — walking skeleton</td><td style="color:var(--green)">Done</td>
+        <td>Event-driven simulation, one resource network, offline catch-up, installable PWA</td></tr>
+      <tr><td>M1 — the living ship</td><td style="color:var(--green)">Done</td>
+        <td>Five coupled resource networks, part wear and failure, work orders, crew on a watch bill</td></tr>
+      <tr><td>M2 — going somewhere</td><td>Next</td>
+        <td>System map, transfer windows, delta-v budgeting, the first cargo contract, money</td></tr>
+      <tr><td>M3 — a world with opinions</td><td class="muted">Planned</td>
+        <td>Four guilds, standing and rank, crew ageing and permadeath, light-lag</td></tr>
+      <tr><td>M4 / M5</td><td class="muted">Planned</td>
+        <td>Part market and modding, relocatable headquarters, guild politics</td></tr>
+    </table>
+    <p style="margin-top:20px" class="muted">
+      The full design — including the reasoning behind every number — lives in
+      <a href="https://github.com/CoderCoop/SolarSyndicate/blob/main/docs/design.md">docs/design.md</a>.
+      Code comments reference its section numbers, so any decision traces back
+      to the argument for it.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Screenshots on this page are captured from the running build by
+    <code>scripts/capture-shots.mjs</code> — not mockups.</p>
+    <p><a href="https://github.com/CoderCoop/SolarSyndicate">GitHub</a> ·
+       <a href="play/">Play</a> ·
+       <a href="https://github.com/CoderCoop/SolarSyndicate/blob/main/ARCHITECTURE.md">Architecture</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

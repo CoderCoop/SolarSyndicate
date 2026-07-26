@@ -48,9 +48,18 @@ jobs:
       # no base path needs threading through here.
       - run: pnpm --filter @solsyn/web build
 
+      # The project site is served at the root and the game beneath it, so a
+      # visitor lands on an explanation rather than an unlabelled cockpit.
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp -r docs/index.html docs/img _site/
+          cp -r apps/web/dist _site/play
+          find _site -type f | sort | sed 's/^/  /'
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/web/dist
+          path: _site
 
   deploy:
     name: Deploy
