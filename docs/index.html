@@ -71,6 +71,11 @@
   .install h3{margin-top:24px}
   .why{color:var(--faint);font-size:14px;font-style:italic}
 
+  nav.site{padding:16px 0;border-bottom:1px solid var(--line);font-size:15px}
+  nav.site a{margin-right:20px;text-decoration:none;color:var(--dim)}
+  nav.site a:hover{color:var(--cyan)}
+  nav.site a[aria-current]{color:var(--cyan)}
+
   footer{padding:40px 0 64px;color:var(--faint);font-size:14px}
   footer a{color:var(--dim)}
 </style>
@@ -95,6 +100,16 @@
     </div>
   </div>
 </header>
+
+<nav class="site">
+  <div class="wrap">
+    <a href="./" aria-current="page">Overview</a>
+    <a href="changelog.html">Changelog</a>
+    <a href="play/">Play</a>
+    <a href="https://github.com/CoderCoop/SolarSyndicate">GitHub</a>
+  </div>
+</nav>
+
 
 <section>
   <div class="wrap">
@@ -281,6 +296,7 @@ pnpm dev              # http://localhost:5173</code></pre>
     <p>Screenshots on this page are captured from the running build by
     <code>scripts/capture-shots.mjs</code> — not mockups.</p>
     <p><a href="https://github.com/CoderCoop/SolarSyndicate">GitHub</a> ·
+       <a href="changelog.html">Changelog</a> ·
        <a href="play/">Play</a> ·
        <a href="https://github.com/CoderCoop/SolarSyndicate/blob/main/ARCHITECTURE.md">Architecture</a></p>
   </div>

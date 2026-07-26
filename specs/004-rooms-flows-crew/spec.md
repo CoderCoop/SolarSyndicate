@@ -235,16 +235,66 @@ the current assignment — repairing the CO₂ scrubber, 9.4 of 26 hours done, a
   substitute for a worn-out recycler, and a new recycler still runs better with
   someone tending it.
 
-## Open questions
+## Attendance: two terms, not one
 
-1. **How large should the crew term be?** Large enough to plan around,
-   small enough that an unattended ship is not crippled — §7.4 forbids the ship
-   punishing absence. Proposal: up to +3 percentage points of closure at skill
-   100 and full effectiveness, against upgrade tiers spanning 0.92 to 0.985.
-   That makes a tech worth roughly one tier of hardware while on station, and
-   nothing when asleep — noticeable, never mandatory.
-2. **Does an unattended ship need a floor?** If closure drops whenever the tech
-   sleeps, the ship is worse for eight hours of every day forever. Either the
-   base is set so unattended operation is comfortable and attention is upside,
-   or the term persists for some hours after they leave station. The first is
-   simpler and is the proposal.
+Both open questions resolve together, and the resolution is that **presence
+should mostly buy condition, not output**. "A ship needs skilled crew to keep
+its systems in good operational status" is a statement about *status over
+time*, which is wear — not about instantaneous efficiency. Splitting it that
+way makes the mechanic legible and stops it being punishing.
+
+### The rated figure is the unattended figure
+
+- **RF-35** A part's values in `parts.json` are what it delivers **with nobody
+  attending it**. That is what "rated" means. An unattended ship runs to spec
+  indefinitely; it does not decay toward some worse steady state.
+
+This is the floor, and it is structural rather than a timer — no bonus lingers
+after someone leaves station, because there is no deficit to paper over. §7.4
+holds by construction: absence can never kill, never spiral, and never make the
+ship worse than the hardware you bought.
+
+### Presence is a small, immediate efficiency bonus
+
+- **RF-36** A crew member on watch and stationed in a system's room adds up to
+  **+3 percentage points** of loop closure, or **+6%** of rated output, at skill
+  100 and effectiveness 1.0. It scales linearly with `skill / 100` and with
+  `crewEffectiveness`, and it is never negative.
+
+Enough to see in the flow diagram when a watch turns over. Not enough that an
+unattended run is in trouble.
+
+### Presence is a larger, cumulative wear effect
+
+- **RF-37** Wear on the parts in a room is multiplied by an attendance factor:
+  **0.55×** with a skill-100 hand on station at full effectiveness, rising to
+  **1.0×** at skill 0, and **1.15×** when nobody is stationed there at all.
+
+This is where attention actually pays, and it pays the way the fiction says it
+should — a tended plant stays in good order and an ignored one drifts toward its
+next service. The unattended penalty is deliberately mild: 15% faster wear is
+weeks of drift, visible in the condition bar long before it becomes a failure,
+and always recoverable with a work order. It is a reason to staff a watch, never
+a punishment for closing the app.
+
+With three watches and four crew, most rooms are unattended most of the time.
+That is the intended shape: the watch bill becomes a real allocation decision
+about *which* systems get looked after, rather than a formality.
+
+- **RF-38** Every coefficient above lives in `packages/data` (constitution
+  VIII), including the unattended multiplier, so balance is a JSON edit.
+- **RF-39** The existing ship-wide `mechanicBonuses` and `lifeSupportBonus` —
+  which read the best skill aboard regardless of watch, station or
+  consciousness — are replaced by the per-room rule. Nothing may still reward a
+  specialist who never works.
+
+### Acceptance additions
+
+12. An unattended ship holds its rated closure and output indefinitely; the
+    only difference from a tended one is the rate of wear.
+13. Moving a skilled life-support tech onto the Life Support watch raises
+    closure and lowers that room's wear rate; moving them off restores both.
+14. A room with nobody stationed in it wears faster than the same room with an
+    unskilled hand in it, and both are within 15% of the rated rate.
+15. A fatigued tech in a hot cabin contributes measurably less than the same
+    tech rested, on both terms.

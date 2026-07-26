@@ -130,6 +130,18 @@ await shot('crew', async (page) => {
   await page.waitForSelector('.roster')
 })
 
+// The cross-section as shipped, for the changelog: decks drawn from content,
+// crew standing on the deck they are actually on.
+await shot('ship-schematic', async (page) => {
+  await page.waitForSelector('.schema .glyph')
+}, { height: 1800 })
+
+// The same ship with the flow overlay on.
+await shot('ship-flow-overlay', async (page) => {
+  await page.click('.flowtoggle')
+  await page.waitForSelector('.flow__ch')
+}, { height: 1800 })
+
 await browser.close()
 server.close()
 console.log('Done.')

@@ -1,0 +1,795 @@
+<title>Ship view — three directions</title>
+<style>
+  :root {
+    /* Page chrome — flips with theme */
+    --page-bg: #f4f6f7;
+    --page-panel: #ffffff;
+    --page-rule: #d9e0e4;
+    --page-ink: #16232b;
+    --page-dim: #55707e;
+    --page-faint: #8ba1ad;
+    --page-accent: #0f7d86;
+
+    /* Game palette — fixed, these depict a dark UI */
+    --g-bg: #0b1015;
+    --g-raised: #111a22;
+    --g-sunken: #080d12;
+    --g-line: #1e2d3a;
+    --g-line2: #2c4256;
+    --g-ink: #c9d8e3;
+    --g-dim: #7d95a8;
+    --g-faint: #4e6373;
+    --g-cyan: #4fd1d9;
+    --g-amber: #e8a33d;
+    --g-green: #6fcf8f;
+    --g-red: #e5675f;
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-bg: #0d1114;
+      --page-panel: #151b1f;
+      --page-rule: #263137;
+      --page-ink: #dbe5ea;
+      --page-dim: #94a9b4;
+      --page-faint: #647a86;
+      --page-accent: #5fd3dc;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #0d1114;
+    --page-panel: #151b1f;
+    --page-rule: #263137;
+    --page-ink: #dbe5ea;
+    --page-dim: #94a9b4;
+    --page-faint: #647a86;
+    --page-accent: #5fd3dc;
+  }
+  :root[data-theme="light"] {
+    --page-bg: #f4f6f7;
+    --page-panel: #ffffff;
+    --page-rule: #d9e0e4;
+    --page-ink: #16232b;
+    --page-dim: #55707e;
+    --page-faint: #8ba1ad;
+    --page-accent: #0f7d86;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------------------------------------------------------------- masthead */
+  .masthead { padding: 56px 0 36px; border-bottom: 1px solid var(--page-rule); }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--page-faint);
+    margin: 0 0 16px;
+  }
+  h1 {
+    font-size: clamp(30px, 4.6vw, 42px);
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 18px;
+    color: var(--page-dim);
+    max-width: 62ch;
+    margin: 0;
+  }
+  .constraints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 26px;
+    padding: 0;
+    list-style: none;
+  }
+  .constraints li {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .04em;
+    padding: 5px 11px;
+    border: 1px solid var(--page-rule);
+    border-radius: 999px;
+    color: var(--page-dim);
+  }
+
+  /* ------------------------------------------------------------------ option */
+  .option { padding: 52px 0; border-bottom: 1px solid var(--page-rule); }
+  .option__head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  .option__id {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .14em;
+    color: var(--page-accent);
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+  .option h2 { font-size: 26px; margin: 0; letter-spacing: -.01em; }
+  .option__tag { font-size: 14px; color: var(--page-faint); font-style: italic; }
+  .option__lede { color: var(--page-dim); max-width: 62ch; margin: 10px 0 30px; }
+
+  .split { display: grid; grid-template-columns: 360px 1fr; gap: 40px; align-items: start; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; gap: 30px; } }
+
+  .notes { display: flex; flex-direction: column; gap: 22px; }
+  .note h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--page-faint);
+    margin: 0 0 7px;
+    font-weight: 600;
+  }
+  .note p { margin: 0; font-size: 15px; color: var(--page-dim); }
+  .note p strong { color: var(--page-ink); font-weight: 600; }
+  .note--cost h3 { color: var(--g-amber); }
+
+  /* ------------------------------------------------------------- phone frame */
+  .phone {
+    width: 360px;
+    max-width: 100%;
+    border: 1px solid var(--g-line2);
+    border-radius: 18px;
+    background: var(--g-bg);
+    overflow: hidden;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .28);
+    background-image:
+      linear-gradient(rgba(79, 209, 217, .035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79, 209, 217, .035) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .phone__bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--g-line);
+    background: var(--g-sunken);
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .phone__clock { color: var(--g-cyan); font-size: 15px; letter-spacing: .04em; }
+  .phone__net { color: var(--g-green); font-size: 14px; }
+  .phone__body { padding: 12px; }
+
+  /* shared deck chrome */
+  .deckname {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    fill: var(--g-ink);
+  }
+  .decksub, .stationlabel {
+    font-family: var(--mono);
+    font-size: 8.5px;
+    letter-spacing: .06em;
+    fill: var(--g-faint);
+  }
+  .deckpower {
+    font-family: var(--mono);
+    font-size: 10px;
+    fill: var(--g-dim);
+    text-anchor: end;
+  }
+  .hull { fill: var(--g-raised); stroke: var(--g-line2); stroke-width: 1; }
+  .divider { stroke: var(--g-line); stroke-width: 1; }
+  .fixture { fill: none; stroke: var(--g-cyan); stroke-width: 1; opacity: .55; }
+  .fixture--solid { fill: var(--g-cyan); opacity: .18; stroke: none; }
+  .shaft { stroke: var(--g-line2); stroke-width: 1; stroke-dasharray: 3 3; }
+
+  .crew circle { stroke-width: 1.5; }
+  .crew text {
+    font-family: var(--mono);
+    font-size: 7.5px;
+    font-weight: 700;
+    text-anchor: middle;
+    fill: var(--g-bg);
+  }
+  .crew--watch circle { fill: var(--g-cyan); stroke: var(--g-cyan); }
+  .crew--off circle { fill: var(--g-dim); stroke: var(--g-dim); }
+  .crew--sleep circle { fill: none; stroke: var(--g-faint); }
+  .crew--sleep text { fill: var(--g-faint); }
+
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 10px 14px 12px;
+    border-top: 1px solid var(--g-line);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .04em;
+    color: var(--g-faint);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot--watch { background: var(--g-cyan); }
+  .dot--off { background: var(--g-dim); }
+  .dot--sleep { border: 1.5px solid var(--g-faint); }
+
+  /* ------------------------------------------------------- direction B extras */
+  .warm { fill: var(--g-amber); opacity: .13; }
+  .grow { fill: var(--g-green); opacity: .16; }
+  .figure { fill: var(--g-ink); opacity: .9; }
+  .figure--dim { fill: var(--g-faint); opacity: .8; }
+
+  /* ------------------------------------------------------- direction C extras */
+  .flow { fill: none; stroke-width: 1.2; opacity: .75; }
+  .flow--power { stroke: var(--g-cyan); }
+  .flow--heat { stroke: var(--g-amber); }
+  .flow--water { stroke: #6aa9e0; }
+  .node { fill: var(--g-sunken); stroke: var(--g-line2); stroke-width: 1; }
+  .node--source { stroke: var(--g-green); }
+  .node--sink { stroke: var(--g-amber); }
+  .nodelabel { font-family: var(--mono); font-size: 8px; fill: var(--g-dim); }
+  @media (prefers-reduced-motion: no-preference) {
+    .flow--animated { stroke-dasharray: 4 5; animation: drift 2.4s linear infinite; }
+    @keyframes drift { to { stroke-dashoffset: -18; } }
+  }
+
+  /* ------------------------------------------------------------ recommendation */
+  .rec { padding: 52px 0 70px; }
+  .rec__box {
+    background: var(--page-panel);
+    border: 1px solid var(--page-rule);
+    border-left: 3px solid var(--page-accent);
+    border-radius: 4px;
+    padding: 26px 30px;
+  }
+  .rec h2 { font-size: 24px; margin: 0 0 12px; }
+  .rec p { color: var(--page-dim); max-width: 66ch; }
+  .rec p:last-child { margin-bottom: 0; }
+  .rec strong { color: var(--page-ink); }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 14.5px; }
+  caption {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--page-faint);
+    padding-bottom: 10px;
+  }
+  th, td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--page-rule); vertical-align: top; }
+  th { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--page-faint); font-weight: 600; }
+  td:first-child { font-family: var(--mono); font-size: 12.5px; color: var(--page-ink); white-space: nowrap; }
+  .yes { color: var(--g-green); }
+  .no { color: var(--g-red); }
+  .mid { color: var(--g-amber); }
+
+  .scroller { overflow-x: auto; }
+
+  footer { padding: 0 0 60px; color: var(--page-faint); font-size: 14px; }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="kicker">Solar Syndicate · design pitch · ship view</p>
+  <h1>Three ways to make the ship a place</h1>
+  <p class="standfirst">
+    The current view is a list of decks that expand into lists of parts. It is
+    legible and it is not a ship. These are three directions for showing the
+    layout, the stations, and the people standing in them — each rendered with
+    the real hull, the real twelve components, and the real four crew.
+  </p>
+  <ul class="constraints">
+    <li>portrait, phone-first</li>
+    <li>7 decks, 12 parts, 4 crew</li>
+    <li>every part is a JSON record</li>
+    <li>trace why a margin is thin</li>
+    <li>crew are individuals</li>
+  </ul>
+</header>
+
+<!-- ============================================================ DIRECTION A -->
+<section class="option">
+  <div class="option__head">
+    <span class="option__id">A</span>
+    <h2>Schematic</h2>
+    <span class="option__tag">the drafting drawing, made spatial</span>
+  </div>
+  <p class="option__lede">
+    Keeps the blueprint language and gives each deck real interior geometry —
+    bunks, racks, the reactor's shadow shield — drawn as line art from the room
+    type. Stations are labelled fixtures. Crew are lettered markers standing at
+    whatever they are doing.
+  </p>
+
+  <div class="split">
+    <div class="phone">
+      <div class="phone__bar">
+        <span class="phone__clock">D0 06:14</span>
+        <span class="phone__net">+8.9 kW</span>
+      </div>
+      <div class="phone__body">
+        <svg viewBox="0 0 336 560" width="100%" role="img"
+             aria-label="Ship cross-section with seven decks, stations drawn as line art, and crew markers at their stations">
+          <!-- nose -->
+          <path d="M168 4 L326 40 L326 46 L10 46 L10 40 Z" class="hull"/>
+          <text x="168" y="30" class="decksub" text-anchor="middle">ARIADNE · KESTREL-CLASS</text>
+
+          <!-- ladder shaft -->
+          <line x1="168" y1="46" x2="168" y2="486" class="shaft"/>
+
+          <!-- deck 0 bridge -->
+          <rect x="10" y="46" width="316" height="62" class="hull"/>
+          <text x="22" y="64" class="deckname">Bridge</text>
+          <text x="22" y="76" class="decksub">SENSORS &amp; NAVIGATION</text>
+          <text x="316" y="64" class="deckpower">−1.9 kW</text>
+          <!-- consoles -->
+          <rect x="26" y="84" width="34" height="16" rx="2" class="fixture"/>
+          <text x="30" y="106" class="stationlabel">NAV</text>
+          <rect x="86" y="84" width="34" height="16" rx="2" class="fixture"/>
+          <text x="90" y="106" class="stationlabel">COMMS</text>
+          <!-- sensor mast -->
+          <path d="M250 100 L250 84 M242 84 L258 84" class="fixture"/>
+          <text x="234" y="106" class="stationlabel">MAST</text>
+          <g class="crew crew--watch">
+            <circle cx="43" cy="92" r="7"/><text x="43" y="94.6">IB</text>
+          </g>
+
+          <!-- deck 1 quarters -->
+          <rect x="10" y="108" width="316" height="70" class="hull"/>
+          <line x1="10" y1="108" x2="326" y2="108" class="divider"/>
+          <text x="22" y="126" class="deckname">Quarters</text>
+          <text x="316" y="126" class="deckpower">−2.6 kW</text>
+          <!-- six bunks -->
+          <rect x="26" y="136" width="26" height="12" rx="2" class="fixture"/>
+          <rect x="26" y="152" width="26" height="12" rx="2" class="fixture"/>
+          <rect x="58" y="136" width="26" height="12" rx="2" class="fixture"/>
+          <rect x="58" y="152" width="26" height="12" rx="2" class="fixture"/>
+          <rect x="90" y="136" width="26" height="12" rx="2" class="fixture"/>
+          <rect x="90" y="152" width="26" height="12" rx="2" class="fixture"/>
+          <text x="26" y="172" class="stationlabel">BUNKS</text>
+          <!-- galley table -->
+          <rect x="228" y="140" width="46" height="20" rx="3" class="fixture"/>
+          <text x="228" y="172" class="stationlabel">GALLEY</text>
+          <g class="crew crew--sleep">
+            <circle cx="39" cy="142" r="7"/><text x="39" y="144.6">DO</text>
+          </g>
+          <g class="crew crew--off">
+            <circle cx="251" cy="150" r="7"/><text x="251" y="152.6">MS</text>
+          </g>
+
+          <!-- deck 2 life support -->
+          <rect x="10" y="178" width="316" height="82" class="hull"/>
+          <line x1="10" y1="178" x2="326" y2="178" class="divider"/>
+          <text x="22" y="196" class="deckname">Life Support</text>
+          <text x="316" y="196" class="deckpower">−9.9 kW</text>
+          <!-- scrubber + electrolysis columns -->
+          <rect x="26" y="206" width="18" height="34" rx="2" class="fixture"/>
+          <text x="22" y="252" class="stationlabel">CO₂</text>
+          <rect x="52" y="206" width="18" height="34" rx="2" class="fixture"/>
+          <text x="50" y="252" class="stationlabel">O₂</text>
+          <rect x="78" y="206" width="18" height="34" rx="2" class="fixture"/>
+          <text x="74" y="252" class="stationlabel">H₂O</text>
+          <!-- hydroponics rack: a grid -->
+          <rect x="240" y="206" width="72" height="34" rx="2" class="fixture"/>
+          <line x1="240" y1="217" x2="312" y2="217" class="fixture"/>
+          <line x1="240" y1="228" x2="312" y2="228" class="fixture"/>
+          <text x="240" y="252" class="stationlabel">HYDROPONICS</text>
+          <g class="crew crew--watch">
+            <circle cx="120" cy="222" r="7"/><text x="120" y="224.6">TB</text>
+          </g>
+
+          <!-- deck 3 cargo -->
+          <rect x="10" y="260" width="316" height="56" class="hull"/>
+          <line x1="10" y1="260" x2="326" y2="260" class="divider"/>
+          <text x="22" y="278" class="deckname">Cargo</text>
+          <text x="316" y="278" class="deckpower">—</text>
+          <rect x="26" y="286" width="60" height="22" rx="2" class="fixture"/>
+          <rect x="92" y="286" width="60" height="22" rx="2" class="fixture"/>
+          <rect x="184" y="286" width="60" height="22" rx="2" class="fixture"/>
+          <rect x="250" y="286" width="60" height="22" rx="2" class="fixture"/>
+          <text x="26" y="304" class="stationlabel" style="fill:var(--g-faint)">4 BAYS · EMPTY</text>
+
+          <!-- deck 4 machinery -->
+          <rect x="10" y="316" width="316" height="66" class="hull"/>
+          <line x1="10" y1="316" x2="326" y2="316" class="divider"/>
+          <text x="22" y="334" class="deckname">Machinery</text>
+          <text x="316" y="334" class="deckpower">−1.6 kW</text>
+          <rect x="26" y="344" width="52" height="24" rx="2" class="fixture"/>
+          <text x="26" y="378" class="stationlabel">BATTERY</text>
+          <path d="M240 346 h72 M240 354 h72 M240 362 h72" class="fixture"/>
+          <text x="240" y="378" class="stationlabel">THERMAL LOOP</text>
+
+          <!-- deck 5 reactor -->
+          <rect x="10" y="382" width="316" height="60" class="hull"/>
+          <line x1="10" y1="382" x2="326" y2="382" class="divider"/>
+          <text x="22" y="400" class="deckname">Reactor</text>
+          <text x="316" y="400" class="deckpower" style="fill:var(--g-green)">+25.5 kW</text>
+          <circle cx="168" cy="422" r="15" class="fixture"/>
+          <circle cx="168" cy="422" r="8" class="fixture--solid"/>
+          <path d="M140 434 a34 34 0 0 1 56 0" class="fixture"/>
+          <text x="200" y="426" class="stationlabel">SHADOW SHIELD</text>
+
+          <!-- deck 6 engines -->
+          <rect x="10" y="442" width="316" height="44" class="hull"/>
+          <line x1="10" y1="442" x2="326" y2="442" class="divider"/>
+          <text x="22" y="460" class="deckname">Engines</text>
+          <text x="316" y="460" class="deckpower">—</text>
+          <text x="22" y="476" class="stationlabel" style="fill:var(--g-faint)">NTR CLUSTER · COLD</text>
+
+          <!-- bell -->
+          <path d="M10 486 L326 486 L262 524 L74 524 Z" class="hull"/>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="dot dot--watch"></i>on watch</span>
+        <span><i class="dot dot--off"></i>off watch</span>
+        <span><i class="dot dot--sleep"></i>asleep</span>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>What it buys</h3>
+        <p>The ship reads as a <strong>machine with rooms in it</strong>. Where
+        someone is answers "who can reach that failure" without a second screen.
+        Geometry comes from the room type, so a bigger hull or a new deck draws
+        itself.</p>
+      </div>
+      <div class="note">
+        <h3>Where the crew stand</h3>
+        <p>Position is <strong>derived, not stored</strong> — on watch puts you
+        at your station or your work order, off watch and asleep put you in
+        quarters. No new state, and the view answers "where is everyone" for
+        free.</p>
+      </div>
+      <div class="note note--cost">
+        <h3>What it costs</h3>
+        <p>Roughly a day. One SVG geometry template per room type, a crew-marker
+        component, and a position rule. No new art pipeline; nothing an M4 part
+        addition would break.</p>
+      </div>
+      <div class="note">
+        <h3>The risk</h3>
+        <p>It stays cold. Crew are lettered dots, and a game whose thesis is
+        that <strong>the crew are people and you are not</strong> may want more
+        of them than initials.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ DIRECTION B -->
+<section class="option">
+  <div class="option__head">
+    <span class="option__id">B</span>
+    <h2>Cutaway</h2>
+    <span class="option__tag">the dollhouse</span>
+  </div>
+  <p class="option__lede">
+    Each deck becomes a small illustrated interior. Warm light in the galley,
+    actual green in the hydroponics rack, crew as figures rather than markers —
+    walking to the ladder at shift change. The ship stops being a diagram and
+    becomes somewhere people live.
+  </p>
+
+  <div class="split">
+    <div class="phone">
+      <div class="phone__bar">
+        <span class="phone__clock">D0 06:14</span>
+        <span class="phone__net">+8.9 kW</span>
+      </div>
+      <div class="phone__body">
+        <svg viewBox="0 0 336 470" width="100%" role="img"
+             aria-label="Illustrated cutaway of four decks with crew shown as figures at their stations">
+          <!-- bridge -->
+          <rect x="10" y="8" width="316" height="86" class="hull"/>
+          <text x="22" y="26" class="deckname">Bridge</text>
+          <!-- console bank with screen glow -->
+          <rect x="26" y="44" width="88" height="30" rx="3" class="fixture"/>
+          <rect x="30" y="48" width="80" height="16" rx="2" class="fixture--solid"/>
+          <path d="M30 48 h80 v16 h-80 z" fill="var(--g-cyan)" opacity=".08"/>
+          <!-- acceleration couch -->
+          <path d="M232 74 q0 -22 22 -22 h30 q10 0 10 10 v12" class="fixture"/>
+          <!-- crew figure: Ballard at the helm -->
+          <g class="figure">
+            <circle cx="132" cy="46" r="5"/>
+            <path d="M127 54 q5 -3 10 0 l2 20 h-14 z"/>
+          </g>
+          <text x="142" y="60" class="stationlabel" style="fill:var(--g-cyan)">BALLARD</text>
+
+          <!-- quarters, warm -->
+          <rect x="10" y="94" width="316" height="104" class="hull"/>
+          <rect x="10" y="94" width="316" height="104" class="warm"/>
+          <line x1="10" y1="94" x2="326" y2="94" class="divider"/>
+          <text x="22" y="112" class="deckname">Quarters</text>
+          <!-- stacked bunks with a sleeper -->
+          <rect x="26" y="126" width="64" height="20" rx="3" class="fixture"/>
+          <rect x="26" y="152" width="64" height="20" rx="3" class="fixture"/>
+          <path d="M30 146 q14 -8 30 -2 l22 2 v-8 h-52 z" fill="var(--g-faint)" opacity=".5"/>
+          <circle cx="76" cy="134" r="4.5" fill="var(--g-faint)" opacity=".7"/>
+          <text x="26" y="186" class="stationlabel">OKONKWO · ASLEEP</text>
+          <!-- galley: table, lamp pool -->
+          <ellipse cx="252" cy="140" rx="44" ry="14" fill="var(--g-amber)" opacity=".1"/>
+          <rect x="222" y="132" width="60" height="8" rx="3" class="fixture"/>
+          <path d="M252 118 v10" class="fixture"/>
+          <circle cx="252" cy="116" r="4" fill="var(--g-amber)" opacity=".5"/>
+          <g class="figure--dim">
+            <circle cx="228" cy="150" r="5"/>
+            <path d="M223 158 q5 -3 10 0 l2 18 h-14 z"/>
+          </g>
+          <text x="206" y="186" class="stationlabel">SANDOVAL · OFF WATCH</text>
+
+          <!-- life support, green -->
+          <rect x="10" y="198" width="316" height="112" class="hull"/>
+          <line x1="10" y1="198" x2="326" y2="198" class="divider"/>
+          <text x="22" y="216" class="deckname">Life Support</text>
+          <!-- scrubber stacks with pipes -->
+          <rect x="26" y="230" width="22" height="46" rx="3" class="fixture"/>
+          <rect x="54" y="230" width="22" height="46" rx="3" class="fixture"/>
+          <path d="M26 240 h-10 v36 h10 M76 240 h10 v36 h-10" class="fixture"/>
+          <text x="26" y="292" class="stationlabel">SCRUBBERS</text>
+          <!-- hydroponics: the only green anyone sees for months -->
+          <rect x="196" y="226" width="116" height="54" rx="3" class="fixture"/>
+          <rect x="196" y="226" width="116" height="54" class="grow"/>
+          <path d="M206 254 q4 -12 8 0 M220 254 q4 -14 8 0 M234 254 q4 -10 8 0
+                   M248 254 q4 -13 8 0 M262 254 q4 -11 8 0 M276 254 q4 -12 8 0"
+                stroke="var(--g-green)" fill="none" stroke-width="1.4" opacity=".85"/>
+          <path d="M206 272 q4 -12 8 0 M220 272 q4 -14 8 0 M234 272 q4 -10 8 0
+                   M248 272 q4 -13 8 0 M262 272 q4 -11 8 0 M276 272 q4 -12 8 0"
+                stroke="var(--g-green)" fill="none" stroke-width="1.4" opacity=".6"/>
+          <text x="196" y="292" class="stationlabel" style="fill:var(--g-green)">HYDROPONICS</text>
+          <!-- Berg working -->
+          <g class="figure">
+            <circle cx="120" cy="236" r="5"/>
+            <path d="M115 244 q5 -3 10 0 l2 20 h-14 z"/>
+            <path d="M125 250 l12 6" stroke="var(--g-ink)" stroke-width="1.5" fill="none"/>
+          </g>
+          <text x="98" y="292" class="stationlabel" style="fill:var(--g-cyan)">BERG · SERVICING</text>
+
+          <!-- reactor -->
+          <rect x="10" y="310" width="316" height="90" class="hull"/>
+          <line x1="10" y1="310" x2="326" y2="310" class="divider"/>
+          <text x="22" y="328" class="deckname">Reactor</text>
+          <circle cx="168" cy="360" r="22" class="fixture"/>
+          <circle cx="168" cy="360" r="13" fill="var(--g-cyan)" opacity=".22"/>
+          <circle cx="168" cy="360" r="6" fill="var(--g-cyan)" opacity=".5"/>
+          <path d="M126 382 a42 42 0 0 1 84 0" class="fixture"/>
+          <text x="216" y="364" class="stationlabel">SHIELD</text>
+
+          <path d="M10 400 L326 400 L262 438 L74 438 Z" class="hull"/>
+        </svg>
+      </div>
+      <div class="legend">
+        <span>4 of 7 decks shown — at full height this is a long scroll</span>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>What it buys</h3>
+        <p>Warmth, and a reason to care. The hydroponics rack is <strong>the
+        only green anyone sees for months</strong> — here you can actually see
+        it. Crew read as people, which matters more once they age and die.</p>
+      </div>
+      <div class="note note--cost">
+        <h3>What it costs</h3>
+        <p>It fights the architecture. Every part is a JSON record precisely so
+        content can be added without code — but <strong>art does not come out of
+        JSON</strong>. Each new part in M4's market needs someone to draw it, or
+        it appears as a blank rectangle in an otherwise illustrated room.</p>
+      </div>
+      <div class="note note--cost">
+        <h3>And it doesn't fit</h3>
+        <p>Four decks fill a phone screen at this density. Seven means constant
+        scrolling, and the ship-wide glance — the thing the current view is
+        actually good at — is gone.</p>
+      </div>
+      <div class="note">
+        <h3>Worth stealing</h3>
+        <p>The colour-as-meaning idea survives on its own: warm light where
+        people rest, green where things grow, cyan where machines run. That is
+        three CSS variables, not an art pipeline.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ DIRECTION C -->
+<section class="option">
+  <div class="option__head">
+    <span class="option__id">C</span>
+    <h2>Flow</h2>
+    <span class="option__tag">the engineering panel</span>
+  </div>
+  <p class="option__lede">
+    Drops architecture for connection. Stations are nodes, the five networks are
+    lines running between them, and the lines move when the resource does. The
+    coupling that M1 spent its whole budget building becomes the thing you
+    actually look at.
+  </p>
+
+  <div class="split">
+    <div class="phone">
+      <div class="phone__bar">
+        <span class="phone__clock">D0 06:14</span>
+        <span class="phone__net">+8.9 kW</span>
+      </div>
+      <div class="phone__body">
+        <svg viewBox="0 0 336 470" width="100%" role="img"
+             aria-label="Systems diagram showing stations as nodes with power, heat and water flows between them">
+          <!-- flows drawn first, behind nodes -->
+          <!-- power: reactor up the spine to everything -->
+          <path d="M168 372 L168 330 L64 330 L64 92" class="flow flow--power flow--animated"/>
+          <path d="M168 330 L272 330 L272 92" class="flow flow--power flow--animated"/>
+          <path d="M168 372 L168 220" class="flow flow--power flow--animated"/>
+          <!-- heat: everything to radiators -->
+          <path d="M100 372 L48 372 L48 262" class="flow flow--heat flow--animated"/>
+          <path d="M64 140 L30 140 L30 262" class="flow flow--heat flow--animated"/>
+          <!-- water loop -->
+          <path d="M136 220 q-40 30 0 60 q40 -30 0 -60" class="flow flow--water flow--animated"/>
+
+          <!-- nodes -->
+          <g>
+            <rect x="30" y="70" width="68" height="44" rx="6" class="node"/>
+            <text x="40" y="88" class="nodelabel">NAV</text>
+            <text x="40" y="100" class="nodelabel" style="fill:var(--g-amber)">−1.1 kW</text>
+            <g class="crew crew--watch"><circle cx="86" cy="78" r="7"/><text x="86" y="80.6">IB</text></g>
+          </g>
+          <g>
+            <rect x="238" y="70" width="68" height="44" rx="6" class="node"/>
+            <text x="248" y="88" class="nodelabel">COMMS</text>
+            <text x="248" y="100" class="nodelabel" style="fill:var(--g-amber)">−0.8 kW</text>
+          </g>
+          <g>
+            <rect x="30" y="150" width="68" height="44" rx="6" class="node"/>
+            <text x="40" y="168" class="nodelabel">HAB</text>
+            <text x="40" y="180" class="nodelabel" style="fill:var(--g-amber)">−2.6 kW</text>
+          </g>
+          <g>
+            <rect x="106" y="198" width="124" height="72" rx="6" class="node node--sink"/>
+            <text x="116" y="216" class="nodelabel" style="fill:var(--g-ink)">LIFE SUPPORT</text>
+            <text x="116" y="230" class="nodelabel">CO₂ · O₂ · H₂O · GROW</text>
+            <text x="116" y="244" class="nodelabel" style="fill:var(--g-amber)">−9.9 kW</text>
+            <text x="116" y="258" class="nodelabel" style="fill:var(--g-cyan)">1 035 ppm · 86% closed</text>
+            <g class="crew crew--watch"><circle cx="216" cy="212" r="7"/><text x="216" y="214.6">TB</text></g>
+          </g>
+          <g>
+            <rect x="14" y="262" width="68" height="44" rx="6" class="node node--sink"/>
+            <text x="24" y="280" class="nodelabel">RADIATORS</text>
+            <text x="24" y="292" class="nodelabel" style="fill:var(--g-amber)">104 kW out</text>
+          </g>
+          <g>
+            <rect x="238" y="262" width="68" height="44" rx="6" class="node"/>
+            <text x="248" y="280" class="nodelabel">BATTERY</text>
+            <text x="248" y="292" class="nodelabel" style="fill:var(--g-green)">84%</text>
+          </g>
+          <g>
+            <rect x="120" y="330" width="96" height="52" rx="6" class="node node--source"/>
+            <text x="130" y="350" class="nodelabel" style="fill:var(--g-ink)">REACTOR</text>
+            <text x="130" y="364" class="nodelabel" style="fill:var(--g-green)">+22.0 kW</text>
+            <text x="130" y="376" class="nodelabel">66 kW waste</text>
+          </g>
+          <g>
+            <rect x="120" y="404" width="96" height="40" rx="6" class="node"/>
+            <text x="130" y="422" class="nodelabel">NTR PREHEAT</text>
+            <text x="130" y="434" class="nodelabel" style="fill:var(--g-faint)">COLD</text>
+          </g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--g-cyan)"></i>power</span>
+        <span><i class="dot" style="background:var(--g-amber)"></i>heat</span>
+        <span><i class="dot" style="background:#6aa9e0"></i>water</span>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>What it buys</h3>
+        <p>Pillar one, literally. "You can trace why the O<sub>2</sub> margin is
+        thin" stops being a promise and becomes <strong>following a line with
+        your finger</strong>. Edges come from the resource networks, so the
+        diagram is generated, never drawn.</p>
+      </div>
+      <div class="note">
+        <h3>Where it shines</h3>
+        <p>The moment a scrubber fails and CO<sub>2</sub> climbs, this view shows
+        the cascade — bad air, slower repairs — as a shape rather than three
+        numbers on separate screens.</p>
+      </div>
+      <div class="note note--cost">
+        <h3>What it costs</h3>
+        <p>It is not a place. Nobody lives in a node graph, and crew chips
+        docked to boxes make the people feel like <strong>assignments rather
+        than persons</strong> — the opposite of where the design is heading.</p>
+      </div>
+      <div class="note note--cost">
+        <h3>And it gets noisy</h3>
+        <p>Twelve parts and five networks is already near the limit shown here.
+        M4 adds parts; the graph does not degrade gracefully.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================= RECOMMENDATION -->
+<section class="rec">
+  <div class="rec__box">
+    <h2>What I'd build</h2>
+    <p>
+      <strong>A as the base, C as an overlay.</strong> Ship the schematic —
+      it is the only one of the three that survives contact with the
+      data-driven architecture, fits seven decks on a phone, and costs about a
+      day. Then add a <strong>flow toggle</strong> that fades the room geometry
+      back and draws the network lines over it. Same screen, same geometry, one
+      switch: the ship as a place, or the ship as a system.
+    </p>
+    <p>
+      From B, take only the colour-as-meaning: warm where people rest, green
+      where things grow, cyan where machines run. That is three variables and it
+      gets most of the warmth without an art pipeline that M4 would immediately
+      break.
+    </p>
+    <p>
+      The one thing I would <em>not</em> compromise on is crew presence. If
+      lettered markers still feel like tokens once it is on screen, the next
+      increment is a portrait strip docked to each deck rather than illustrated
+      interiors — it scales, and it keeps the people visible.
+    </p>
+  </div>
+
+  <div class="scroller">
+    <table>
+      <caption>How they compare</caption>
+      <tr>
+        <th>Direction</th><th>Fits 7 decks</th><th>Generated from data</th>
+        <th>Crew feel like people</th><th>Traceable systems</th><th>Build cost</th>
+      </tr>
+      <tr>
+        <td>A · Schematic</td>
+        <td class="yes">yes</td><td class="yes">yes</td>
+        <td class="mid">partly</td><td class="mid">partly</td><td class="yes">~1 day</td>
+      </tr>
+      <tr>
+        <td>B · Cutaway</td>
+        <td class="no">no</td><td class="no">no</td>
+        <td class="yes">yes</td><td class="no">no</td><td class="no">weeks + art</td>
+      </tr>
+      <tr>
+        <td>C · Flow</td>
+        <td class="yes">yes</td><td class="yes">yes</td>
+        <td class="no">no</td><td class="yes">yes</td><td class="mid">~2 days</td>
+      </tr>
+      <tr>
+        <td>A + C toggle</td>
+        <td class="yes">yes</td><td class="yes">yes</td>
+        <td class="mid">partly</td><td class="yes">yes</td><td class="mid">~3 days</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>Mockups are live HTML and SVG, not images — the hull, the twelve
+  components, the four crew and their watch states are the real ones.</p>
+</footer>
+
+</div>
