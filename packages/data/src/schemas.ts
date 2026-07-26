@@ -197,6 +197,16 @@ export const PartProvides = z
   .object({
     /** CO2 removed from the cabin, kg/day. ISS CDRA is ~4 kg/day. */
     co2ScrubKgPerDay: z.number().nonnegative().optional(),
+    /**
+     * The lowest cabin partial pressure this remover can hold, ppm.
+     *
+     * A sorbent bed does not strip a gas out of an atmosphere -- it reaches
+     * equilibrium with its own sorbent. The ISS runs around 2,000-3,000 ppm
+     * with CDRA working perfectly, and Earth ambient is about 420. Without
+     * this the model drove the cabin to exactly zero, which is a reading the
+     * player can see is impossible (§1 pillar 2).
+     */
+    co2FloorPpm: z.number().positive().optional(),
     /** O2 put into the cabin, kg/day. */
     o2KgPerDay: z.number().nonnegative().optional(),
     /** Fraction of grey water recovered. Near-future closure ~0.97-0.98. */

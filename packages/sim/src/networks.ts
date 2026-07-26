@@ -13,7 +13,7 @@
  */
 import { getHull, getPart, SHED_ORDER, type PartProvides, type PowerPriority } from '@solsyn/data'
 import { tuneOutputScale, tuneOf } from './tune.js'
-import { activityLoad, fatigueRatePerSecond, METABOLIC } from './crew.js'
+import { activityLoad, co2KgForPpm, fatigueRatePerSecond, METABOLIC } from './crew.js'
 import { pushLog } from './log.js'
 import { boundTime, levelAt, settle } from './resources.js'
 import { cancelKind, schedule } from './queue.js'
@@ -166,6 +166,12 @@ export interface LifeBalance {
   heatRejectKw: number
   /** Fraction of throughput the recycler returns; 0 when it is down. */
   recycleFraction: number
+  /**
+   * The lowest cabin CO2 the running removers can hold, ppm; Infinity when
+   * nothing is removing it, in which case there is no floor and the cabin
+   * fills (§7.4 wants that failure visible, not silent).
+   */
+  co2FloorPpm: number
   /** Crew metabolic demand, scaled by what they are each doing. */
   crewLoad: number
 }
@@ -186,6 +192,7 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
   let foodProduction = 0
   let waterUse = 0
   let recycleFraction = 0
+  let co2FloorPpm = Infinity
   let heatRejectKw = 0
   let thermalWasteKw = 0
   let electricalLoadKw = 0
@@ -197,7 +204,14 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
     const def = getPart(part.defId)
 
     if (p.o2KgPerDay) o2Production += p.o2KgPerDay * scale
-    if (p.co2ScrubKgPerDay) co2Scrub += p.co2ScrubKgPerDay * scale
+    if (p.co2ScrubKgPerDay) {
+      co2Scrub += p.co2ScrubKgPerDay * scale
+      // The best remover running sets how clean the cabin can get. A sorbent
+      // bed reaches equilibrium with its own sorbent rather than stripping the
+      // gas out; plants pull lower still, which is why the rack earns its
+      // power beyond the food it grows.
+      if (p.co2FloorPpm !== undefined) co2FloorPpm = Math.min(co2FloorPpm, p.co2FloorPpm)
+    }
     if (p.foodKgPerDay) foodProduction += p.foodKgPerDay * scale
     if (p.waterUseKgPerDay) waterUse += p.waterUseKgPerDay
     if (p.heatRejectKw) heatRejectKw += p.heatRejectKw * scale
@@ -250,6 +264,7 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
     heatInKw,
     heatRejectKw,
     recycleFraction,
+    co2FloorPpm,
     crewLoad,
   }
 }
@@ -314,6 +329,11 @@ export function resolveNetworks(state: SimState, at: GameTime): void {
   const hull = getHull(state.ship.hullId)
 
   res.o2.rate = PER_DAY(life.o2PerDay)
+  // The cabin cannot get cleaner than the best remover can hold it (§3.2).
+  // Setting the reservoir's floor here keeps the level a closed-form function
+  // of time -- a concentration-dependent scrub rate would be exponential and
+  // would cost the whole catch-up story.
+  res.co2.min = Number.isFinite(life.co2FloorPpm) ? co2KgForPpm(state, life.co2FloorPpm) : 0
   res.co2.rate = PER_DAY(life.co2PerDay)
   res.water.rate = PER_DAY(life.waterPerDay)
   res.food.rate = PER_DAY(life.foodPerDay)
