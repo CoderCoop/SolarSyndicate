@@ -1,0 +1,23 @@
+[
+  {
+    "id": "earth",
+    "name": "Earth",
+    "orbitRadiusAu": 1.000000,
+    "orbitPeriodDays": 365.256,
+    "phaseAtEpochRad": 0.0
+  },
+  {
+    "id": "mars",
+    "name": "Mars",
+    "orbitRadiusAu": 1.523679,
+    "orbitPeriodDays": 686.980,
+    "phaseAtEpochRad": 2.6
+  },
+  {
+    "id": "ceres",
+    "name": "Ceres",
+    "orbitRadiusAu": 2.765800,
+    "orbitPeriodDays": 1681.630,
+    "phaseAtEpochRad": 4.1
+  }
+]
