@@ -117,34 +117,36 @@ export function laborRate(state: SimState, crew: CrewState, t: GameTime): number
   return skillFactor * crewEffectiveness(state, crew, t)
 }
 
-/** The best value of a skill among crew currently aboard. */
-export function bestSkill(state: SimState, skill: 'mechanics' | 'lifeSupport'): number {
-  let best = 0
-  for (const crew of state.crew) {
-    const value = getCrewDef(crew.defId).skills[skill]
-    if (value > best) best = value
-  }
-  return best
-}
+/** Where crew go when they are not on watch. */
+export const QUARTERS_ROOM_DEF = 'quarters'
 
 /**
- * Ship-wide effects of having a good engineer aboard (§4.2).
+ * Which room a crew member is in. Spec 003 SV-8, spec 004 RF-32.
  *
- * A well-kept plant runs a little hotter and a little longer between services.
- * Both effects are deliberately visible in the power readout and the condition
- * bars rather than hidden in a modifier screen.
+ * Derived, never stored (constitution V). Sleeping and off-watch crew are in
+ * Quarters; a crew member on a work order is at the part they are working on;
+ * anyone else is at their station.
+ *
+ * This lives here rather than in the selector layer because the *simulation*
+ * now depends on it too: attendance is what a room's wear and efficiency turn
+ * on. Two definitions of "where is she" would drift, and the drawing would
+ * stop agreeing with the physics.
  */
-export function mechanicBonuses(state: SimState): { outputScale: number; wearScale: number } {
-  const skill = bestSkill(state, 'mechanics')
-  return {
-    outputScale: 1 + (skill / 100) * 0.08,
-    wearScale: 1 - (skill / 100) * 0.3,
-  }
-}
+export function crewRoomId(state: SimState, crew: CrewState): string {
+  const roomByDef = (defId: string): string | undefined =>
+    state.ship.rooms.find((r) => r.defId === defId)?.id
 
-/** A skilled life-support tech squeezes a little more closure out of the loops. */
-export function lifeSupportBonus(state: SimState): number {
-  return (bestSkill(state, 'lifeSupport') / 100) * 0.015
+  if (crew.activity !== 'sleep' && crew.workOrderId) {
+    const order = state.workOrders.find((w) => w.id === crew.workOrderId)
+    const part = order ? state.ship.parts.find((p) => p.id === order.partId) : undefined
+    if (part) return part.roomId
+  }
+
+  const def = getCrewDef(crew.defId)
+  const station = crew.activity === 'watch' ? def.stationRoomId : QUARTERS_ROOM_DEF
+  // Fall back rather than throwing: a hull without quarters is a content bug,
+  // not a reason to blank the screen.
+  return roomByDef(station) ?? roomByDef(def.stationRoomId) ?? state.ship.rooms[0]!.id
 }
 
 /** Refresh every crew member's activity for the current time. */

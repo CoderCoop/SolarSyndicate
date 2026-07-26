@@ -8,7 +8,7 @@
  * a week is a decision the player declined to make.
  */
 import { getPart } from '@solsyn/data'
-import { mechanicBonuses } from './crew.js'
+import { attendanceFor, wearScaleFor } from './attendance.js'
 import { pushLog } from './log.js'
 import { cancelKind, schedule } from './queue.js'
 import { levelAt, settle } from './resources.js'
@@ -39,12 +39,16 @@ export function conditionLabel(condition: number): string {
   return 'critical'
 }
 
-/** Wear only accrues while a part is actually running. */
-export function wearRatePerSecond(state: SimState, part: PartState): number {
+/**
+ * Wear only accrues while a part is actually running, and it accrues at a rate
+ * set by who is standing watch in its room (spec 004 RF-37). A tended plant
+ * stays in good order; an ignored one drifts toward its next service.
+ */
+export function wearRatePerSecond(state: SimState, part: PartState, t: GameTime): number {
   if (!part.enabled || part.broken) return 0
   const def = getPart(part.defId)
   if (def.wearPerDay <= 0) return 0
-  const { wearScale } = mechanicBonuses(state)
+  const wearScale = wearScaleFor(attendanceFor(state, part.roomId, t))
   return -(def.wearPerDay * wearScale) / DAY
 }
 
@@ -65,7 +69,7 @@ export function resolveWear(state: SimState, at: GameTime): void {
 
   for (const part of state.ship.parts) {
     settle(part.condition, at)
-    part.condition.rate = wearRatePerSecond(state, part)
+    part.condition.rate = wearRatePerSecond(state, part, at)
 
     const current = levelAt(part.condition, at)
     const threshold = nextThresholdBelow(current)

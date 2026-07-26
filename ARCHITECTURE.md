@@ -140,6 +140,19 @@ output, and work orders read the resulting environment to decide how fast the
 crew can work. One ordering, in one place, so a new system can only be wired in
 correctly.
 
+**Attendance** (`attendance.ts`) feeds the first two. A room's wear rate and its
+parts' efficiency depend on who is standing watch in it — scaled by that
+person's current effectiveness, so fatigue and bad air feed back into the
+machinery they are tending. It reads state and returns numbers; it schedules
+nothing. That matters: attendance changes only when a watch turns over or a work
+order moves, and both of those already re-resolve the world, so nothing new had
+to fire for the ship to respond and offline catch-up stays bit-identical.
+
+A part's rated figures are what it delivers **unattended**, so attendance is
+always a multiplier ≥ 1 on output and the only penalty for a deserted room is a
+mild 1.15× on wear. An unattended ship therefore holds spec indefinitely, which
+is design §7.4 enforced by the shape of the code rather than by vigilance.
+
 The two dotted paths are the ship protecting itself while nobody is watching
 (design §7.4): load shedding by priority when the battery empties, and a
 thermal trip that derates the reactor rather than cooking the crew. Neither can
@@ -191,6 +204,11 @@ Crew appear as markers on the deck they are in. That deck is **derived** from
 activity, work order and declared station (`crewRoomId`) rather than stored, so
 the picture cannot drift out of agreement with the roster and no save needs
 migrating to show people aboard.
+
+`crewRoomId` lives in `crew.ts`, not in the selector layer, because the
+simulation depends on it too: `attendance.ts` turns a room's wear rate and
+efficiency on who is standing watch there. Two definitions of "where is she"
+would drift, and the drawing would stop agreeing with the physics.
 
 The **flow overlay** is an optional layer inside the same SVGs, drawing power,
 heat and water as links whose width comes from the same `roomViews` figures the

@@ -18,6 +18,7 @@ import {
 } from '../src/engine.js'
 import { laborRate } from '../src/crew.js'
 import { conditionOutput } from '../src/networks.js'
+import { resolveWear } from '../src/wear.js'
 import { DAY, HOUR } from '../src/time.js'
 import { CONDITION_THRESHOLDS } from '../src/wear.js'
 import type { SimState, WorkOrderKind } from '../src/types.js'
@@ -221,13 +222,32 @@ describe('crew skill is legible in the numbers the player watches', () => {
     expect(okonkwo / berg).toBeGreaterThan(1.5)
   })
 
-  it('a good engineer slows the whole ship down less', () => {
-    // mechanicBonuses reduces wear fleet-wide, so the same part lasts longer.
+  it('slows wear in the room a hand is actually standing watch in', () => {
+    // Spec 004 RF-37 replaced the old fleet-wide bonus: skill helps the deck
+    // you are on, not every deck at once. Nameplate scrubber wear is 0.52/day.
     const s = world()
-    const scrubberWear = -part(s, 'life.scrubber.co2').condition.rate * DAY
-    // Nameplate is 0.52/day; the 71-skill engineer should be shaving it.
-    expect(scrubberWear).toBeLessThan(0.52)
-    expect(scrubberWear).toBeGreaterThan(0.3)
+    const wearOf = (st: typeof s, id: string) => -part(st, id).condition.rate * DAY
+
+    const deserted = structuredClone(s)
+    for (const c of deserted.crew) c.activity = 'off'
+    resolveWear(deserted, deserted.now)
+    // Nobody on watch anywhere: 1.15x, mild drift rather than a cliff.
+    expect(wearOf(deserted, 'life.scrubber.co2')).toBeCloseTo(0.52 * 1.15, 6)
+
+    const tended = structuredClone(s)
+    for (const c of tended.crew) {
+      // Sandoval keeps lifeSupport 58 and stations in Life Support.
+      c.activity = c.id === 'crew.sandoval' ? 'watch' : 'off'
+    }
+    resolveWear(tended, tended.now)
+    expect(wearOf(tended, 'life.scrubber.co2')).toBeLessThan(wearOf(deserted, 'life.scrubber.co2'))
+    expect(wearOf(tended, 'life.scrubber.co2')).toBeLessThan(0.52)
+
+    // And she does nothing at all for the reactor, which is not her deck.
+    expect(wearOf(tended, 'reactor.fission.beacon4')).toBeCloseTo(
+      wearOf(deserted, 'reactor.fission.beacon4'),
+      9,
+    )
   })
 
   it('reports what each hand is doing, in words', () => {

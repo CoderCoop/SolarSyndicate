@@ -58,6 +58,10 @@ export const FixtureDef = z.object({
 })
 export type FixtureDef = z.infer<typeof FixtureDef>
 
+/** The five skills, as a value rather than only a shape. */
+export const SkillName = z.enum(['mechanics', 'lifeSupport', 'medicine', 'piloting', 'leadership'])
+export type SkillName = z.infer<typeof SkillName>
+
 export const RoomDef = z.object({
   id: z.string(),
   name: z.string(),
@@ -72,6 +76,12 @@ export const RoomDef = z.object({
    */
   deckUnits: z.number().positive().default(1),
   fixtures: z.array(FixtureDef).default([]),
+  /**
+   * Which skill counts as tending this room (spec 004 RF-27). A hand on watch
+   * here contributes at this skill; anyone else's expertise is irrelevant to
+   * this deck no matter how good they are.
+   */
+  tendedBySkill: SkillName,
   blurb: z.string(),
 })
 export type RoomDef = z.infer<typeof RoomDef>
@@ -231,7 +241,39 @@ export const PortDef = z.object({
 })
 export type PortDef = z.infer<typeof PortDef>
 
+/**
+ * Attendance coefficients. Spec 004 RF-35 to RF-38.
+ *
+ * The governing rule: a part's rated figures are what it delivers with nobody
+ * attending it, so an unattended ship runs to spec indefinitely and §7.4's ban
+ * on punishing absence holds by construction rather than by remembering to.
+ * Presence is upside -- a little output, and mostly slower wear.
+ */
+export const AttendanceTuning = z.object({
+  /** Fractional lift to rated output at quality 1. */
+  outputBonusMax: z.number().min(0).max(0.5),
+  /** Percentage points of loop closure added at quality 1, as a fraction. */
+  closureBonusMax: z.number().min(0).max(0.2),
+  /** Wear multiplier with a quality-1 hand on station. */
+  wearScaleSkilled: z.number().positive(),
+  /** Wear multiplier with someone present but unskilled. */
+  wearScaleUnskilled: z.number().positive(),
+  /**
+   * Wear multiplier with nobody stationed there. Deliberately close to 1:
+   * weeks of drift, visible in the condition bar long before it is a failure,
+   * and always recoverable with a work order.
+   */
+  wearScaleUnattended: z.number().positive(),
+})
+export type AttendanceTuning = z.infer<typeof AttendanceTuning>
+
+export const Tuning = z.object({
+  attendance: AttendanceTuning,
+})
+export type Tuning = z.infer<typeof Tuning>
+
 export const ContentPack = z.object({
+  tuning: Tuning,
   rooms: z.array(RoomDef),
   parts: z.array(PartDef),
   hulls: z.array(HullDef),

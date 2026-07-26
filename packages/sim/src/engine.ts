@@ -17,7 +17,14 @@ import {
   STARTER_HULL_ID,
   type Glyph,
 } from '@solsyn/data'
-import { activityAt, co2Ppm, crewEffectiveness, nextShiftBoundary, updateActivities } from './crew.js'
+import {
+  activityAt,
+  co2Ppm,
+  crewEffectiveness,
+  crewRoomId,
+  nextShiftBoundary,
+  updateActivities,
+} from './crew.js'
 import { pushLog } from './log.js'
 import {
   lifeBalance,
@@ -448,35 +455,6 @@ export function lifeSupportView(state: SimState): LifeSupportView {
     docked: state.ship.docked,
   }
 }
-
-/**
- * Which room a crew member is in. Spec 003 SV-8.
- *
- * Derived, never stored (constitution V). Sleeping and off-watch crew are in
- * Quarters; a crew member on a work order is at the part they are working on;
- * anyone else is at their station. Three inputs the sim already tracks, so
- * this needs no field in SimState and no save migration -- and it cannot drift
- * out of agreement with the roster, because there is nothing to keep in sync.
- */
-function crewRoomId(state: SimState, crew: CrewState): string {
-  const roomByDef = (defId: string): string | undefined =>
-    state.ship.rooms.find((r) => r.defId === defId)?.id
-
-  if (crew.activity !== 'sleep' && crew.workOrderId) {
-    const order = state.workOrders.find((w) => w.id === crew.workOrderId)
-    const part = order ? state.ship.parts.find((p) => p.id === order.partId) : undefined
-    if (part) return part.roomId
-  }
-
-  const def = getCrewDef(crew.defId)
-  const station = crew.activity === 'watch' ? def.stationRoomId : QUARTERS_ROOM_DEF
-  // Fall back to the first room rather than throwing: a hull without quarters
-  // is a content bug, not a reason to blank the screen.
-  return roomByDef(station) ?? roomByDef(def.stationRoomId) ?? state.ship.rooms[0]!.id
-}
-
-/** Where crew go when they are not on watch. */
-const QUARTERS_ROOM_DEF = 'quarters'
 
 /** First letter of the given name and of the family name. */
 function initialsOf(name: string): string {
