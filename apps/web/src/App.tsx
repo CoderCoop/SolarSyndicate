@@ -19,7 +19,7 @@ import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
 import { Flows } from './components/Flows.js'
-import { Port } from './components/Port.js'
+import { Mission } from './components/Mission.js'
 import { StarChart } from './components/StarChart.js'
 import { LifeSupport } from './components/LifeSupport.js'
 import { ShipViewport } from './components/ShipViewport.js'
@@ -27,11 +27,11 @@ import { StatusBar } from './components/StatusBar.js'
 import { WorkOrders } from './components/WorkOrders.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
-type Tab = 'ship' | 'port' | 'chart' | 'flows' | 'life' | 'crew' | 'log'
+type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'log'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ship', label: 'Ship' },
-  { id: 'port', label: 'Port' },
+  { id: 'mission', label: 'Mission' },
   { id: 'chart', label: 'Chart' },
   { id: 'flows', label: 'Flows' },
   { id: 'life', label: 'Life' },
@@ -88,9 +88,9 @@ export function App() {
   const settlement = lastSettlement(state)
   const brokenCount = state.ship.parts.filter((p) => p.broken).length
 
-  // The Port tab is where the only timed decision in the game lives, so the
+  // The Mission tab is where the only timed decision in the game lives, so the
   // nav says when it wants attention: work on offer, or a deadline running.
-  const portBadge = state.ship.docked
+  const missionBadge = state.ship.docked
     ? active
       ? `${Math.max(0, Math.ceil(active.daysRemaining))}d`
       : board.length > 0
@@ -113,7 +113,7 @@ export function App() {
           >
             {t.label}
             {t.id === 'ship' && brokenCount > 0 && <span className="tabs__dot" />}
-            {t.id === 'port' && portBadge && <span className="tabs__count">{portBadge}</span>}
+            {t.id === 'mission' && missionBadge && <span className="tabs__count">{missionBadge}</span>}
             {t.id === 'crew' && orders.length > 0 && <span className="tabs__count">{orders.length}</span>}
           </button>
         ))}
@@ -156,8 +156,8 @@ export function App() {
           </>
         )}
 
-        {tab === 'port' && (
-          <Port
+        {tab === 'mission' && (
+          <Mission
             ledger={ledger}
             board={board}
             active={active}

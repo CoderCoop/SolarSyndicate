@@ -353,12 +353,12 @@ check('and its port highlighted', await page.isVisible('.chart__body.is-current'
 
 await page.screenshot({ path: join(SHOTS, '11-chart.png'), fullPage: true })
 
-// --- the port: board, allowance, astrogator (TR-3b, TR-16, TR-20) -----------
-await page.click('.tabs__btn:has-text("Port")')
+// --- the mission: board, allowance, astrogator (TR-3b, TR-16, TR-20) -------
+await page.click('.tabs__btn:has-text("Mission")')
 await page.waitForSelector('.berth__name')
 
 check(
-  'the port tab names the berth the ship is actually at',
+  'the mission tab names the berth the ship is actually at',
   (await page.textContent('.berth__name'))?.includes('Gateway') === true,
   (await page.textContent('.berth__name'))?.trim() ?? '',
 )
@@ -382,6 +382,19 @@ check(
   allowanceLabels.length === 5,
   allowanceLabels.join(' · '),
 )
+
+// The route strip: where a run starts, where it ends, what kind of job it is.
+const routes = await page.$$('.offer .route')
+check('every offer draws its route', routes.length === offers.length, `${routes.length}/${offers.length}`)
+
+const routeEnds = await page.$$eval('.offer:first-child .route__port', (els) =>
+  els.map((e) => e.textContent),
+)
+check('the route names both ends', routeEnds.length === 2, routeEnds.join(' → '))
+
+const types = await page.$$eval('.mtype__name', (els) => els.map((e) => e.textContent))
+check('each offer says what kind of mission it is (§5.3)', types.length === offers.length, types.join(' · '))
+check('and the types are not all the same word', new Set(types).size > 1, [...new Set(types)].join(' · '))
 
 const balance = await page.textContent('.books__balance')
 check('the books show a balance', /cr$/.test(balance?.trim() ?? ''), balance?.trim() ?? '')
@@ -566,8 +579,8 @@ await p1.waitForTimeout(200)
 check('deficit set before leaving', Number.parseFloat((await p1.textContent('.status__net')) ?? '') < 0)
 await p1.close()
 
-// Six real hours away = six game days at 24x (§7.1).
-await away.clock.fastForward('06:00:00')
+// Twelve real minutes away = six game days at 720x (§7.1).
+await away.clock.fastForward('00:12:00')
 
 const p2 = await away.newPage()
 const awayErrors = []
@@ -580,7 +593,13 @@ check('return screen appears after an absence (§7.4)', reportVisible)
 
 if (reportVisible) {
   const lede = await p2.textContent('.away__lede')
-  check('return screen states how long you were gone', /hours off the desk/.test(lede ?? ''), lede?.trim() ?? '')
+  // Real time away and game time aboard are different units and both matter:
+  // at 720x twelve minutes off the desk is six days on the ship.
+  check(
+    'return screen states how long you were gone, in both clocks',
+    /(minutes|hours) off the desk/.test(lede ?? '') && /\d+d aboard/.test(lede ?? ''),
+    lede?.trim() ?? '',
+  )
 
   const first = await p2.textContent('.away__entry')
   check('worst news leads the digest', /Brownout/.test(first ?? ''), first?.trim() ?? '')
@@ -622,9 +641,9 @@ check('no errors during catch-up', awayErrors.length === 0, awayErrors.slice(0, 
 // ---------------------------------------------------------------------------
 // A run, flown and settled (TR-17 to TR-21) -- the milestone end to end.
 //
-// The Gateway-to-Tranquillity crossing is five days, which at 24x is five real
-// hours. So this is the same trick as the catch-up pass: cast off, walk away,
-// and come back to a berthed ship with its books closed.
+// The Gateway-to-Tranquillity crossing is five game days, which at 720x is ten
+// real minutes -- the point of the multiplier. Same trick as the catch-up
+// pass: cast off, walk away, and come back to a berthed ship with closed books.
 // ---------------------------------------------------------------------------
 console.log('\n  -- a run, flown and settled --')
 
@@ -637,7 +656,7 @@ v1.on('pageerror', (e) => voyageErrors.push(String(e)))
 await v1.goto(base, { waitUntil: 'networkidle' })
 await v1.waitForSelector('.ship')
 
-await v1.click('.tabs__btn:has-text("Port")')
+await v1.click('.tabs__btn:has-text("Mission")')
 await v1.waitForSelector('.offer')
 await tap(v1, '.offer:first-child .offer__accept')
 await v1.waitForSelector('.option__go')
@@ -656,11 +675,20 @@ check(
 const legs = await v1.textContent('.voyage__legs')
 check('and names both ends of the crossing', /→/.test(legs ?? ''), legs?.trim() ?? '')
 
+// The same route strip the run was chosen from, now carrying the ship.
+check('the route strip follows the ship under way', await v1.isVisible('.route__ship-mark'))
+const flownLabel = await v1.getAttribute('.route', 'aria-label')
+check(
+  'and states how much of it has been flown',
+  /per cent flown/.test(flownLabel ?? ''),
+  flownLabel ?? '',
+)
+
 await v1.screenshot({ path: join(SHOTS, '14-under-way.png'), fullPage: true })
 await v1.close()
 
-// Long enough for the five-day crossing to complete while the app is shut.
-await voyageCtx.clock.fastForward('06:00:00')
+// Long enough for the ten-minute crossing to complete while the app is shut.
+await voyageCtx.clock.fastForward('00:15:00')
 
 const v2 = await voyageCtx.newPage()
 v2.on('pageerror', (e) => voyageErrors.push(String(e)))
@@ -668,7 +696,7 @@ await v2.goto(base, { waitUntil: 'networkidle' })
 await v2.waitForSelector('.ship')
 if (await v2.isVisible('.away')) await v2.click('.away .button')
 
-await v2.click('.tabs__btn:has-text("Port")')
+await v2.click('.tabs__btn:has-text("Mission")')
 await v2.waitForSelector('.settle__list')
 
 const berth = await v2.textContent('.berth__name')

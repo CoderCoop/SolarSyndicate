@@ -13,11 +13,23 @@ import {
 } from '../src/time.js'
 
 describe('time', () => {
-  it('holds the design contract: one real hour is one game day', () => {
+  it('holds the design contract: one real minute is half a game day', () => {
     // §7.1. If this test fails, every balance number in the game has moved.
-    expect(TIME_SCALE).toBe(24)
-    expect(gameSecondsFromRealMs(60 * 60 * 1000)).toBe(DAY)
-    expect(realMsFromGameSeconds(DAY)).toBe(60 * 60 * 1000)
+    expect(TIME_SCALE).toBe(720)
+    expect(gameSecondsFromRealMs(60 * 1000)).toBe(DAY / 2)
+    expect(realMsFromGameSeconds(DAY)).toBe(2 * 60 * 1000)
+  })
+
+  it('resolves a flyable crossing inside a sitting', () => {
+    // The reason the multiplier is what it is: the Earth-system transfers run
+    // 3.6 to 5.0 game days, and a voyage the player chooses and then waits out
+    // has to finish while they are still watching. 5 to 20 real minutes was
+    // the brief; anything slower is the four-hour wait 24x produced.
+    for (const days of [3.6, 4.4, 5.0]) {
+      const realMinutes = realMsFromGameSeconds(days * DAY) / 60_000
+      expect(realMinutes).toBeGreaterThanOrEqual(5)
+      expect(realMinutes).toBeLessThanOrEqual(20)
+    }
   })
 
   it('round-trips UTC through game time', () => {

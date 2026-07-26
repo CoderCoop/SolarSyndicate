@@ -488,10 +488,24 @@ export const Allowance = z.object({
 })
 export type Allowance = z.infer<typeof Allowance>
 
+/**
+ * What kind of job this is. Design doc §5.3's v1 archetypes, narrowed to the
+ * ones M2 actually ships.
+ *
+ * The type is not a modifier -- it changes nothing in the sim arithmetic. It
+ * exists because "9.8 t to Phobos in 300 days" and "6.4 t of blood products to
+ * Ceres in 540" are the same row of numbers describing two completely different
+ * errands, and the board should say which is which before the player reads a
+ * single figure.
+ */
+export const MissionType = z.enum(['cargo', 'bulk', 'survey', 'medical', 'relief'])
+export type MissionType = z.infer<typeof MissionType>
+
 export const ContractDef = z.object({
   id: z.string(),
   title: z.string(),
   client: z.string(),
+  type: MissionType,
   fromPortId: z.string(),
   toPortId: z.string(),
   /** Payment on delivery, before the allowance is reconciled. */

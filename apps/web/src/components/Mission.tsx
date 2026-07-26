@@ -1,10 +1,14 @@
 /**
- * The port. Spec 002 TR-3b, TR-16 to TR-21. Design doc §2, §5.1, §6.2.
+ * The mission. Spec 002 TR-3b, TR-16 to TR-21. Design doc §2, §5.1, §5.3, §6.2.
  *
- * One tab for the whole commercial loop, because it is one loop: what is on
- * offer here, what the astrogator can fly, where the ship is while it flies,
- * and what the run was worth when it got there. Splitting those across tabs
- * would hide the fact that they are the same decision seen at four moments.
+ * One tab for the whole mission loop, because it is one loop: what is on offer
+ * here, what the astrogator can fly, where the ship is while it flies, and what
+ * the run was worth when it got there. Splitting those across tabs would hide
+ * the fact that they are the same decision seen at four moments.
+ *
+ * Called "mission" rather than "port" because a mission is what the player is
+ * choosing. The port is only where the choosing happens, and naming the tab
+ * after the furniture rather than the decision made it read as a shop.
  *
  * Two requirements shape the layout:
  *
@@ -27,6 +31,7 @@ import {
   type TransferOption,
   type VoyageView,
 } from '@solsyn/sim'
+import { MISSION_BLURB, MISSION_LABEL, RouteMap } from './RouteMap.js'
 
 /** Allowance lines are kg except spares, which are whole units. */
 function formatStores(key: string, value: number): string {
@@ -126,13 +131,19 @@ function Offer({ offer, onAccept }: { offer: BoardEntry; onAccept: (id: string) 
       <header className="offer__head">
         <div>
           <h3 className="offer__title">{offer.title}</h3>
-          {/* Departure is always "here" on the board, so only the far end is news. */}
-          <p className="offer__client">
-            {offer.client} · to {portName(offer.toPortId)}
-          </p>
+          <p className="offer__client">{offer.client}</p>
         </div>
         <span className="offer__pay">{credits(offer.payCr)}</span>
       </header>
+
+      {/* Where it starts, where it ends, and what kind of errand it is --
+          before any of the numbers. */}
+      <RouteMap fromPortId={offer.fromPortId} toPortId={offer.toPortId} type={offer.type} />
+
+      <p className={`mtype mtype--${offer.type}`}>
+        <span className="mtype__name">{MISSION_LABEL[offer.type]}</span>
+        <span className="mtype__what">{MISSION_BLURB[offer.type]}</span>
+      </p>
 
       <p className="offer__blurb">{offer.blurb}</p>
 
@@ -243,8 +254,14 @@ function TheRun({
       <section className="panel" aria-label="Current contract">
         <h2 className="panel__title">The run</h2>
         <h3 className="offer__title">{active.title}</h3>
-        <p className="offer__client">
-          {active.client} · bound for {portName(active.toPortId)}
+        <p className="offer__client">{active.client}</p>
+
+        {/* Same drawing as the board card, still unflown. */}
+        <RouteMap fromPortId={active.fromPortId} toPortId={active.toPortId} type={active.type} />
+
+        <p className={`mtype mtype--${active.type}`}>
+          <span className="mtype__name">{MISSION_LABEL[active.type]}</span>
+          <span className="mtype__what">{MISSION_BLURB[active.type]}</span>
         </p>
 
         <ul className="offer__terms">
@@ -285,6 +302,16 @@ function UnderWay({ voyage, active }: { voyage: VoyageView; active?: ActiveContr
       <p className="voyage__legs">
         {portName(voyage.fromPortId)} → {portName(voyage.toPortId)}
       </p>
+
+      {/* The same route the run was chosen from, now with the ship on it. */}
+      {active && (
+        <RouteMap
+          fromPortId={voyage.fromPortId}
+          toPortId={voyage.toPortId}
+          type={active.type}
+          progress={voyage.fractionComplete}
+        />
+      )}
 
       <div
         className="voyage__track"
@@ -393,7 +420,7 @@ function SettlementPanel({ settlement }: { settlement: Settlement }) {
 
 /* -------------------------------------------------------------------- tab */
 
-export function Port({
+export function Mission({
   ledger,
   board,
   active,

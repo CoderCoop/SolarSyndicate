@@ -2702,3 +2702,159 @@ button {
 .books__amount.is-debit {
   color: var(--ink-faint);
 }
+
+/* ------------------------------------------------------------- route map */
+
+/*
+ * The route strip, drawn on the mission board and again under way. Map
+ * symbols, not a chart: the star chart carries real positions, this carries
+ * "where from, where to, what kind of job, how far along".
+ */
+
+.route {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 12px 0 4px;
+}
+
+.route__path {
+  fill: none;
+  stroke: var(--line-bright);
+  stroke-width: 1.6;
+  stroke-dasharray: 5 4;
+}
+
+.route__path--flown {
+  stroke: var(--cyan);
+  stroke-width: 2.2;
+  stroke-dasharray: none;
+}
+
+.route__body {
+  fill: var(--bg-raised);
+  stroke: var(--ink-faint);
+  stroke-width: 1.4;
+}
+
+.route__end--earth .route__body {
+  fill: rgba(79, 209, 217, 0.16);
+  stroke: var(--cyan);
+}
+
+.route__end--mars .route__body {
+  fill: rgba(229, 103, 95, 0.16);
+  stroke: var(--red);
+}
+
+.route__end--ceres .route__body {
+  fill: rgba(125, 149, 168, 0.16);
+  stroke: var(--ink-dim);
+}
+
+.route__ring {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 0.8;
+  opacity: 0.35;
+}
+
+.route__end.is-here .route__body {
+  stroke-width: 2.2;
+}
+
+.route__port {
+  font-size: 8.5px;
+  fill: var(--ink);
+}
+
+.route__body-name {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
+.route__badge-disc {
+  fill: var(--bg);
+  stroke: var(--line-bright);
+  stroke-width: 1.2;
+}
+
+.route__badge-mark {
+  fill: none;
+  stroke: var(--ink-dim);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.route__badge--medical .route__badge-disc {
+  stroke: var(--red);
+}
+.route__badge--medical .route__badge-mark {
+  stroke: var(--red);
+}
+
+.route__badge--survey .route__badge-disc,
+.route__badge--survey .route__badge-mark {
+  stroke: var(--cyan);
+}
+
+.route__badge--relief .route__badge-disc,
+.route__badge--relief .route__badge-mark {
+  stroke: var(--green);
+}
+
+.route__badge--bulk .route__badge-disc,
+.route__badge--bulk .route__badge-mark {
+  stroke: var(--amber);
+}
+
+.route__ship-halo {
+  fill: rgba(232, 163, 61, 0.16);
+  stroke: var(--amber);
+  stroke-width: 0.8;
+}
+
+.route__ship-mark {
+  fill: var(--amber);
+}
+
+/* mission type caption */
+
+.mtype {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border-left: 3px solid var(--line-bright);
+  border-radius: 0 6px 6px 0;
+  background: var(--bg-sunken);
+}
+
+.mtype--medical {
+  border-left-color: var(--red);
+}
+.mtype--survey {
+  border-left-color: var(--cyan);
+}
+.mtype--relief {
+  border-left-color: var(--green);
+}
+.mtype--bulk {
+  border-left-color: var(--amber);
+}
+
+.mtype__name {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.mtype__what {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}

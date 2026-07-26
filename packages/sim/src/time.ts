@@ -5,13 +5,28 @@
  *   - Real time: UTC milliseconds. Only ever enters the sim as a parameter.
  *   - Game time: seconds since the game epoch. Every sim timestamp is this.
  *
- * The 24x multiplier lives HERE and nowhere else. Changing it warps every
- * balance number in the game (§7.1 says tune early, then freeze), so it must
- * have exactly one definition to change.
+ * The multiplier lives HERE and nowhere else. Changing it warps every balance
+ * number in the game (§7.1 says tune early, then freeze), so it must have
+ * exactly one definition to change.
  */
 
-/** Game seconds per real second (§7.1: one real hour = one game day). */
-export const TIME_SCALE = 24
+/**
+ * Game seconds per real second. §7.1, and the answer to open question 1.
+ *
+ * Set by what a *voyage* should feel like, because that is the only span the
+ * player waits out deliberately. The flyable Earth-system crossings are 3.6 to
+ * 5.0 game days, and a run the player chooses and then watches should resolve
+ * inside a sitting: at 720x they take 7.2 to 10 minutes.
+ *
+ * The old 24x came from the ship-management side, where "one real hour = one
+ * game day" reads nicely. It made the same crossings four to five real *hours*
+ * -- fine for a game checked twice a day, wrong for one where casting off is
+ * the decision you came to make.
+ *
+ * Handy conversions: one real second is 12 game minutes, one real minute is
+ * half a game day, and a watch turns over every 40 real seconds.
+ */
+export const TIME_SCALE = 720
 
 /**
  * Seconds since a world's own epoch. The unit of every timestamp in SimState.
