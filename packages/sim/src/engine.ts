@@ -20,6 +20,7 @@ import {
   STARTER_PORT_ID,
   TUNE,
   type CrewDef,
+  type FixtureDef,
   type Fitting,
   type Glyph,
   type SizeM,
@@ -690,7 +691,13 @@ export interface RoomView {
   /** Deck head height in metres (RF-4). */
   deckHeightM: number
   /** Furniture the sim does not model but the room draws (SV-4, RF-3). */
-  fixtures: { glyph: Glyph; name: string; blurb: string; count: number; fitting: Fitting; sizeM: SizeM }[]
+  /**
+   * Furniture, passed through from content unchanged -- including how several
+   * of the same thing are arranged and who occupies them. The view layer draws
+   * a berth stack rather than six loose rectangles because content says it is
+   * one (spec 004 RF-3).
+   */
+  fixtures: FixtureDef[]
   /** Who is tending this room right now, and what that is worth (RF-27). */
   attendance: { attended: boolean; quality: number; wearScale: number; name?: string }
   parts: {

@@ -76,12 +76,40 @@ export type SizeM = z.infer<typeof SizeM>
  * a table, empty cargo bays. Data, on the same footing as parts (SV-4), so a
  * refit changes JSON rather than JSX.
  */
+/**
+ * What a crew member has to be doing to be using this. Spec 004 RF-5.
+ *
+ * Furniture exists to be occupied, and a room where the sleeper is drawn on
+ * the floor beside the bunks is not a room, it is a parts bin. This is what
+ * lets the drawing put a person *in* the thing their activity implies.
+ */
+export const OccupiedBy = z.enum(['watch', 'off', 'sleep'])
+export type OccupiedBy = z.infer<typeof OccupiedBy>
+
+/**
+ * How several of the same thing are arranged together. Spec 004 RF-3.
+ *
+ * Six bunks are not six objects that happen to be adjacent; they are one berth
+ * stack, three columns and two tiers, and a packer fed six loose rectangles
+ * cannot reliably produce that shape -- it does not know they are a set. It
+ * produced a staircase with the mess table balanced on top instead.
+ */
+export const FixtureBlock = z.object({
+  /** Across before up. Six in three columns is two tiers of three. */
+  columns: z.number().int().positive(),
+})
+export type FixtureBlock = z.infer<typeof FixtureBlock>
+
 export const FixtureDef = z.object({
   glyph: Glyph,
   /** What it is, for the card that opens when the player taps it. */
   name: z.string(),
   count: z.number().int().positive().default(1),
   fitting: Fitting.default('floor'),
+  /** Arrangement when there is more than one. Defaults to a single row. */
+  block: FixtureBlock.optional(),
+  /** Who stands, sits or lies here, if anybody does. */
+  occupiedBy: OccupiedBy.optional(),
   sizeM: SizeM,
   /**
    * Why it is here. Fixtures are the things the sim does not model, so this is

@@ -12,14 +12,23 @@
  * metres and how it is fitted; the packer below places it without knowing what
  * it is. Adding a part that reuses a glyph costs no code at all.
  */
-import type { Fitting, Glyph, SizeM } from '@solsyn/data'
+import type { Fitting, Glyph, OccupiedBy, SizeM } from '@solsyn/data'
 import type { JSX } from 'react'
 
 /** Drawing units per metre. Sets how big the whole ship reads. */
 export const U_PER_M = 15
 
 /** Interior width of the pressurised hull, metres. */
-export const INTERIOR_W_M = 6
+/**
+ * Habitable width, in metres.
+ *
+ * 6.5 rather than 6.0: at six metres a berth stack, a galley block and the mess
+ * table came to 6.6 m of contents in 5.0 m of drawable deck, so the table was
+ * bumped up a tier and drew as if it were bolted to the overhead. Half a metre
+ * on a hauler of 41 tonnes dry is unremarkable, and it gives every deck the
+ * room to lay its contents out in one run.
+ */
+export const INTERIOR_W_M = 6.5
 
 /** A person, for scale (RF-4). */
 export const HUMAN_H_M = 1.7
@@ -249,15 +258,16 @@ export function glyphShape(glyph: Glyph, w: number, h: number): JSX.Element {
  * A person, drawn at `HUMAN_H_M`. Spec 004 RF-5: activity reads from posture
  * before it reads from colour.
  */
-export function humanShape(activity: string, h: number): JSX.Element {
+export function humanShape(activity: string, h: number, fitW?: number): JSX.Element {
   const w = h * 0.42
 
   if (activity === 'sleep') {
-    // Lying down. Drawn wide and low, which is unmistakable at a glance.
-    const bodyW = h * 0.92
-    const bodyH = h * 0.26
+    // Lying down, and lying *in* something: given a berth's width, the figure
+    // is drawn to fit it rather than sprawling out through the bulkhead.
+    const bodyW = fitW ?? h * 0.92
+    const bodyH = Math.min(h * 0.26, bodyW * 0.42)
     return (
-      <g transform={`translate(${-bodyW / 2 + w / 2} ${h - bodyH})`}>
+      <g transform={fitW ? 'translate(0 0)' : `translate(0 ${h - bodyH})`}>
         <circle className="figure" cx={bodyH * 0.42} cy={bodyH * 0.5} r={bodyH * 0.36} />
         <path
           className="figure"
@@ -324,141 +334,162 @@ export const GAP = 4
  */
 export const PERSON_TAG_U = 7
 
-/** How the deck is shared out before anything is placed on it. */
-export interface RoomLayoutOptions {
-  /**
-   * Width kept clear at the right-hand end of the deck line, for people.
-   *
-   * People stand on the deck; they are not furniture and cannot be packed
-   * around. Reserving their strip first is what stops the captain being drawn
-   * through the comms array -- equipment that will not fit in what is left
-   * moves up a tier instead of sharing the space.
-   */
-  deckReserve?: number
-  /**
-   * How far up the reserve goes.
-   *
-   * A person is taller than one tier of stores, so reserving only the deck line
-   * leaves their head in the tier above -- which is exactly what put three of
-   * the crew inside the bunks. The strip is a person's full height, not a
-   * person's footprint.
-   */
-  reserveHeight?: number
-  gap?: number
+/** How deep a lying figure is, given the berth it has to fit in. */
+export function sleepingDepth(h: number, fitW: number): number {
+  return Math.min(h * 0.26, fitW * 0.42)
 }
 
 /**
- * Lay a room out. Spec 004 RF-3.
+ * A set of identical things, laid out together. Spec 004 RF-3.
  *
- * Floor-standing objects sit on the deck in a row and wrap upward when the run
- * is full -- which is what makes six bunks read as two tiers of three rather
- * than a queue. Wall-mounted objects hang from the bulkhead in their own band,
- * filling from the far end so they do not collide with what is on the deck.
- * Only the deck line itself is shortened by `deckReserve`: the tiers above it
- * are clear of people and use the full width.
+ * This is the unit the room is built from, and the reason it replaced a
+ * bin-packer. Six bunks are not six rectangles that happen to be adjacent, they
+ * are one berth stack; a packer fed them loose produced a staircase with the
+ * mess table balanced on top, because "wrap upward when the row is full" is
+ * exactly what it should do when it has no idea what a table is.
  *
- * Not an optimal packing, and it does not need to be: a deck holds a handful of
- * objects and a stable, predictable arrangement is worth more than a tight one.
- * The same content always draws the same room.
+ * A block knows its own shape. Everything else is just blocks side by side.
  */
-export function layOutRoom<T>(
-  items: Placeable<T>[],
+export interface Block<T> {
+  items: T[]
+  glyph: Glyph
+  fitting: Fitting
+  sizeM: SizeM
+  /** Across before up. Six in three columns is two tiers of three. */
+  columns: number
+  /** What activity puts a person in one of these, if any. */
+  occupiedBy?: OccupiedBy
+}
+
+/** Where a block ended up, and where each slot inside it is. */
+export interface PlacedBlock<T> {
+  block: Block<T>
+  x: number
+  y: number
+  w: number
+  h: number
+  /** One per item, in order: the box each individual thing occupies. */
+  slots: { item: T; x: number; y: number; w: number; h: number }[]
+}
+
+function blockSize<T>(block: Block<T>, gap = GAP): { w: number; h: number; rows: number } {
+  const iw = block.sizeM.w * U_PER_M
+  const ih = block.sizeM.h * U_PER_M
+  const cols = Math.min(block.columns, block.items.length)
+  const rows = Math.ceil(block.items.length / cols)
+  return { w: cols * iw + (cols - 1) * gap, h: rows * ih + (rows - 1) * gap, rows }
+}
+
+/**
+ * Lay a room out as blocks standing side by side on the deck.
+ *
+ * A room elevation is a row of things against a back wall, not a bin to be
+ * filled. Blocks stand on the deck from the left; a block that will not fit in
+ * what is left starts a new tier above. Wall- and ceiling-fitted blocks hang in
+ * the band along the overhead, out of everybody's way.
+ *
+ * Deterministic and order-preserving: the same content always draws the same
+ * room, which is worth more than a tighter packing.
+ */
+export function layOutBlocks<T>(
+  blocks: Block<T>[],
   box: { left: number; right: number; top: number; bottom: number },
-  options: RoomLayoutOptions = {},
-): Placed<T>[] {
-  const gap = options.gap ?? GAP
-  const deckReserve = options.deckReserve ?? 0
-  const reserveHeight = options.reserveHeight ?? 0
-  const out: Placed<T>[] = []
-  const floor = items.filter((i) => i.fitting === 'floor')
-  const mounted = items.filter((i) => i.fitting !== 'floor')
+  gap = GAP,
+): PlacedBlock<T>[] {
+  const out: PlacedBlock<T>[] = []
+  // Biggest first. A berth stack is the thing a crew compartment is built
+  // around, and anchoring it at the left with the small stuff filling in beside
+  // it is both what the mockup drew and what stops a table being bumped up a
+  // tier by whatever happened to be placed before it.
+  const byArea = (a: Block<T>, b: Block<T>) =>
+    blockSize(b, gap).w * blockSize(b, gap).h - blockSize(a, gap).w * blockSize(a, gap).h
+  const onDeck = blocks.filter((b) => b.fitting === 'floor').sort(byArea)
+  const aloft = blocks.filter((b) => b.fitting !== 'floor').sort(byArea)
 
-  // The bulkhead band is reserved before anything stands up in the room, so a
-  // wall unit can never end up drawn through the top of a tall floor-standing
-  // one. Nothing overlaps by accident; it is not allowed to.
-  const band = wallBandHeight(items, gap)
+  const band = bandHeight(aloft, gap)
+  const deckTop = box.top + (band > 0 ? band + gap : 0)
 
-  // --- deck level, wrapping upward, never into the reserved band ---
+  const put = (block: Block<T>, x: number, y: number) => {
+    const iw = block.sizeM.w * U_PER_M
+    const ih = block.sizeM.h * U_PER_M
+    const cols = Math.min(block.columns, block.items.length)
+    const size = blockSize(block, gap)
+    out.push({
+      block,
+      x,
+      y,
+      ...size,
+      // Filled bottom row first, so a half-empty stack reads as a stack with
+      // its top tier empty rather than as one floating in the air.
+      slots: block.items.map((item, i) => ({
+        item,
+        x: x + (i % cols) * (iw + gap),
+        y: y + size.h - ih - Math.floor(i / cols) * (ih + gap),
+        w: iw,
+        h: ih,
+      })),
+    })
+  }
+
+  // --- the deck ---
   let x = box.left
   let tierBottom = box.bottom
   let tierHeight = 0
-  // A tier is in people's space while its floor is still below the top of
-  // their heads. Above that the full width is free again.
-  const rightOf = (bottom: number) =>
-    bottom > box.bottom - reserveHeight ? box.right - deckReserve : box.right
-  for (const it of floor) {
-    const w = it.sizeM.w * U_PER_M
-    const h = it.sizeM.h * U_PER_M
-    // Wrap when the run is full -- including on the very first object, which
-    // the deck line can be too short for once people have their strip. Bunks
-    // in a room with three people off watch is exactly that case: nothing fits
-    // beside them, so everything goes up.
-    // Keep going up while it still does not fit: one wrap is not enough when
-    // the tier above is also in the reserve. Bounded so a single oversized
-    // object can never spin here.
-    const full = box.right - box.left
-    for (let up = 0; x + w > rightOf(tierBottom) && (x > box.left || w <= full) && up < 8; up++) {
+  for (const block of onDeck) {
+    const size = blockSize(block, gap)
+    if (x > box.left && x + size.w > box.right) {
       tierBottom -= tierHeight + gap
       tierHeight = 0
       x = box.left
     }
-    out.push({ item: it.item, glyph: it.glyph, x, y: tierBottom - h, w, h })
-    tierHeight = Math.max(tierHeight, h)
-    x += w + gap
+    put(block, x, tierBottom - size.h)
+    tierHeight = Math.max(tierHeight, size.h)
+    x += size.w + gap
   }
 
-  // --- bulkhead, filling from the far end back toward the ladder ---
+  // --- the overhead band, filling from the far end back toward the ladder ---
   let mx = box.right
-  for (const it of mounted) {
-    const w = it.sizeM.w * U_PER_M
-    const h = it.sizeM.h * U_PER_M
-    mx -= w
-    if (mx < box.left) mx = box.right - w
-    out.push({ item: it.item, glyph: it.glyph, x: mx, y: box.top + (band - h) / 2, w, h })
+  for (const block of aloft) {
+    const size = blockSize(block, gap)
+    mx -= size.w
+    if (mx < box.left) mx = box.right - size.w
+    put(block, mx, box.top + (band - size.h) / 2)
     mx -= gap
   }
 
+  void deckTop
   return out
 }
 
-/** Vertical space the wall-mounted band needs, in drawing units. */
-export function wallBandHeight<T>(items: Placeable<T>[], gap = GAP): number {
-  const mounted = items.filter((i) => i.fitting !== 'floor')
-  if (mounted.length === 0) return 0
-  return Math.max(...mounted.map((i) => i.sizeM.h * U_PER_M)) + gap
+/** Vertical space the overhead band needs. */
+export function bandHeight<T>(aloft: Block<T>[], gap = GAP): number {
+  if (aloft.length === 0) return 0
+  return Math.max(...aloft.map((b) => blockSize(b, gap).h)) + gap
 }
 
 /**
- * How tall a room must be to hold what is in it, in drawing units: the deck
- * tiers plus the reserved bulkhead band above them.
+ * How tall a room must be to hold what is in it.
  *
- * Mirrors `layOutRoom`'s wrap rule exactly, `deckReserve` included -- a room
- * sized by a different rule than it is filled by is a room that overflows.
+ * Mirrors `layOutBlocks` exactly -- a room sized by a different rule than it is
+ * filled by is a room that overflows.
  */
-export function requiredHeight<T>(
-  items: Placeable<T>[],
-  widthUnits: number,
-  options: RoomLayoutOptions = {},
-): number {
-  const gap = options.gap ?? GAP
-  const deckReserve = options.deckReserve ?? 0
-  const reserveHeight = options.reserveHeight ?? 0
+export function requiredRoomHeight<T>(blocks: Block<T>[], widthUnits: number, gap = GAP): number {
+  const byArea = (a: Block<T>, b: Block<T>) =>
+    blockSize(b, gap).w * blockSize(b, gap).h - blockSize(a, gap).w * blockSize(a, gap).h
+  const onDeck = blocks.filter((b) => b.fitting === 'floor').sort(byArea)
+  const aloft = blocks.filter((b) => b.fitting !== 'floor')
   let x = 0
   let stacked = 0
   let tierHeight = 0
-  // `stacked` is how far this tier's floor is above the deck line, so it is
-  // exactly the test layOutRoom makes against the reserve.
-  const rightAt = (up: number) => (up < reserveHeight ? widthUnits - deckReserve : widthUnits)
-  for (const it of items.filter((i) => i.fitting === 'floor')) {
-    const w = it.sizeM.w * U_PER_M
-    const h = it.sizeM.h * U_PER_M
-    for (let up = 0; x + w > rightAt(stacked) && (x > 0 || w <= widthUnits) && up < 8; up++) {
+  for (const block of onDeck) {
+    const size = blockSize(block, gap)
+    if (x > 0 && x + size.w > widthUnits) {
       stacked += tierHeight + gap
       tierHeight = 0
       x = 0
     }
-    tierHeight = Math.max(tierHeight, h)
-    x += w + gap
+    tierHeight = Math.max(tierHeight, size.h)
+    x += size.w + gap
   }
-  return stacked + tierHeight + wallBandHeight(items, gap)
+  return stacked + tierHeight + bandHeight(aloft, gap) + gap
 }
