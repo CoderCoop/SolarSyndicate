@@ -304,6 +304,21 @@ check(
 const totalGlyphs = glyphCounts.reduce((a, b) => a + b, 0)
 check('parts and fixtures both come from content (SV-3, SV-4)', totalGlyphs === 28, `${totalGlyphs} glyphs`)
 
+// A tap target is not a drawn object. `.hit` sits inside `.glyph`, which sets a
+// stroke, and stroke inherits -- so every part and fixture on the ship was
+// outlined by its own hit box, two units proud of the thing it belonged to.
+// Nothing in the DOM was wrong, which is why no test caught it: the drawing was
+// simply full of boxes nobody had drawn.
+/* eslint-disable no-undef */
+const strokedTargets = await page.$$eval('.schema .hit', (els) =>
+  els.filter((e) => {
+    const s = getComputedStyle(e)
+    return s.stroke !== 'none' && parseFloat(s.strokeWidth) > 0
+  }).length,
+)
+/* eslint-enable no-undef */
+check('tap targets are invisible, not drawn as boxes', strokedTargets === 0, `${strokedTargets} stroked`)
+
 // SV-7: everyone is somewhere, and nobody is in two places.
 const markers = await page.$$eval('.schema .person__tag', (els) => els.map((e) => e.textContent))
 check(

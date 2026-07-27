@@ -384,8 +384,45 @@ button {
 }
 
 .room__rib {
-  stroke: #16222c;
+  stroke: #0a1218;
+  stroke-width: 0.9;
+}
+
+/* The lit side of a structural frame. Two lines a millimetre apart is the
+   whole trick: one edge catching the overhead, one in its own shadow, and the
+   wall stops being a plane and becomes plating on a frame. */
+.room__rib-lit {
+  stroke: #31485a;
+  stroke-width: 0.5;
+  opacity: 0.55;
+}
+
+.room__seam {
+  stroke: #060b0f;
   stroke-width: 0.6;
+  opacity: 0.75;
+}
+
+/* Wall furniture. Faint on purpose -- it is the plating the machines are
+   bolted to, and the moment it competes with them it has stopped being
+   texture and started being clutter. */
+.room__stencil {
+  fill: var(--ink-faint);
+  font-size: 3px;
+  letter-spacing: 0.22em;
+  font-weight: 600;
+  opacity: 0.2;
+}
+
+.room__grille rect {
+  fill: #060c11;
+  stroke: #16222c;
+  stroke-width: 0.4;
+}
+
+.room__grille line {
+  stroke: #24343f;
+  stroke-width: 0.55;
 }
 
 .room__tray {
@@ -398,9 +435,42 @@ button {
   stroke-width: 0.4;
 }
 
+.room__conduit--fat {
+  stroke-width: 0.9;
+  opacity: 0.8;
+}
+
+/* The lamp run under the tray -- the room's one light source, drawn as one.
+   Everything below is shaded as though it were there, so leaving it invisible
+   was the drawing asserting something it never showed. */
+.room__lamp {
+  fill: color-mix(in srgb, var(--cyan) 45%, #f4fbff);
+  opacity: 0.22;
+}
+
+.room--warm .room__lamp {
+  fill: color-mix(in srgb, var(--amber) 55%, #fff6e6);
+}
+
+.room--grow .room__lamp {
+  fill: color-mix(in srgb, var(--green, #6fcf8f) 55%, #f2fff6);
+}
+
+.room--hot .room__lamp {
+  fill: color-mix(in srgb, var(--red) 40%, #fff2ee);
+}
+
 .room__deck {
   stroke: var(--line-bright);
   stroke-width: 0.9;
+}
+
+/* Painted deck edge where the reactor and the engines are: texture that is
+   also a warning, which is the only kind worth the ink at this size. */
+.room__hazard line {
+  stroke: var(--amber);
+  stroke-width: 1.4;
+  opacity: 0.2;
 }
 
 .room__grate {
@@ -445,18 +515,21 @@ button {
   --glyph-fill: rgba(232, 120, 61, 0.09);
 }
 
+/* Objects are solid. The fill arrives as a gradient bound to each shape's own
+   box (see DeckSchematic's defs), so a vessel is shaded from its top edge down
+   and reads as a cylinder rather than as the outline of one. The flat wash
+   this replaced let the wall show straight through everything on the deck. */
 .glyph .kit {
   fill: var(--glyph-fill);
   stroke: var(--glyph);
   stroke-width: 0.75;
 }
 
-.glyph .kit.warm {
-  fill: rgba(232, 163, 61, 0.11);
-}
-
+/* A plinth is in the object's own shadow: it is the bit nearest the deck and
+   furthest from the lamp. */
 .glyph .plinth {
-  fill: color-mix(in srgb, var(--bg-sunken) 70%, transparent);
+  fill: #060b0f;
+  fill-opacity: 0.85;
 }
 
 .glyph .shield {
@@ -532,8 +605,13 @@ button {
 
 /* --- targets (RF-8) --- */
 
+/* A tap target is not a drawn object. It sits inside `.glyph`, which sets a
+   stroke, and stroke inherits -- so every part and every fixture on the ship
+   was being outlined by its own hit box, two units proud of the thing it
+   belonged to. That is where the boxes-inside-boxes look came from. */
 .hit {
   fill: transparent;
+  stroke: none;
   cursor: pointer;
   outline: none;
 }
@@ -3931,13 +4009,131 @@ button {
  */
 
 .schema .soft {
-  fill: color-mix(in srgb, var(--amber) 16%, transparent);
+  fill: var(--soft-fill, color-mix(in srgb, var(--amber) 16%, transparent));
   stroke: color-mix(in srgb, var(--amber) 55%, transparent);
   stroke-width: 0.5;
 }
 
 .schema .pillow {
   fill: color-mix(in srgb, var(--amber) 30%, transparent);
+}
+
+/*
+ * Volume, shadow, and material.
+ *
+ * The pass before this one lit the *room* and left the things in it flat: a
+ * mattress and a spares locker took the light identically, and nothing in any
+ * compartment cast a shadow, so every object floated a little way off the
+ * plating. These are the three cheap cues that fix it -- a gradient down each
+ * form, a shadow under it, and a different response to light for metal, cloth
+ * and anything lit from within.
+ */
+
+/* --- shaded forms --- */
+
+.kitgrad--cool .kit-lit { stop-color: #2c4553; }
+.kitgrad--cool .kit-body { stop-color: #1a2a35; }
+.kitgrad--cool .kit-shade { stop-color: #0d161d; }
+
+.kitgrad--warm .kit-lit { stop-color: #56412a; }
+.kitgrad--warm .kit-body { stop-color: #3a2c1c; }
+.kitgrad--warm .kit-shade { stop-color: #1b1410; }
+
+.kitgrad--grow .kit-lit { stop-color: #2b4635; }
+.kitgrad--grow .kit-body { stop-color: #1b2e23; }
+.kitgrad--grow .kit-shade { stop-color: #0d1712; }
+
+.kitgrad--hot .kit-lit { stop-color: #533228; }
+.kitgrad--hot .kit-body { stop-color: #37211a; }
+.kitgrad--hot .kit-shade { stop-color: #1a100c; }
+
+/* Cloth is matte: it has no hard top edge and it never gets as dark as steel,
+   because it scatters rather than reflecting. */
+.soft-lit { stop-color: color-mix(in srgb, var(--amber) 34%, #241a10); }
+.soft-shade { stop-color: color-mix(in srgb, var(--amber) 12%, #17110b); }
+
+/* --- shadows --- */
+
+.shadows {
+  pointer-events: none;
+}
+
+.shadows .is-dim {
+  opacity: 0.34;
+}
+
+.shadow__cast {
+  fill: #000;
+  fill-opacity: 0.34;
+}
+
+/* Contact is darker and tighter than the cast shadow. It is the cue that says
+   an object is standing on something rather than hovering near it. */
+.shadow__contact {
+  fill: #000;
+  fill-opacity: 0.62;
+}
+
+/* --- the light, drawn --- */
+
+.spill-near { stop-color: color-mix(in srgb, var(--cyan) 9%, transparent); }
+.spill-far { stop-color: transparent; }
+.room--warm .spill-near { stop-color: color-mix(in srgb, var(--amber) 13%, transparent); }
+.room--grow .spill-near { stop-color: color-mix(in srgb, var(--green, #6fcf8f) 12%, transparent); }
+.room--hot .spill-near { stop-color: color-mix(in srgb, var(--red) 10%, transparent); }
+
+.room__lamp {
+  filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--cyan) 40%, transparent));
+}
+
+.room--warm .room__lamp {
+  filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--amber) 45%, transparent));
+}
+
+.room--grow .room__lamp {
+  filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--green, #6fcf8f) 45%, transparent));
+}
+
+.room--hot .room__lamp {
+  filter: drop-shadow(0 1px 3px color-mix(in srgb, var(--red) 40%, transparent));
+}
+
+/* --- lit from within --- */
+
+/* A screen or an indicator is a light source, not a painted rectangle, so it
+   is the one thing that stays bright when the room around it is dim -- and
+   goes properly dead when the machine is off, which is the fastest state read
+   on the drawing. */
+.glyph .screen {
+  fill: color-mix(in srgb, var(--cyan) 22%, #06131a);
+  stroke: none;
+}
+
+.glyph--warm .screen {
+  fill: color-mix(in srgb, var(--amber) 26%, #150e06);
+}
+
+.glyph.is-on .screen {
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--cyan) 55%, transparent));
+}
+
+.glyph .screen-line {
+  stroke: color-mix(in srgb, var(--cyan) 70%, transparent);
+  stroke-width: 0.5;
+  fill: none;
+}
+
+.glyph.is-off .screen,
+.glyph.is-shed .screen,
+.glyph.is-broken .screen {
+  fill: #0a1016;
+  filter: none;
+}
+
+.glyph.is-off .screen-line,
+.glyph.is-shed .screen-line,
+.glyph.is-broken .screen-line {
+  stroke-opacity: 0.25;
 }
 
 .schema .strap {
@@ -3953,17 +4149,25 @@ button {
 
 /* Rooms are lit from the overhead tray, so the top of every deck is brighter
    than the bottom and the deck itself catches a little of it back. */
-/* Overhead tray above, deck below, and the room's own character in between. */
-.light-top { stop-color: color-mix(in srgb, var(--cyan) 7%, var(--bg-sunken)); }
-.light-mid { stop-color: var(--bg-sunken); }
-.light-deck { stop-color: color-mix(in srgb, #000 35%, var(--bg-sunken)); }
+/*
+ * Overhead tray above, deck below, and the room's own character in between.
+ *
+ * Lifted off the floor of the palette. The wall used to sit within a few
+ * points of pure black top to bottom, which left a shadow nothing to fall on:
+ * every object had one and not one of them was visible. Plating a ship's crew
+ * actually work against is dim, not unlit, and the range between the lamp and
+ * the deck is what everything else in this file is drawn against.
+ */
+.light-top { stop-color: color-mix(in srgb, var(--cyan) 12%, #141f27); }
+.light-mid { stop-color: #0e171e; }
+.light-deck { stop-color: #05090c; }
 
-.room--warm .light-top { stop-color: color-mix(in srgb, var(--amber) 12%, var(--bg-sunken)); }
-.room--warm .light-mid { stop-color: color-mix(in srgb, var(--amber) 4%, var(--bg-sunken)); }
-.room--grow .light-top { stop-color: color-mix(in srgb, var(--green, #6fcf8f) 12%, var(--bg-sunken)); }
-.room--grow .light-mid { stop-color: color-mix(in srgb, var(--green, #6fcf8f) 4%, var(--bg-sunken)); }
-.room--hot .light-top { stop-color: color-mix(in srgb, var(--red) 10%, var(--bg-sunken)); }
-.room--hot .light-mid { stop-color: color-mix(in srgb, var(--red) 3%, var(--bg-sunken)); }
+.room--warm .light-top { stop-color: color-mix(in srgb, var(--amber) 15%, #172022); }
+.room--warm .light-mid { stop-color: color-mix(in srgb, var(--amber) 6%, #0f1720); }
+.room--grow .light-top { stop-color: color-mix(in srgb, var(--green, #6fcf8f) 15%, #131f1d); }
+.room--grow .light-mid { stop-color: color-mix(in srgb, var(--green, #6fcf8f) 6%, #0d1712); }
+.room--hot .light-top { stop-color: color-mix(in srgb, var(--red) 15%, #1a1416); }
+.room--hot .light-mid { stop-color: color-mix(in srgb, var(--red) 6%, #100f13); }
 
 /* Depth: what is far from the light falls off. The ladder shaft is outside the
    compartment, so it stays cold whatever the room is for. */

@@ -16,6 +16,10 @@ several runs it is the difference between making a deadline and not. It started
 as a drawing bug and the drawing was the honest part — it was faithfully
 reporting a trajectory the sim had got wrong.
 
+Also carries a second pass over the ship interior, which picks up where the
+lit-interior work left off: that one said it had covered perhaps half the
+distance to filled and shaded forms, and this is most of the rest.
+
 ### Fixed
 
 - **The star chart drew the same arc whatever you paid for.** It rebuilt the
@@ -44,9 +48,36 @@ reporting a trajectory the sim had got wrong.
   crossing. Departure anomaly is carried on the transfer now, and one function
   turns a transfer into a position — the readout and the chart cannot disagree
   about where she is because they no longer work it out separately.
+- **Every object on the ship was outlined by its own tap target.** `.hit` sits
+  inside `.glyph`, which sets a stroke, and stroke inherits — so each part and
+  each fixture carried a second rectangle two units proud of itself. Nothing in
+  the DOM was wrong, which is why nothing caught it: the drawing was simply
+  full of boxes nobody had drawn, and it is where the boxes-inside-boxes look
+  came from. The end-to-end pass now measures it.
 
 ### Changed
 
+- **The ship interior is shaded rather than outlined.** The previous pass lit
+  the *room* and left the things in it flat: a mattress and a spares locker
+  took the light identically, and nothing in any compartment cast a shadow, so
+  every object floated a little way off the plating. Three cues fix that —
+  a gradient down each form, a shadow under it, and a different response to
+  light for steel, cloth and anything lit from within. The wall was lifted off
+  the floor of the palette to make room for it: it used to sit within a few
+  points of pure black top to bottom, which left a shadow nothing to fall on.
+- **The machines got the treatment the furniture got last time.** Bunks, the
+  mess table, cargo bays and lockers were reworked in the interior pass; the
+  parts were still their first sketches. The flight desk has a screen that
+  lights, the comms array has a feed horn and an elevation drive, the pump has
+  an impeller and a finned motor, the solar wing has cells and a hinge spine,
+  the engine bell has cooling tubes and a throat that glows, and the battery
+  says what is in it. A machine that is running now says so with light, and one
+  that is shed or failed goes dark along with its shadow.
+- **Compartments have walls rather than backgrounds.** Panel seams, structural
+  frames drawn with a lit edge and a shadowed one, the compartment stencilled
+  on, a return-air grille, and a painted deck edge where the reactor and the
+  engines are. All of it behind the equipment, because it is what the equipment
+  is bolted to.
 - `Transfer` carries `eccentricity` and `departureAnomalyRad`; `radiusAtTime`
   is replaced by `transferStateAt`, which takes the transfer rather than
   re-deriving its shape at each call site. The old signature could not express

@@ -150,6 +150,36 @@ it, so it is a layer rather than a second view. It stays off until asked for.
 Ships are allowed to be taller than a screen. Scrolling through a vessel deck
 by deck is inspection, which is the activity this game is about.
 
+#### Schematic does not have to mean flat
+
+The style decision above buys a generated picture and rules out an art
+pipeline. It does not rule out *shading*, and treating the two as the same
+thing is what kept the interior looking like a diagram of a room rather than a
+room. Three cues, all of them derived rather than drawn, close most of the gap:
+
+- **A gradient down each form.** Bound to the object's own box, so one
+  definition per tone shades every object of that tone at whatever size it is.
+  A pressure vessel becomes a cylinder instead of the outline of one.
+- **A shadow under it.** A soft one thrown back onto the plating, and a tighter,
+  darker one where the object meets what it stands on — which is the cue that
+  says *standing here* rather than *floating near here*.
+- **A different response to light per material.** Steel takes a hard top edge,
+  cloth is matte and never goes as dark, and a screen or an indicator makes its
+  own light — so it stays lit when the compartment is dim and goes properly
+  dead when the machine is off.
+
+None of that is an asset. It is four gradients and one blur filter per deck,
+emitted from the same content the layout already reads, and it holds the §9
+line: adding a part that reuses a glyph still costs no code.
+
+Two things this pass established that are easy to lose again. The wall has to
+be *dim rather than unlit* — it previously sat within a few points of pure
+black top to bottom, which left every shadow nothing to fall on. And a tap
+target is not a drawn object: `.hit` lives inside a group that sets a stroke,
+stroke inherits, and for two milestones every part and fixture aboard was
+outlined by its own hit box. Nothing in the DOM was wrong, which is why nothing
+caught it; the end-to-end pass measures it now.
+
 ### 3.2 Resource networks
 
 Five networks connect parts. Each is a per-tick balance of producers, consumers,
