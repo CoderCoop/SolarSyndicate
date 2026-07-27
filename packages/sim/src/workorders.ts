@@ -53,7 +53,9 @@ export function createWorkOrder(
     state,
     at,
     'info',
-    `Work order raised: ${effectiveKind === 'repair' ? 'repair' : 'service'} ${def.name} (${required} labour-hours).`,
+    'upkeep',
+    `Work order raised: ${effectiveKind === 'repair' ? 'repair' : 'service'} ${def.name}.`,
+    `${required} h`,
   )
   return order
 }
@@ -143,14 +145,23 @@ export function completeWorkOrder(state: SimState, orderId: string, at: GameTime
     part.broken = false
     part.enabled = true
     part.condition.value = Math.max(part.condition.value, REPAIR_RESTORE_TO)
-    pushLog(state, at, 'info', `${crewName} has ${def.name} running again, at ${REPAIR_RESTORE_TO}% condition.`)
+    pushLog(
+      state,
+      at,
+      'info',
+      'upkeep',
+      `${crewName} has ${def.name} running again.`,
+      `${REPAIR_RESTORE_TO}% condition`,
+    )
   } else {
     part.condition.value = Math.min(part.condition.max, part.condition.value + SERVICE_RESTORE)
     pushLog(
       state,
       at,
       'info',
-      `${crewName} serviced ${def.name}; condition now ${Math.round(part.condition.value)}%.`,
+      'upkeep',
+      `${crewName} serviced ${def.name}.`,
+      `${Math.round(part.condition.value)}% condition`,
     )
   }
 
@@ -172,6 +183,7 @@ export function cancelWorkOrder(state: SimState, orderId: string, at: GameTime):
       state,
       at,
       'info',
+      'upkeep',
       `Work order cancelled: ${part ? getPart(part.defId).name : order.partId}.`,
     )
   }

@@ -134,7 +134,9 @@ export function hireCrew(state: SimState, crewId: string, at: GameTime): boolean
     state,
     at,
     'info',
-    `${def.name} signed on as ${def.role}, ${candidate.wageCrPerDay.toLocaleString()} cr a day, ${watch} watch.`,
+    'crew',
+    `${def.name} signed on as ${def.role}, ${watch} watch.`,
+    `${candidate.wageCrPerDay.toLocaleString()} cr/day`,
   )
   return true
 }
@@ -165,9 +167,11 @@ export function dismissCrew(state: SimState, crewId: string, at: GameTime): bool
     state,
     at,
     'warn',
+    'crew',
     severance > 0
-      ? `${def.name} paid off. ${guild.name} rules put ${severance.toLocaleString()} cr of severance on the desk.`
+      ? `${def.name} paid off. ${guild.name} rules put severance on the desk.`
       : `${def.name} paid off. No severance, no argument.`,
+    severance > 0 ? `−${severance.toLocaleString()} cr` : undefined,
   )
   return true
 }

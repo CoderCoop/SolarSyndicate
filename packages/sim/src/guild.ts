@@ -52,7 +52,9 @@ export function adjustStanding(
       state,
       at,
       delta > 0 ? 'info' : 'warn',
+      'crew',
       `${getGuild(guildId).name} now reckon you ${bandLabel(after).toLowerCase()}. ${reason}`,
+      `${delta > 0 ? '+' : ''}${delta} standing`,
     )
   }
 }

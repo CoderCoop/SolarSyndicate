@@ -119,9 +119,11 @@ export function reconcileArrival(state: SimState, at: GameTime): void {
     state,
     at,
     late ? 'warn' : 'info',
+    'money',
     late
-      ? `${def.title} delivered late. ${payCr.toLocaleString()} cr against ${def.payCr.toLocaleString()} agreed, and ${settlementPhrase(allowanceCr)}.`
-      : `${def.title} delivered. ${payCr.toLocaleString()} cr, and ${settlementPhrase(allowanceCr)}.`,
+      ? `${def.title} delivered late, against ${def.payCr.toLocaleString()} cr agreed, and ${settlementPhrase(allowanceCr)}.`
+      : `${def.title} delivered, and ${settlementPhrase(allowanceCr)}.`,
+    `${payCr >= 0 ? '+' : '−'}${Math.abs(payCr).toLocaleString()} cr`,
   )
 
   restock(state, at)

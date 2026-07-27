@@ -62,11 +62,14 @@ describe('wear', () => {
 
   it('warns at thresholds on the way down', () => {
     const s = advanceTo(world(), 40 * DAY)
-    const warned = s.log.filter((l) => l.text.includes('is down to'))
+    const warned = s.log.filter((l) => l.topic === 'upkeep' && /Service takes/.test(l.text))
     expect(warned.length).toBeGreaterThan(0)
-    // Each warning names the part, where it is, and what it will cost to put
-    // right -- the player should never have to go looking for that.
-    expect(warned[0]!.text).toMatch(/is down to \d+% — \w+\. Service takes \d+ hours\./)
+    // Each warning names the part, its state, and what it will cost to put
+    // right -- the player should never have to go looking for that. The
+    // condition itself is the figure, hoisted out of the prose so a column of
+    // dispatches can be read down rather than across.
+    expect(warned[0]!.text).toMatch(/ is \w+\. Service takes \d+ hours\./)
+    expect(warned[0]!.figure).toMatch(/^\d+% condition$/)
     // What arrives first is whichever part is nearest its next threshold, not
     // whichever is in worst condition: the reactor starts at 79% and 75% is
     // only four points away.

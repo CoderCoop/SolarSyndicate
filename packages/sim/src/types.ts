@@ -17,14 +17,14 @@ import type { GameTime } from './time.js'
  *
  * Distinct from the product version in package.json on purpose. This one only
  * moves when a save written by an older build can no longer be read correctly
- * -- v7 is such a case: guilds arrived, and a v6 save has no `guildId`, so the
- * first payroll after loading one looks up a guild that is not there.
+ * -- v8 is such a case: dispatches carry a topic now, and every line in a v7
+ * save has none, so a log loaded from one cannot be sorted or filtered.
  *
  * Remembering to move it is not left to memory any more: `save.ts` fingerprints
  * the shape and a test refuses any change to it that this number did not
  * follow.
  */
-export const SIM_STATE_VERSION = 7
+export const SIM_STATE_VERSION = 8
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -176,11 +176,31 @@ export type LogLevel = 'info' | 'warn' | 'alert'
  * A dispatch line. §7.4: the session-open screen is the captain's inbox, so
  * offline catch-up must produce readable history, not just a final state.
  */
+/**
+ * What a dispatch is about. Design §7.4.
+ *
+ * Authored where the line is written, not guessed from its wording at render
+ * time: the code that raises "battery exhausted" knows it is a power event,
+ * and a regular expression over prose would only be a worse copy of knowledge
+ * that already exists at the call site.
+ */
+export const LOG_TOPICS = ['ship', 'power', 'life', 'upkeep', 'crew', 'money', 'voyage'] as const
+export type LogTopic = (typeof LOG_TOPICS)[number]
+
 export interface LogEntry {
   seq: number
   at: GameTime
   level: LogLevel
+  topic: LogTopic
   text: string
+  /**
+   * The one number that matters in this line, already formatted.
+   *
+   * Pulled out so a column of dispatches can be read down rather than across:
+   * the figure is what tells you whether a line needs you, and burying it
+   * mid-sentence makes the reader parse every word to find it.
+   */
+  figure?: string
 }
 
 export interface SimState {

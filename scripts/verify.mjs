@@ -177,6 +177,34 @@ check(
   logged.some((t) => t?.includes('NTR Preheat switched on')),
   logged[0] ?? '',
 )
+// --- the log is sorted, not just long (§7.4) --------------------------------
+const topics = await page.$$eval('.log__topic', (els) => [
+  ...new Set(els.map((e) => e.textContent?.trim())),
+])
+check('every dispatch says what it is about', topics.length > 1, topics.join(' · '))
+
+const logFigures = await page.$$eval('.log__figure', (els) => els.map((e) => e.textContent?.trim()))
+check(
+  'and the number that matters is pulled out of the prose',
+  logFigures.length > 0,
+  logFigures.slice(0, 3).join(' | '),
+)
+
+const allCount = await page.$$eval('.log__entry', (els) => els.length)
+await page.click('.log__filters .chip--power')
+const powerOnly = await page.$$eval('.log__topic', (els) => [
+  ...new Set(els.map((e) => e.textContent?.trim())),
+])
+const powerCount = await page.$$eval('.log__entry', (els) => els.length)
+check(
+  'filtering to one topic shows only that topic',
+  powerOnly.length === 1 && powerOnly[0] === 'Power' && powerCount < allCount,
+  `${powerCount} of ${allCount}`,
+)
+await page.click('.log__filters .chip:has-text("All")')
+
+await page.screenshot({ path: join(SHOTS, '03b-log.png'), fullPage: true })
+
 await page.click('.tabs__btn:has-text("Ship")')
 await page.waitForSelector('.ship')
 

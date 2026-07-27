@@ -18,7 +18,14 @@ import { pushLog } from './log.js'
 import { boundTime, levelAt, settle } from './resources.js'
 import { cancelKind, schedule } from './queue.js'
 import { DAY, type GameTime } from './time.js'
-import { RESOURCE_KEYS, type PartState, type ResourceKey, type SimState } from './types.js'
+import {
+  RESOURCE_KEYS,
+  type LogLevel,
+  type LogTopic,
+  type PartState,
+  type ResourceKey,
+  type SimState,
+} from './types.js'
 
 /** kWh per game second, from kW. One kW sustained for an hour is one kWh. */
 export function kwToKwhPerSecond(kw: number): number {
@@ -314,7 +321,9 @@ export function resolveNetworks(state: SimState, at: GameTime): void {
         state,
         at,
         'alert',
+        'power',
         `Brownout. Battery exhausted; shed ${shedNames.join(', ')} to hold the critical bus.`,
+        'battery 0%',
       )
     }
 
@@ -323,7 +332,9 @@ export function resolveNetworks(state: SimState, at: GameTime): void {
         state,
         at,
         'alert',
-        `Critical bus is drawing ${(-power.netKw).toFixed(1)} kW more than the ship can make. The reactor cannot carry life support alone.`,
+        'power',
+        'Critical bus is drawing more than the ship can make. The reactor cannot carry life support alone.',
+        `${power.netKw.toFixed(1)} kW`,
       )
     }
   }
@@ -364,7 +375,9 @@ export function resolveNetworks(state: SimState, at: GameTime): void {
       state,
       at,
       'alert',
-      `Thermal trip at ${temp.toFixed(1)}C. Reactor derated to ${Math.round(DERATE_SCALE * 100)}% — the loop cannot reject what it is making.`,
+      'life',
+      `Thermal trip. Reactor derated to ${Math.round(DERATE_SCALE * 100)}% — the loop cannot reject what it is making.`,
+      `${temp.toFixed(1)} °C`,
     )
     // Re-read the balance now that the plant is throttled.
     const derated = lifeBalance(state, at)
@@ -380,7 +393,7 @@ export function resolveNetworks(state: SimState, at: GameTime): void {
     state.ship.thermalTrip = false
     const full = lifeBalance(state, at)
     if (full.heatInKw <= full.heatRejectKw) {
-      pushLog(state, at, 'info', 'Thermal margin restored; reactor back to full output.')
+      pushLog(state, at, 'info', 'life', 'Thermal margin restored; reactor back to full output.')
       netHeatKw = full.heatInKw - full.heatRejectKw
       power = powerBalance(state, at)
       state.ship.netPowerKw = power.netKw
@@ -453,7 +466,13 @@ export function restoreShedLoads(state: SimState, at: GameTime): number {
   }
   if (restored > 0) {
     state.ship.brownout = false
-    pushLog(state, at, 'info', `Restored ${restored} shed load${restored === 1 ? '' : 's'}.`)
+    pushLog(
+      state,
+      at,
+      'info',
+      'power',
+      `Restored ${restored} shed load${restored === 1 ? '' : 's'}.`,
+    )
   }
   return restored
 }
@@ -462,25 +481,44 @@ export function restoreShedLoads(state: SimState, at: GameTime): number {
 export function resourceBoundMessage(
   key: ResourceKey,
   atMax: boolean,
-): { level: 'info' | 'warn' | 'alert'; text: string } | undefined {
+): { level: LogLevel; topic: LogTopic; text: string; figure?: string } | undefined {
   switch (key) {
     case 'battery':
       return atMax
-        ? { level: 'info', text: 'Batteries at full charge; surplus generation is being dumped.' }
-        : { level: 'warn', text: 'Battery bank exhausted.' }
+        ? {
+            level: 'info',
+            topic: 'power',
+            text: 'Batteries at full charge; surplus generation is being dumped.',
+            figure: '100%',
+          }
+        : { level: 'warn', topic: 'power', text: 'Battery bank exhausted.', figure: '0%' }
     case 'co2':
       return atMax
-        ? { level: 'alert', text: 'CO2 has reached the cabin limit. Scrubbing cannot keep up.' }
+        ? {
+            level: 'alert',
+            topic: 'life',
+            text: 'CO2 has reached the cabin limit. Scrubbing cannot keep up.',
+          }
         : undefined
     case 'o2':
-      return atMax ? undefined : { level: 'alert', text: 'Oxygen reserve is gone.' }
+      return atMax
+        ? undefined
+        : { level: 'alert', topic: 'life', text: 'Oxygen reserve is gone.', figure: '0 kg' }
     case 'water':
-      return atMax ? undefined : { level: 'alert', text: 'Water tanks are dry.' }
+      return atMax
+        ? undefined
+        : { level: 'alert', topic: 'life', text: 'Water tanks are dry.', figure: '0 kg' }
     case 'food':
-      return atMax ? undefined : { level: 'alert', text: 'Food stores are empty.' }
+      return atMax
+        ? undefined
+        : { level: 'alert', topic: 'life', text: 'Food stores are empty.', figure: '0 kg' }
     case 'heat':
       return atMax
-        ? { level: 'alert', text: 'Cabin temperature has hit the limit; the loop cannot reject any more.' }
+        ? {
+            level: 'alert',
+            topic: 'life',
+            text: 'Cabin temperature has hit the limit; the loop cannot reject any more.',
+          }
         : undefined
     default:
       return undefined

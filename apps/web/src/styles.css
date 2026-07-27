@@ -1594,6 +1594,85 @@ button {
   color: var(--red);
 }
 
+/* Topics: a filter row, a label per line, and the figure in its own column
+   so the log reads down as well as across. */
+
+.log__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  border: 1px solid var(--line-bright);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.chip.is-on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+}
+
+.chip__count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.is-on .chip__count {
+  color: inherit;
+}
+
+.log__entry {
+  align-items: baseline;
+}
+
+.log__topic {
+  flex: none;
+  width: 52px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.log__entry--power .log__topic { color: var(--cyan); }
+.log__entry--life .log__topic { color: var(--green, #6fcf8f); }
+.log__entry--upkeep .log__topic { color: var(--amber); }
+.log__entry--money .log__topic { color: var(--amber); }
+.log__entry--voyage .log__topic { color: var(--cyan); }
+
+.log__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.log__figure {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.log__entry--alert .log__figure {
+  color: var(--red);
+}
+
 /* ------------------------------------------------------------------- footer */
 
 .app__footer {

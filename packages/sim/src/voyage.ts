@@ -203,7 +203,9 @@ export function depart(state: SimState, optionId: string, at: GameTime): boolean
     state,
     at,
     'info',
-    `Departed ${getPort(state.ship.portId).name} for ${getPort(def.toPortId).name}. ${(option.deltaVMs / 1000).toFixed(1)} km/s, ${(option.propellantKg / 1000).toFixed(1)} t of propellant, ${formatDuration(option.durationS)} under way.`,
+    'voyage',
+    `Departed ${getPort(state.ship.portId).name} for ${getPort(def.toPortId).name}. ${(option.propellantKg / 1000).toFixed(1)} t of propellant, ${formatDuration(option.durationS)} under way.`,
+    `${(option.deltaVMs / 1000).toFixed(1)} km/s`,
   )
   return true
 }
@@ -217,7 +219,7 @@ export function arrive(state: SimState, at: GameTime): void {
   state.ship.docked = true
   state.voyage = undefined
 
-  pushLog(state, at, 'info', `Berthed at ${getPort(voyage.toPortId).name}.`)
+  pushLog(state, at, 'info', 'voyage', `Berthed at ${getPort(voyage.toPortId).name}.`)
   // Berthed first, so the books settle at the arrival port's prices (TR-19).
   reconcileArrival(state, at)
 }

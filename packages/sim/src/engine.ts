@@ -169,7 +169,13 @@ export function createWorld(seed: number, utcMs: number): SimState {
     log: [],
   }
 
-  pushLog(state, t0, 'info', `${hull.name} (${hull.className}) is on the Local's books. Reactor online, four hands aboard.`)
+  pushLog(
+    state,
+    t0,
+    'info',
+    'ship',
+    `${hull.name} (${hull.className}) is on the Local's books. Reactor online, four hands aboard.`,
+  )
   resolveAll(state, t0)
   scheduleAt(state, DAY, 'DAY_ROLL')
   scheduleAt(state, nextShiftBoundary(t0), 'SHIFT_CHANGE')
@@ -220,7 +226,7 @@ function applyEvent(state: SimState, event: SimEvent): void {
       settle(reservoir, event.at)
       const atMax = reservoir.value >= reservoir.max - 1e-9
       const message = resourceBoundMessage(key, atMax)
-      if (message) pushLog(state, event.at, message.level, message.text)
+      if (message) pushLog(state, event.at, message.level, message.topic, message.text, message.figure)
       resolveAll(state, event.at)
       break
     }
@@ -295,9 +301,9 @@ function writeDailyDispatch(state: SimState, at: GameTime): void {
   }
 
   if (worries.length === 0) {
-    pushLog(state, at, 'info', `Watch change. All systems nominal, battery ${battery}%.`)
+    pushLog(state, at, 'info', 'crew', 'Watch change. All systems nominal.', `battery ${battery}%`)
   } else {
-    pushLog(state, at, 'warn', `Watch change. ${capitalize(worries.join('; '))}.`)
+    pushLog(state, at, 'warn', 'crew', `Watch change. ${capitalize(worries.join('; '))}.`)
   }
 }
 
@@ -369,7 +375,18 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
       // An explicit order clears the shed flag: the player has taken the
       // decision back from the load-shedding logic.
       part.shed = false
-      pushLog(state, at, 'info', `${def.name} switched ${command.enabled ? 'on' : 'off'}.`)
+      // The figure is what the order actually costs the bus, which is the
+      // whole reason anybody switches anything.
+      pushLog(
+        state,
+        at,
+        'info',
+        'power',
+        `${def.name} switched ${command.enabled ? 'on' : 'off'}.`,
+        def.powerKw === 0
+          ? undefined
+          : `${def.powerKw > 0 ? '+' : ''}${def.powerKw.toFixed(1)} kW`,
+      )
       resolveAll(state, at)
       break
     }
@@ -439,7 +456,9 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
         state,
         at,
         'info',
+        'crew',
         `${getCrewDef(crew.defId).name} reassigned to ${command.watch} watch.`,
+        `${command.watch} watch`,
       )
       resolveAll(state, at)
       break
