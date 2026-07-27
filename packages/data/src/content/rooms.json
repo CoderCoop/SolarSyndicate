@@ -15,7 +15,11 @@
           "w": 1.1,
           "h": 0.7
         },
-        "blurb": "Two of them, facing the consoles. Occupied for burns and for nothing else — the rest of the watch is spent standing at the boards."
+        "blurb": "Two of them, facing the consoles. Occupied for burns and for nothing else \u2014 the rest of the watch is spent standing at the boards.",
+        "block": {
+          "columns": 2
+        },
+        "occupiedBy": "off"
       }
     ],
     "needs": [
@@ -44,10 +48,14 @@
         "count": 6,
         "fitting": "floor",
         "sizeM": {
-          "w": 1.9,
-          "h": 0.65
+          "w": 0.85,
+          "h": 0.62
         },
-        "blurb": "Six for a crew of four: the watch bill means two are always warm, and the spares are where you put a passenger or an argument."
+        "blurb": "Six for a crew of four: the watch bill means two are always warm, and the spares are where you put a passenger or an argument.",
+        "block": {
+          "columns": 2
+        },
+        "occupiedBy": "sleep"
       },
       {
         "glyph": "table",
@@ -58,7 +66,8 @@
           "w": 1.3,
           "h": 0.7
         },
-        "blurb": "The only surface aboard big enough for four people at once. Meals, briefings, cards, and the occasional autopsy of a work order."
+        "blurb": "The only surface aboard big enough for four people at once. Meals, briefings, cards, and the occasional autopsy of a work order.",
+        "occupiedBy": "off"
       }
     ],
     "needs": [
@@ -114,7 +123,10 @@
           "w": 1.3,
           "h": 1.4
         },
-        "blurb": "Empty tie-down grid. What sits here is mass, and mass is delta-v you pay for on every burn."
+        "blurb": "Empty tie-down grid. What sits here is mass, and mass is delta-v you pay for on every burn.",
+        "block": {
+          "columns": 2
+        }
       }
     ],
     "needs": [
@@ -141,7 +153,10 @@
           "w": 0.55,
           "h": 1.2
         },
-        "blurb": "Bar stock, seals, filter cartridges and fasteners. A repair that cannot find what it needs waits until the locker is restocked."
+        "blurb": "Bar stock, seals, filter cartridges and fasteners. A repair that cannot find what it needs waits until the locker is restocked.",
+        "block": {
+          "columns": 3
+        }
       }
     ],
     "needs": [

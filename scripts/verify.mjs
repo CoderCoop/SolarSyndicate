@@ -368,7 +368,10 @@ await page.click('.tabs__btn:has-text("Ship")')
 await page.waitForSelector('.ship')
 await page.click('.deck:nth-child(2) .deck__head') // Quarters: bunks and a table
 await page.waitForSelector('.deck.is-open .schema')
-await tap(page, '.deck.is-open .hit--fixture')
+// An *unoccupied* berth. Okonkwo sleeps in the first bunk and Sandoval stands
+// at the mess table, and tapping either of those opens the person rather than
+// the furniture -- which is correct, and makes both the wrong target here.
+await tap(page, '.deck.is-open .hit--fixture >> nth=1')
 const fixtureName = await page.textContent('.whois--fixture .whois__name')
 check('furniture answers when tapped, not just machines', Boolean(fixtureName), fixtureName ?? '')
 const fixtureBlurb = await page.textContent('.whois--fixture .whois__blurb')
@@ -421,6 +424,8 @@ const collisions = await page.evaluate(() => {
         const t = shape.transform.baseVal.consolidate()
         boxes.push({
           kind: 'drawn',
+          person: g.classList.contains('person'),
+          occupying: g.classList.contains('is-occupying'),
           label,
           x: b.x + (t ? t.matrix.e : 0),
           y: b.y + (t ? t.matrix.f : 0),
@@ -431,6 +436,8 @@ const collisions = await page.evaluate(() => {
       if (hit) {
         boxes.push({
           kind: 'tap target',
+          person: g.classList.contains('person'),
+          occupying: g.classList.contains('is-occupying'),
           label,
           x: +hit.getAttribute('x'),
           y: +hit.getAttribute('y'),
@@ -444,6 +451,16 @@ const collisions = await page.evaluate(() => {
         const a = boxes[i]
         const c = boxes[j]
         if (a.kind !== c.kind || a.label === c.label) continue
+      // People may stand in front of things -- that is what standing in a room
+      // looks like, and on a full deck there is nowhere else to be. What must
+      // not happen is two *objects* sharing space, or two tap targets fighting
+      // over the same press.
+      // A person may share space with the furniture they are using, drawn and
+      // tappable alike: tapping somebody standing at the mess table should open
+      // the person, not the table. What must not happen is two objects sharing
+      // space, or a person standing through something they are not using.
+      if (a.occupying || c.occupying) continue
+      if (a.kind === 'drawn' && (a.person || c.person)) continue
         const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x)
         const oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y)
         if (ox > 0.5 && oy > 0.5) bad.push(`${a.kind}: ${a.label} × ${c.label}`)
