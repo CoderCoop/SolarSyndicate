@@ -18,6 +18,7 @@ import {
   roomViews,
   transferOptions,
   voyageView,
+  whereabouts,
   workOrderViews,
 } from '@solsyn/sim'
 import { AwayReport } from './components/AwayReport.js'
@@ -149,6 +150,7 @@ export function App() {
   const active = activeContract(state)
   const options = transferOptions(state)
   const voyage = voyageView(state)
+  const where = whereabouts(state)
   const settlement = lastSettlement(state)
   const hullOffers = shipyardOffers(state)
   const guilds = guildViews(state)
@@ -169,7 +171,7 @@ export function App() {
 
   return (
     <div className="app">
-      <StatusBar now={state.now} power={power} life={life} brokenCount={brokenCount} />
+      <StatusBar now={state.now} power={power} life={life} brokenCount={brokenCount} where={where} />
 
       {/* Under the status bar, never over it: the offer must not cover a gauge
           the player is watching. */}

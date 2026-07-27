@@ -19,7 +19,17 @@
 import { getBody, getContract, getHull, getPort } from '@solsyn/data'
 import { pushLog } from './log.js'
 import { reconcileArrival } from './reconcile.js'
-import { propellantForDeltaV, stretchedBetween, stretchedTransfer } from './orbits.js'
+import {
+  AU,
+  G0,
+  MU_SUN,
+  burnSplit,
+  propellantForDeltaV,
+  radiusAtTime,
+  speedOnEllipse,
+  stretchedBetween,
+  stretchedTransfer,
+} from './orbits.js'
 import { levelAt, settle } from './resources.js'
 import { DAY, formatDuration, type GameTime } from './time.js'
 import type { SimState } from './types.js'
@@ -212,18 +222,132 @@ export function arrive(state: SimState, at: GameTime): void {
   reconcileArrival(state, at)
 }
 
+/** One end of the crossing, as the crew actually experience it. */
+export interface Burn {
+  kind: 'departure' | 'arrival'
+  deltaVMs: number
+  durationS: number
+  /** Acceleration at the start of the burn, in g. It rises as tanks empty. */
+  gees: number
+}
+
 export interface VoyageView extends VoyageState {
   daysRemaining: number
   fractionComplete: number
+  /**
+   * What the ship is doing now.
+   *
+   * Three states, not a continuum, because a Hohmann-class transfer really is
+   * three things: a burn, a long fall, and a burn (§3.4, §5.2). Nothing is
+   * under thrust in the middle, and saying so is more honest than inventing a
+   * number to fill the gap.
+   */
+  phase: 'departure' | 'coast' | 'arrival'
+  /** Speed relative to the body being orbited, m/s. Real, and it varies. */
+  speedMs: number
+  /** Thrust now, kN. Zero for all but the first and last minutes. */
+  thrustKn: number
+  /** Acceleration now, in g. Zero on the coast: the crew are in free fall. */
+  gees: number
+  burns: Burn[]
 }
 
 export function voyageView(state: SimState): VoyageView | undefined {
   const v = state.voyage
   if (!v) return undefined
   const total = v.arrivesAt - v.departedAt
+  const elapsed = state.now - v.departedAt
+
+  const from = getPort(v.fromPortId)
+  const to = getPort(v.toPortId)
+  const sameBody = from.bodyId === to.bodyId
+  const profile = PROFILES.find((p) => p.id === v.optionId) ?? PROFILES[0]
+
+  // Recomputed rather than stored. The trajectory is a pure function of where
+  // the ship left, where it is going and which profile was chosen -- all of
+  // which the voyage already records -- so putting the geometry in the save
+  // would only be a second copy of it to keep in step.
+  const mu = sameBody ? getBody(from.bodyId).muM3S2 : MU_SUN
+  const r1 = sameBody ? from.orbitRadiusKm * 1000 : getBody(from.bodyId).orbitRadiusAu * AU
+  const r2 = sameBody ? to.orbitRadiusKm * 1000 : getBody(to.bodyId).orbitRadiusAu * AU
+  const leg = sameBody
+    ? stretchedBetween(mu, r1, r2, profile.multiplier)
+    : stretchedTransfer(from.bodyId, to.bodyId, profile.multiplier)
+
+  const a = leg.semiMajorAxisM
+  // Departure is at periapsis of the transfer ellipse for both profiles, so
+  // eccentricity follows from the radius the ship left at.
+  const e = Math.abs(1 - Math.min(r1, r2) / a)
+  const r = radiusAtTime(mu, a, e, Math.max(0, elapsed))
+
+  const hull = getHull(state.ship.hullId)
+  const split = burnSplit(mu, r1, r2, a)
+  const wet = wetMassKg(state, state.now)
+  const massFlowKgS = (hull.thrustKn * 1000) / (hull.ispS * G0)
+
+  const burns: Burn[] = (['departure', 'arrival'] as const).map((kind) => {
+    const deltaVMs = kind === 'departure' ? split.departureMs : split.arrivalMs
+    const propellantKg = propellantForDeltaV(wet, deltaVMs, hull.ispS)
+    return {
+      kind,
+      deltaVMs,
+      durationS: propellantKg / massFlowKgS,
+      gees: (hull.thrustKn * 1000) / (wet * G0),
+    }
+  })
+
+  const [departureBurn, arrivalBurn] = burns as [Burn, Burn]
+  const phase: VoyageView['phase'] =
+    elapsed < departureBurn.durationS
+      ? 'departure'
+      : state.now > v.arrivesAt - arrivalBurn.durationS
+        ? 'arrival'
+        : 'coast'
+  const burning = phase !== 'coast'
+
   return {
     ...v,
     daysRemaining: (v.arrivesAt - state.now) / DAY,
-    fractionComplete: total > 0 ? Math.min(1, (state.now - v.departedAt) / total) : 1,
+    fractionComplete: total > 0 ? Math.min(1, elapsed / total) : 1,
+    phase,
+    speedMs: speedOnEllipse(mu, r, a),
+    thrustKn: burning ? hull.thrustKn : 0,
+    gees: burning ? (hull.thrustKn * 1000) / (wet * G0) : 0,
+    burns,
+  }
+}
+
+/** Where the ship is, in one line, for the bar that is always on screen. */
+export interface Whereabouts {
+  docked: boolean
+  /** "Gateway Station", or "Gateway → Tranquillity" under way. */
+  place: string
+  /** "Berthed" or "Coasting · 1.2 km/s · 0 g". */
+  detail: string
+  /** 0–1 under way, undefined alongside. */
+  fractionComplete?: number
+}
+
+export function whereabouts(state: SimState): Whereabouts {
+  const v = voyageView(state)
+  if (!v || state.ship.docked) {
+    return {
+      docked: true,
+      place: getPort(state.ship.portId).name,
+      detail: state.contract ? 'Berthed · cargo aboard' : 'Berthed',
+    }
+  }
+
+  const speed = `${(v.speedMs / 1000).toFixed(2)} km/s`
+  const phase =
+    v.phase === 'coast'
+      ? `Coasting · ${speed} · 0 g`
+      : `${v.phase === 'departure' ? 'Departure' : 'Arrival'} burn · ${speed} · ${v.gees.toFixed(2)} g`
+
+  return {
+    docked: false,
+    place: `${getPort(v.fromPortId).name} → ${getPort(v.toPortId).name}`,
+    detail: `${phase} · ${formatDuration(Math.max(0, v.arrivesAt - state.now))} out`,
+    fractionComplete: v.fractionComplete,
   }
 }

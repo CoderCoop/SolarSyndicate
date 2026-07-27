@@ -218,3 +218,61 @@ export function deltaVForPropellant(
   if (propellantKg >= wetMassKg) return Infinity
   return ispS * G0 * Math.log(wetMassKg / (wetMassKg - propellantKg))
 }
+
+// ---------------------------------------------------------------------------
+// Where the ship is on the ellipse, and how fast
+// ---------------------------------------------------------------------------
+
+/**
+ * Radius on an ellipse, `sinceS` seconds after periapsis. Design §5.2.
+ *
+ * Kepler's equation, solved by Newton. Both transfer profiles depart at the
+ * periapsis of their transfer ellipse, so departure time *is* periapsis time
+ * and no extra state has to be stored to place the ship: position is a
+ * closed-form function of time, which is the property §8.2 rests on.
+ */
+export function radiusAtTime(mu: number, a: number, e: number, sinceS: number): number {
+  const n = Math.sqrt(mu / (a * a * a))
+  const m = n * sinceS
+  // Newton on E - e·sin E = M. Converges in a handful of steps for e < 0.9,
+  // and a fixed iteration count keeps it deterministic (§7.2).
+  let ecc = m
+  for (let i = 0; i < 12; i++) {
+    const f = ecc - e * Math.sin(ecc) - m
+    const df = 1 - e * Math.cos(ecc)
+    ecc -= f / df
+  }
+  return a * (1 - e * Math.cos(ecc))
+}
+
+/** Speed at radius `r` on an ellipse of semi-major axis `a`. Vis-viva. */
+export function speedOnEllipse(mu: number, r: number, a: number): number {
+  return Math.sqrt(Math.max(0, mu * (2 / r - 1 / a)))
+}
+
+/**
+ * The two burns a transfer is actually flown as, in m/s.
+ *
+ * Not a detail: it is the answer to "does the ship accelerate for half the
+ * distance and decelerate for the other half". It does not. A nuclear-thermal
+ * ship burns hard at each end and coasts for everything in between — the
+ * continuous-thrust profile belongs to the fusion-torch tier (§3.4), which is
+ * a long way off.
+ *
+ * The arrival figure treats both velocities as along-track. True for a
+ * Hohmann, where the transfer meets the target orbit tangentially; slightly
+ * optimistic for the stretched profiles, which cross it at an angle. The sum
+ * the ship is actually charged for stays the honest one from `Transfer`.
+ */
+export function burnSplit(
+  mu: number,
+  r1: number,
+  r2: number,
+  semiMajorAxisM: number,
+): { departureMs: number; arrivalMs: number } {
+  const a = semiMajorAxisM
+  return {
+    departureMs: Math.abs(speedOnEllipse(mu, r1, a) - Math.sqrt(mu / r1)),
+    arrivalMs: Math.abs(Math.sqrt(mu / r2) - speedOnEllipse(mu, r2, a)),
+  }
+}

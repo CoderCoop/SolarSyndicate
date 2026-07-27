@@ -5,18 +5,27 @@
  * networks running, the bar's job is triage: what time is it aboard, is the
  * ship making or losing power, and is anything about to need me.
  */
-import { formatDuration, formatShipClock, type GameTime, type LifeSupportView, type PowerView } from '@solsyn/sim'
+import {
+  formatDuration,
+  formatShipClock,
+  type GameTime,
+  type LifeSupportView,
+  type PowerView,
+  type Whereabouts,
+} from '@solsyn/sim'
 
 export function StatusBar({
   now,
   power,
   life,
   brokenCount,
+  where,
 }: {
   now: GameTime
   power: PowerView
   life: LifeSupportView
   brokenCount: number
+  where: Whereabouts
 }) {
   const pct = Math.round(power.batteryFraction * 100)
   const deficit = power.netKw < 0
@@ -63,6 +72,29 @@ export function StatusBar({
           {power.batteryKwh.toFixed(1)} / {power.batteryCapacityKwh.toFixed(0)} kWh
         </span>
         <span className={deficit ? 'is-load' : ''}>{margin}</span>
+      </div>
+
+      {/* Where the ship is, above the housekeeping. Power and CO2 were always
+          on screen while "berthed or under way?" -- the thing that decides
+          whether any of it is your problem this minute -- was not stated
+          anywhere at all. */}
+      <div className={`berth ${where.docked ? 'is-alongside' : 'is-underway'}`}>
+        <div className="berth__line">
+          <span className="berth__place">{where.place}</span>
+          <span className="berth__detail">{where.detail}</span>
+        </div>
+        {where.fractionComplete !== undefined && (
+          <div
+            className="berth__track"
+            role="meter"
+            aria-valuenow={Math.round(where.fractionComplete * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Distance flown"
+          >
+            <div className="berth__flown" style={{ width: `${where.fractionComplete * 100}%` }} />
+          </div>
+        )}
       </div>
 
       <div className="status__row status__row--fine status__row--dim">

@@ -307,6 +307,17 @@ export const HullDef = z.object({
    * the drawing already stated before anything enforced it.
    */
   berths: z.number().int().positive(),
+  /**
+   * The engine, as the two numbers that decide how the ship flies (§3.4).
+   *
+   * `ispS` is exhaust velocity in disguise and sets what a given tank buys;
+   * `thrustKn` sets how long a burn takes and what it feels like aboard.
+   * Design §3.4 puts a nuclear-thermal ship at 0.05–0.3 g loaded, which is why
+   * these are Hohmann-class transfers: two burns and a long coast, not the
+   * accelerate-flip-decelerate profile of the fusion-torch tier.
+   */
+  ispS: z.number().positive(),
+  thrustKn: z.number().positive(),
   rooms: z.array(z.string()),
   /**
    * The parts this hull is delivered with, by id.

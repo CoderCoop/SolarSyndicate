@@ -1111,6 +1111,40 @@ check(
   flownLabel ?? '',
 )
 
+// --- the bar says where the ship is, and the panel says what it is doing ----
+const placeUnderway = await v1.textContent('.berth__place')
+check(
+  'the status bar says the ship is under way, and between where',
+  /→/.test(placeUnderway ?? ''),
+  placeUnderway?.trim() ?? '',
+)
+// The fill has zero width at nought per cent, so ask the meter rather than
+// the bar: a progress track that is legitimately empty is still present.
+const flownPct = await v1.getAttribute('.berth__track', 'aria-valuenow')
+check(
+  'and shows how far along it is',
+  flownPct !== null && Number(flownPct) >= 0,
+  `${flownPct}% flown`,
+)
+
+const phase = await v1.textContent('.telem__phase')
+const speed = await v1.textContent('.telem__speed')
+check('the crossing states its phase', Boolean(phase), `${phase?.trim()} at ${speed?.trim()}`)
+check(
+  'and a real speed, not a placeholder',
+  Number.parseFloat(speed ?? '') > 0.05,
+  speed?.trim() ?? '',
+)
+
+const burnRows = await v1.$$eval('.telem__burns li strong', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  'both burns are stated with their duration and their g (§3.4)',
+  burnRows.length === 2 && burnRows.every((r) => /km\/s · \d+ min · \d\.\d\d g/.test(r ?? '')),
+  burnRows.join(' | '),
+)
+
 await v1.screenshot({ path: join(SHOTS, '14-under-way.png'), fullPage: true })
 await v1.close()
 
