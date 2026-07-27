@@ -67,6 +67,25 @@ the ship. All six items came from playing it.
   makes the reader parse every word to find it. In a column the log reads
   *down*: 79%, 61%, 43%, failed.
 
+- **Flows leads with the engineering panel** — mockup 003's option C, which is
+  the one that was asked for. Stations as nodes laid out the way the ship is
+  laid out, the five networks as coloured lines running between them, and
+  dashes that travel the way the resource does, so a line that has stopped
+  moving is a network that has stopped. The crew are on it, which 003 said it
+  would not compromise on. The ranked view stays underneath: a list can say the
+  hydroponics rack is the biggest draw, and only a graph can say the reactor
+  feeds it and the water comes back round.
+
+  Nothing is positioned by hand — deck is the row, position within the deck is
+  the column — so a part added in content lands somewhere sensible and the
+  diagram keeps the ship's own shape. Short station names are authored in
+  `parts.json`, because no rule over "Navigation & Flight Computers" yields NAV
+  and truncation gave FLIGHT COMP.
+
+  003's stated risk stands: "twelve parts and five networks is already near the
+  limit ... the graph does not degrade gracefully." The channel filter is the
+  answer for now.
+
 ### Save format
 
 `SIM_STATE_VERSION` 7 → 8: dispatches carry a topic, and every line in a v7
