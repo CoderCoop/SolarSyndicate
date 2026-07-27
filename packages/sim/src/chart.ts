@@ -12,11 +12,28 @@
  * anomaly costs a Newton iteration and buys a position that is genuinely
  * where the ship is. A straight line between departure and arrival would have
  * been a lie the player could check.
+ *
+ * **Which ellipse depends on the profile that was chosen**, and the chart
+ * draws that one. It used to rebuild the minimum-energy ellipse from the two
+ * orbit radii and nothing else, so every trajectory on offer was drawn as the
+ * cheap one: the player paid 2.4 km/s extra for Express and watched the arc
+ * they had declined. The geometry now comes from the same `Transfer` the
+ * astrogator priced -- §1 pillar 2 is that the numbers are real, and a picture
+ * of a different trajectory is no more true than a fake number.
  */
 import { content, getBody, getPort } from '@solsyn/data'
-import { AU, MU_SUN, bodyAngleAt, bodyPositionAt, type Vec2 } from './orbits.js'
+import {
+  AU,
+  MU_SUN,
+  bodyAngleAt,
+  bodyPositionAt,
+  stretchedTransfer,
+  transferStateAt,
+  type Vec2,
+} from './orbits.js'
 import { type GameTime } from './time.js'
 import type { SimState } from './types.js'
+import { transferProfile } from './voyage.js'
 
 export interface ChartBody {
   id: string
@@ -38,6 +55,8 @@ export interface ChartShip {
   fromBodyId?: string
   toBodyId?: string
   fractionComplete?: number
+  /** The trajectory being flown -- "Express" -- so the arc can be named. */
+  profileLabel?: string
   /** True when the crossing never leaves one body's neighbourhood. */
   local: boolean
 }
@@ -52,56 +71,31 @@ export interface ChartView {
 }
 
 /**
- * Solve Kepler's equation for the eccentric anomaly. Newton-Raphson from a
- * sensible guess; the ellipses here are mild, so this converges in a handful
- * of steps and the loop is bounded regardless.
+ * Where a ship is on a transfer ellipse, `elapsed` seconds after departure.
+ *
+ * `semiMajorMultiplier` is the chosen profile's stretch -- 1 for minimum
+ * energy, 1.12 for Express -- and it changes the shape of the arc, not just
+ * how fast the dot moves along it. An Express leg leaves harder, rides a
+ * longer ellipse, and crosses the target orbit rather than meeting it
+ * tangentially; drawing it on the Hohmann conic put the ship somewhere it
+ * demonstrably was not.
  */
-function eccentricAnomaly(meanAnomaly: number, e: number): number {
-  let E = e < 0.8 ? meanAnomaly : Math.PI
-  for (let i = 0; i < 24; i++) {
-    const delta = (E - e * Math.sin(E) - meanAnomaly) / (1 - e * Math.cos(E))
-    E -= delta
-    if (Math.abs(delta) < 1e-12) break
-  }
-  return E
-}
-
-/** Where a ship is on a transfer ellipse, `elapsed` seconds after departure. */
 export function transferPositionAu(
   fromBodyId: string,
   toBodyId: string,
   departedAt: GameTime,
   elapsed: number,
+  semiMajorMultiplier = 1,
 ): Vec2 {
-  const r1 = getBody(fromBodyId).orbitRadiusAu * AU
-  const r2 = getBody(toBodyId).orbitRadiusAu * AU
-  const a = (r1 + r2) / 2
-  const e = Math.abs(1 - r1 / a)
+  // The same call the astrogator priced the option with, so the drawing and
+  // the invoice cannot come apart (§1 pillar 2).
+  const leg = stretchedTransfer(fromBodyId, toBodyId, semiMajorMultiplier)
+  const { radiusM, sweptRad } = transferStateAt(leg, MU_SUN, elapsed)
 
-  // Which end of the ellipse the ship leaves from. Going outward it departs at
-  // periapsis; going inward the departure radius is the *apoapsis*, half an
-  // orbit round, so the sweep starts at mean anomaly pi rather than zero.
-  // Getting this wrong put an inbound ship on an outbound arc.
-  const outbound = r2 >= r1
-  const startAnomaly = outbound ? 0 : Math.PI
-  const meanAnomaly = startAnomaly + elapsed * Math.sqrt(MU_SUN / a ** 3)
-  const E = eccentricAnomaly(meanAnomaly, e)
+  // Anchor the arc to where the ship actually left.
+  const angle = bodyAngleAt(fromBodyId, departedAt) + sweptRad
 
-  const r = a * (1 - e * Math.cos(E))
-  // True anomaly from eccentric anomaly, the usual half-angle form.
-  const nu =
-    2 *
-    Math.atan2(
-      Math.sqrt(1 + e) * Math.sin(E / 2),
-      Math.sqrt(1 - e) * Math.cos(E / 2),
-    )
-
-  // Anchor the arc to where the ship actually left: the true anomaly at
-  // departure is 0 outbound and pi inbound, so subtract it out.
-  const departureAngle = bodyAngleAt(fromBodyId, departedAt)
-  const angle = departureAngle + nu - startAnomaly
-
-  return { x: (r * Math.cos(angle)) / AU, y: (r * Math.sin(angle)) / AU }
+  return { x: (radiusM * Math.cos(angle)) / AU, y: (radiusM * Math.sin(angle)) / AU }
 }
 
 export function chartView(state: SimState): ChartView {
@@ -133,6 +127,7 @@ export function chartView(state: SimState): ChartView {
     const toBody = getPort(voyage.toPortId).bodyId
     const total = voyage.arrivesAt - voyage.departedAt
     const fraction = total > 0 ? Math.min(1, Math.max(0, (t - voyage.departedAt) / total)) : 1
+    const profile = transferProfile(voyage.optionId)
 
     if (fromBody === toBody) {
       // A hop inside one gravity well. At this scale the ship has not moved,
@@ -144,21 +139,23 @@ export function chartView(state: SimState): ChartView {
         fromBodyId: fromBody,
         toBodyId: toBody,
         fractionComplete: fraction,
+        profileLabel: profile.label,
         local: true,
       }
     } else {
-      const now = transferPositionAu(fromBody, toBody, voyage.departedAt, t - voyage.departedAt)
+      const arcAt = (elapsed: number) =>
+        transferPositionAu(fromBody, toBody, voyage.departedAt, elapsed, profile.multiplier)
+
       ship = {
-        ...now,
+        ...arcAt(t - voyage.departedAt),
         fromBodyId: fromBody,
         toBodyId: toBody,
         fractionComplete: fraction,
+        profileLabel: profile.label,
         local: false,
       }
       const steps = 48
-      track = Array.from({ length: steps + 1 }, (_, i) =>
-        transferPositionAu(fromBody, toBody, voyage.departedAt, (total * i) / steps),
-      )
+      track = Array.from({ length: steps + 1 }, (_, i) => arcAt((total * i) / steps))
     }
   }
 

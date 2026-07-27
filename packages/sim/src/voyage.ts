@@ -25,10 +25,10 @@ import {
   MU_SUN,
   burnSplit,
   propellantForDeltaV,
-  radiusAtTime,
   speedOnEllipse,
   stretchedBetween,
   stretchedTransfer,
+  transferStateAt,
 } from './orbits.js'
 import { levelAt, settle } from './resources.js'
 import { DAY, formatDuration, type GameTime } from './time.js'
@@ -90,6 +90,21 @@ const PROFILES = [
   { id: 'standard', label: 'Standard transfer', multiplier: 1.04 },
   { id: 'express', label: 'Express', multiplier: 1.12 },
 ] as const
+
+export type TransferProfile = (typeof PROFILES)[number]
+
+/**
+ * Which trajectory a voyage is flying. Exported because the geometry of the
+ * crossing belongs to the profile, not to the voyage record -- the chart has
+ * to be able to draw the ellipse that was actually chosen rather than assume
+ * the minimum-energy one, which is what it did until this was reachable.
+ *
+ * Falls back to minimum energy so a save written by a build with a profile
+ * this one has never heard of still draws something true about the ship.
+ */
+export function transferProfile(optionId: string): TransferProfile {
+  return PROFILES.find((p) => p.id === optionId) ?? PROFILES[0]
+}
 
 /**
  * What the astrogator can offer right now. Empty without a contract: there is
@@ -263,7 +278,7 @@ export function voyageView(state: SimState): VoyageView | undefined {
   const from = getPort(v.fromPortId)
   const to = getPort(v.toPortId)
   const sameBody = from.bodyId === to.bodyId
-  const profile = PROFILES.find((p) => p.id === v.optionId) ?? PROFILES[0]
+  const profile = transferProfile(v.optionId)
 
   // Recomputed rather than stored. The trajectory is a pure function of where
   // the ship left, where it is going and which profile was chosen -- all of
@@ -277,10 +292,10 @@ export function voyageView(state: SimState): VoyageView | undefined {
     : stretchedTransfer(from.bodyId, to.bodyId, profile.multiplier)
 
   const a = leg.semiMajorAxisM
-  // Departure is at periapsis of the transfer ellipse for both profiles, so
-  // eccentricity follows from the radius the ship left at.
-  const e = Math.abs(1 - Math.min(r1, r2) / a)
-  const r = radiusAtTime(mu, a, e, Math.max(0, elapsed))
+  // Where she is on that ellipse right now. The transfer carries which apsis
+  // she left from, so an inbound leg starts at the slow end rather than being
+  // reported at periapsis speed the moment she casts off.
+  const { radiusM: r } = transferStateAt(leg, mu, elapsed)
 
   const hull = getHull(state.ship.hullId)
   const split = burnSplit(mu, r1, r2, a)

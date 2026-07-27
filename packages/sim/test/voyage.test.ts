@@ -22,7 +22,8 @@ import {
   transferOptions,
   voyageView,
 } from '../src/index.js'
-import { getPort } from '@solsyn/data'
+import { getBody, getPort } from '@solsyn/data'
+import { AU } from '../src/orbits.js'
 import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
@@ -76,6 +77,62 @@ describe('the stretched transfer is real mechanics', () => {
         hohmannTransfer('earth', 'mars').deltaVMs - 1e-6,
       )
     }
+  })
+
+  // Coming home is not the outbound leg played backwards, and for two
+  // milestones it was priced as though it were: `a` was scaled *up* whichever
+  // way the ship was going, which inbound raises periapsis instead of dropping
+  // it. Express to Earth then cost more delta-v AND took longer than minimum
+  // energy -- a strictly worse option, which is the fake choice TR-3b exists to
+  // forbid -- on an ellipse whose lowest point never reached Earth's orbit.
+  describe('and it works in both directions', () => {
+    for (const [from, to] of [
+      ['ceres', 'earth'],
+      ['mars', 'earth'],
+    ] as const) {
+      it(`buys time on the ${from} to ${to} run instead of wasting it`, () => {
+        const slow = stretchedTransfer(from, to, 1)
+        const fast = stretchedTransfer(from, to, 1.12)
+        expect(fast.durationS).toBeLessThan(slow.durationS)
+        expect(fast.deltaVMs).toBeGreaterThan(slow.deltaVMs)
+      })
+
+      it(`drops below ${to}'s orbit to do it, and leaves from the high end`, () => {
+        const { semiMajorAxisM: a, eccentricity: e, departureAnomalyRad } = stretchedTransfer(
+          from,
+          to,
+          1.12,
+        )
+        // Inbound, the ship departs at apoapsis: the burn is retrograde and it
+        // dips inside the target orbit rather than easing down onto it.
+        expect(departureAnomalyRad).toBeCloseTo(Math.PI, 12)
+        expect(a * (1 + e)).toBeCloseTo(getBody(from).orbitRadiusAu * AU, -3)
+        expect(a * (1 - e)).toBeLessThan(getBody(to).orbitRadiusAu * AU)
+      })
+
+      it('still reduces to Hohmann at the minimum-energy ellipse', () => {
+        const h = hohmannTransfer(from, to)
+        const s = stretchedTransfer(from, to, 1)
+        expect(s.deltaVMs).toBeCloseTo(h.deltaVMs, 6)
+        expect(Math.abs(s.durationS - h.durationS) / h.durationS).toBeLessThan(1e-7)
+        expect(s.eccentricity).toBeCloseTo(h.eccentricity, 9)
+      })
+    }
+
+    it('is monotonic in the multiplier, so a dearer option is never slower', () => {
+      for (const [from, to] of [
+        ['earth', 'ceres'],
+        ['ceres', 'earth'],
+      ] as const) {
+        let previous = stretchedTransfer(from, to, 1)
+        for (const m of [1.04, 1.08, 1.12]) {
+          const next = stretchedTransfer(from, to, m)
+          expect(next.durationS).toBeLessThan(previous.durationS)
+          expect(next.deltaVMs).toBeGreaterThan(previous.deltaVMs)
+          previous = next
+        }
+      }
+    })
   })
 })
 

@@ -122,5 +122,9 @@ function describe(chart: ChartView): string {
   if (ship.local) {
     return `Under way to ${to?.name ?? 'port'} — ${pct}% of a crossing that stays inside this system.`
   }
-  return `Under way to ${to?.name ?? 'port'} — ${pct}% of the transfer flown.`
+  // The arc is the chosen profile's ellipse, not the minimum-energy one, so it
+  // says which trajectory it is drawing rather than leaving the player to
+  // wonder why this crossing bulges further than the last one did.
+  const profile = ship.profileLabel ? ` on the ${ship.profileLabel.toLowerCase()} trajectory` : ''
+  return `Under way to ${to?.name ?? 'port'}${profile} — ${pct}% of the transfer flown.`
 }

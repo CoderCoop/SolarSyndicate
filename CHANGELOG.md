@@ -9,6 +9,49 @@ means here.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-07-27
+
+A minor by the stated rule: coming home fast is a real option now, and on
+several runs it is the difference between making a deadline and not. It started
+as a drawing bug and the drawing was the honest part — it was faithfully
+reporting a trajectory the sim had got wrong.
+
+### Fixed
+
+- **The star chart drew the same arc whatever you paid for.** It rebuilt the
+  minimum-energy ellipse from the two orbit radii and nothing else, so all three
+  profiles came out identical to the last bit. A player could spend 5.3 km/s
+  extra on Express and watch the trajectory they had declined sweep across the
+  plate. The geometry now comes from the same `Transfer` the astrogator priced,
+  so the picture and the invoice cannot come apart — §1 pillar 2 does not stop
+  at numbers. The caption names the profile too, so a fatter arc is explained
+  rather than mysterious.
+- **Stretching an ellipse only worked outbound.** Chasing the arc down found
+  the real fault underneath it: the stretch scaled the semi-major axis *up*
+  whichever way the ship was pointed. Outbound that raises apoapsis past the
+  target, which is the fast trajectory. Inbound the ship leaves from apoapsis,
+  so it raised *periapsis* — and Express to Earth cost more delta-v, took
+  **longer** than minimum energy, and described an ellipse whose lowest point
+  never reached Earth's orbit. Strictly worse in both currencies is precisely
+  the fake choice TR-3b forbids. One rule now covers both directions: move the
+  apsis the ship does not depart from away from the target orbit. Ceres→Earth
+  Express is 340 days against minimum energy's 472, at 28.3 km/s against 11.2 —
+  steep, because dropping perihelion to 0.55 AU means arriving with a lot of
+  speed to kill, and that is what a fast return actually costs.
+- **Inbound telemetry read the wrong end of the ellipse.** The speed readout
+  solved Kepler from periapsis regardless of direction, so a ship casting off
+  for home reported the fastest point of its orbit at the slowest moment of the
+  crossing. Departure anomaly is carried on the transfer now, and one function
+  turns a transfer into a position — the readout and the chart cannot disagree
+  about where she is because they no longer work it out separately.
+
+### Changed
+
+- `Transfer` carries `eccentricity` and `departureAnomalyRad`; `radiusAtTime`
+  is replaced by `transferStateAt`, which takes the transfer rather than
+  re-deriving its shape at each call site. The old signature could not express
+  an inbound leg, which is how the bug lasted two milestones.
+
 ## [0.6.0] — 2026-07-27
 
 A minor by the stated rule: the ship view, the status bar and the log all

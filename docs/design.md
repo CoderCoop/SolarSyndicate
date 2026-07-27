@@ -594,6 +594,41 @@ trajectory choice is genuinely low-stakes. The interesting version of that
 decision lives on interplanetary crossings, where stretching the ellipse costs
 delta-v steeply (Earth→Phobos: 9.62 km/s at minimum energy, 14.93 express).
 
+#### Stretching an ellipse means moving the *far* apsis, and which one that is depends on the direction
+
+The stretch was implemented as "scale the semi-major axis up", which is right
+outbound and wrong coming home. Outbound the ship departs at periapsis and
+raising `a` lifts apoapsis past the target, so it crosses the destination orbit
+early and climbing — that is the shorter, dearer trajectory. Inbound the ship
+departs at *apoapsis*, and raising `a` lifts periapsis, which is the opposite
+of what a fast return needs: the express profile to Earth cost more delta-v,
+took **longer** than minimum energy, and rode an ellipse whose lowest point
+never reached Earth's orbit at all. Strictly worse in both currencies is the
+fake choice TR-3b exists to forbid, and it survived because no test asked what
+the trajectory *was*, only what it cost.
+
+The rule is one rule in both directions: **move the apsis the ship does not
+depart from away from the target orbit, by `(multiplier − 1) × (r₁ + r₂)`.**
+Outbound that is apoapsis raised above the destination; inbound it is periapsis
+dropped below it, so the ship falls past the target orbit and the arrival burn
+catches it on the way down. It reduces to Hohmann at a multiplier of 1 either
+way, and the minimum-energy case still sweeps exactly 180°.
+
+Coming home fast is expensive, and honestly so: Ceres→Earth is 11.2 km/s over
+472 days at minimum energy against 28.3 km/s over 340 days express, because
+dropping perihelion to 0.55 AU means arriving at Earth with a great deal of
+speed to kill. Real mission designers spend an atmosphere on that problem
+rather than propellant. The Kestrel has neither, so the option is offered,
+priced, and marked infeasible with the reason — which is TR-3b working, not
+TR-3b failing.
+
+**The chart draws the ellipse that was chosen.** It used to rebuild the
+minimum-energy conic from the two orbit radii and nothing else, so all three
+profiles were drawn as the cheap one: a player could pay 5.3 km/s extra for
+Express and watch the trajectory they had declined. §1 pillar 2 says the
+numbers are real, and a picture of a different trajectory is no more defensible
+than a wrong number.
+
 **Neglect is priced when you come to sell.** Found by flying the thing: the
 allowance used to *reward* skipping repairs. A tended ship spent its whole
 spares budget and scored nothing on that line; a neglected one spent none and
