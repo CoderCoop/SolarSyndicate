@@ -175,11 +175,33 @@ describe('atmosphere', () => {
     expect(after).toBeLessThan(before)
   })
 
-  it('never lets the crew fall below the M1 health floor', () => {
-    // §7.4 bounded decay. Mortality is an M3 system (§4.5), not an M1 accident.
+  it('announces the emergency by name before it can take anybody (§7.4)', () => {
+    // The rule is not that nobody dies -- §4.5 is a permadeath game. It is
+    // "no death without foreshadowing and a decision". So the dispatch naming
+    // the crew and the time they have must land strictly before the first
+    // casualty, with room to act in between.
+    const s = advanceTo(breakPart(world(), 'life.scrubber.co2'), 90 * DAY)
+
+    const warned = s.log.filter((e) => e.topic === 'life' && /have \d/.test(e.text))
+    const died = s.log.filter((e) => /has died aboard/.test(e.text))
+    expect(warned.length).toBeGreaterThan(0)
+
+    if (died.length > 0) {
+      const firstWarning = Math.min(...warned.map((e) => e.at))
+      const firstDeath = Math.min(...died.map((e) => e.at))
+      expect(firstWarning).toBeLessThan(firstDeath)
+      // And the warning is not a formality issued a minute beforehand.
+      expect(firstDeath - firstWarning).toBeGreaterThan(HOUR)
+    }
+  })
+
+  it('bounds decay for everyone still breathing (§7.4)', () => {
+    // Bounded decay still applies: a survivor bottoms out at the floor rather
+    // than running negative, and the floor is where the casualty rule fires.
     const s = advanceTo(breakPart(world(), 'life.scrubber.co2'), 90 * DAY)
     for (const crew of s.crew) {
-      expect(crew.health.value).toBeGreaterThanOrEqual(10)
+      expect(crew.health.value).toBeGreaterThanOrEqual(0)
+      if (!crew.dead) expect(crew.health.value).toBeGreaterThan(0)
     }
   })
 })

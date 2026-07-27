@@ -126,7 +126,7 @@ export function hireCrew(state: SimState, crewId: string, at: GameTime): boolean
     activity: 'off',
     // They arrive rested and in one piece; what happens next is on the desk.
     fatigue: makeReservoir(10, 0, 100, at),
-    health: makeReservoir(95, 10, 100, at),
+    health: makeReservoir(95, 0, 100, at),
   }
   state.crew.push(hired)
 

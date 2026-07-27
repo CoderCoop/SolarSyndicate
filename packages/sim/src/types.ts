@@ -24,7 +24,7 @@ import type { GameTime } from './time.js'
  * the shape and a test refuses any change to it that this number did not
  * follow.
  */
-export const SIM_STATE_VERSION = 8
+export const SIM_STATE_VERSION = 10
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -113,6 +113,29 @@ export interface ShipState {
   brownout: boolean
   /** Reactor derated because the thermal loop cannot reject its waste heat. */
   thermalTrip: boolean
+  /** Policy the ship follows without being asked (§7.3). */
+  standingOrders: StandingOrders
+  /**
+   * The emergency the log has already announced, so escalating air raises one
+   * dispatch per stage instead of one per network resolve.
+   */
+  lastCasualtyWarning?: string
+}
+
+/**
+ * The orders that stand until you change them. Design doc §7.3.
+ *
+ * "Standing orders are the policy toggles you set in advance" -- the layer
+ * between what you do at the desk and what the captain decides alone. They earn
+ * their place by removing clerical work rather than judgement: the player still
+ * chooses the policy, the ship just stops making them re-enter it.
+ */
+export interface StandingOrders {
+  /**
+   * Raise a service by itself once a part has worn far enough that a full
+   * service will not overflow the condition ceiling.
+   */
+  autoService: boolean
 }
 
 /** What a crew member is doing right now. Driven by the watch bill (§4.3). */
@@ -125,10 +148,25 @@ export interface CrewState {
   activity: CrewActivity
   /** 0-100, rises awake and falls asleep. */
   fatigue: Reservoir
-  /** 0-100. M1 damages health through CO2 and heat; it never kills (§7.4). */
+  /**
+   * 0-100, and it can now reach the floor.
+   *
+   * It used to be capped above zero on the grounds that "M1 never kills". §4.5
+   * is explicit that this is a permadeath game, and §7.4's rule is not that
+   * death cannot happen -- it is that it cannot happen *without foreshadowing
+   * and a decision*. The foreshadowing is `scheduleCasualties`, which can
+   * always state who is in trouble and exactly how long they have, because
+   * health is a reservoir and the answer is a division.
+   */
   health: Reservoir
   /** Work order this crew member is currently progressing, if any. */
   workOrderId?: string
+  /**
+   * Permanent (§4.5). Kept on the record rather than inferred from health,
+   * because a body recovered and a person who merely bottomed out are not the
+   * same thing and the difference must survive the air getting better.
+   */
+  dead?: boolean
 }
 
 export type WorkOrderKind = 'service' | 'repair'
@@ -151,6 +189,10 @@ export interface WorkOrder {
   status: WorkOrderStatus
   assignedCrewId?: string
   createdAt: GameTime
+  /** Position in the queue. Lower is worked first; the player sets it. */
+  priority: number
+  /** Raised by the standing order rather than by hand. */
+  auto: boolean
 }
 
 export type EventKind =
@@ -159,6 +201,8 @@ export type EventKind =
   | 'ARRIVE'
   | 'SHIFT_CHANGE'
   | 'PART_THRESHOLD'
+  | 'AUTO_SERVICE'
+  | 'CREW_DOWN'
   | 'WORK_ORDER_DONE'
 
 export interface SimEvent {
@@ -250,6 +294,8 @@ export type Command =
   | { kind: 'RESET_BROWNOUT' }
   | { kind: 'QUEUE_WORK_ORDER'; partId: string; orderKind: WorkOrderKind }
   | { kind: 'CANCEL_WORK_ORDER'; workOrderId: string }
+  | { kind: 'MOVE_WORK_ORDER'; workOrderId: string; direction: 'up' | 'down' }
+  | { kind: 'SET_STANDING_ORDER'; order: keyof StandingOrders; on: boolean }
   | { kind: 'SET_CREW_WATCH'; crewId: string; watch: Watch }
   /**
    * Move money. Negative credits receive rather than spend. Never refused --

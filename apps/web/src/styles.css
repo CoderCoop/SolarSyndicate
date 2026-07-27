@@ -1907,6 +1907,13 @@ button {
 
 /* tabs */
 
+/*
+ * Nine sections do not fit across a 390 px phone at a legible size: dividing
+ * the width equally gave every label about forty pixels, which wrapped
+ * "Mission" onto two lines and clipped the last tab out of the bar entirely.
+ * So the strip scrolls, which is what a phone does with more tabs than width,
+ * and each label keeps the room it needs to be read.
+ */
 .tabs {
   position: sticky;
   top: 0;
@@ -1916,12 +1923,19 @@ button {
   padding: 0 var(--pad);
   background: var(--bg);
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tabs__btn {
-  flex: 1;
+  flex: 1 0 auto;
+  white-space: nowrap;
   position: relative;
-  padding: 11px 4px;
+  padding: 11px 10px;
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -4231,4 +4245,238 @@ button {
 
 .person--sleep .figure {
   opacity: 0.75;
+}
+
+/* ------------------------------------------------------- work orders, M3.1 */
+
+/*
+ * The standing order sits above the queue it fills, because a queue that fills
+ * itself looks like a malfunction until you can see the rule that is doing it.
+ */
+.standing {
+  margin: 0 0 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.standing__toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.standing__label {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* Reuses the part switch wholesale -- same control, same meaning, and a second
+   set of rules for it would only be a second thing to keep in step. */
+
+.standing__note {
+  margin: 8px 0 0;
+}
+
+.orders__note {
+  margin: 0 0 10px;
+}
+
+/* Reordering controls. Small, quiet, and disabled at the ends rather than
+   absent, so the queue does not reflow as jobs move through it. */
+.order__move {
+  display: inline-flex;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.button--small {
+  padding: 2px 9px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tag--auto {
+  border-color: color-mix(in srgb, var(--cyan) 40%, var(--line));
+  color: var(--cyan);
+}
+
+/* What ordering a service too early actually costs, stated on the job. */
+.order__waste {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--amber);
+  opacity: 0.9;
+}
+
+/* --- hands --- */
+
+.hands {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.hand {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.hand.is-working {
+  border-color: color-mix(in srgb, var(--cyan) 35%, var(--line));
+}
+
+.hand__who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hand__name {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.hand__role {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.hand__doing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  text-align: right;
+}
+
+.hand__job {
+  font-size: 13.5px;
+  color: var(--cyan);
+}
+
+.hand__eta {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.hand__idle {
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+/* Asleep is dimmer: they are not available and the panel should not imply it. */
+.hand--sleep {
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------------ vitals */
+
+/*
+ * What the air is doing to the people in it. The gauges say what the numbers
+ * are; this says what they mean, on the clinical ladder the real exposure
+ * limits are written in.
+ */
+.vitals {
+  margin: 0 0 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.vitals--nominal {
+  color: var(--ink-dim);
+}
+
+.vitals--impaired {
+  border-color: color-mix(in srgb, var(--amber) 35%, var(--line));
+}
+
+.vitals--dangerous,
+.vitals--incapacitating,
+.vitals--lethal {
+  border-color: color-mix(in srgb, var(--red) 50%, var(--line));
+  background: color-mix(in srgb, #1a0f0f 45%, var(--bg-sunken));
+}
+
+.vitals__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.vital {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  align-items: baseline;
+}
+
+.vital__reading {
+  font-size: 13.5px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.vital__label {
+  font-size: 13px;
+  color: var(--amber);
+}
+
+.vital--dangerous .vital__label,
+.vital--incapacitating .vital__label,
+.vital--lethal .vital__label {
+  color: var(--red);
+}
+
+.vital__effect {
+  grid-column: 1 / -1;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+.vitals__stop,
+.vitals__deadline,
+.vitals__lost {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.vitals__stop {
+  color: var(--amber);
+}
+
+/* The §7.4 line: who, and how long, stated before it happens. */
+.vitals__deadline {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.vitals__lost {
+  color: var(--ink-dim);
+  border-top: 1px solid var(--line);
+  padding-top: 9px;
 }

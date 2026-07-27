@@ -13,6 +13,7 @@ import { pushLog } from './log.js'
 import { cancelKind, schedule } from './queue.js'
 import { levelAt, settle } from './resources.js'
 import { draw } from './rng.js'
+import { AUTO_SERVICE_CONDITION } from './workorders.js'
 import { DAY, type GameTime } from './time.js'
 import type { PartState, SimState } from './types.js'
 
@@ -66,6 +67,7 @@ function nextThresholdBelow(condition: number): number | undefined {
  */
 export function resolveWear(state: SimState, at: GameTime): void {
   cancelKind(state.queue, 'PART_THRESHOLD')
+  cancelKind(state.queue, 'AUTO_SERVICE')
 
   for (const part of state.ship.parts) {
     settle(part.condition, at)
@@ -82,6 +84,42 @@ export function resolveWear(state: SimState, at: GameTime): void {
       seq: state.nextSeq++,
       at: at + secondsAway,
       kind: 'PART_THRESHOLD',
+      ref: part.id,
+    })
+  }
+
+  scheduleAutoService(state, at)
+}
+
+/**
+ * When each part will next be worth servicing, as its own event.
+ *
+ * The standing order cannot ride on the condition thresholds: those are 75, 50,
+ * 25, 10 and 0, and the point where a service stops being wasted is 68. Hanging
+ * the policy on the nearest threshold below would make it fire at 50 -- running
+ * every part eighteen points harder than the rule the player was shown.
+ *
+ * So it gets its own scheduled crossing, which is also what makes it work while
+ * the app is closed: catch-up pops the event at the moment condition passed the
+ * line, not whenever somebody next opened the game (§7.2).
+ */
+function scheduleAutoService(state: SimState, at: GameTime): void {
+  if (!state.ship.standingOrders.autoService) return
+
+  for (const part of state.ship.parts) {
+    if (part.broken || part.condition.rate >= 0) continue
+    if (state.workOrders.some((w) => w.partId === part.id && w.status !== 'done')) continue
+
+    const current = levelAt(part.condition, at)
+    // Already past it: raise the crossing now rather than never, which is what
+    // happens to a part that wore through the line while the order was off.
+    const secondsAway = Math.max(0, (current - AUTO_SERVICE_CONDITION) / -part.condition.rate)
+    if (!Number.isFinite(secondsAway)) continue
+
+    schedule(state.queue, {
+      seq: state.nextSeq++,
+      at: at + secondsAway,
+      kind: 'AUTO_SERVICE',
       ref: part.id,
     })
   }

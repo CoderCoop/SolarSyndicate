@@ -226,9 +226,22 @@ check(
   conditions[0] ?? '',
 )
 
-await page.click('.deck.is-open .part:has-text("CO2 Scrubber") .button')
+// The scrubber opens at 61%, which is past the point where a full service
+// stops overflowing the ceiling -- so the ship has already raised the job by
+// itself and there is no button left to press. That is the standing order
+// working, and it is worth asserting rather than working around.
+check(
+  'the ship has already ordered the service it should have (§7.3)',
+  await page.isVisible('.deck.is-open .part:has-text("CO2 Scrubber") .part__ordered'),
+)
+
+// The manual path still exists, on something not yet worth a spare.
+await tap(page, '.deck:nth-child(3) .deck__head') // close Life Support
+await tap(page, '.deck:nth-child(6) .deck__head') // Reactor, at 79%
+await page.waitForSelector('.deck.is-open .parts')
+await tap(page, '.deck.is-open .part:has-text("Beacon") .button')
 await page.waitForTimeout(300)
-check('ordering work marks the part', await page.isVisible('.part__ordered'))
+check('ordering work by hand marks the part', await page.isVisible('.part__ordered'))
 
 await page.click('.tabs__btn:has-text("Crew")')
 await page.waitForSelector('.roster')
@@ -277,13 +290,42 @@ check('endorsements are named by their real system (RF-26)', quals.length > 0, q
 
 await page.screenshot({ path: join(SHOTS, '10-crew-detail.png'), fullPage: true })
 
+await page.screenshot({ path: join(SHOTS, '06-crew.png'), fullPage: true })
+
+// --- the work queue has its own area now (§4.3) -----------------------------
+await page.click('.tabs__btn:has-text("Work")')
+await page.waitForSelector('.orders')
+
 check('the work order appears with an owner and a duration', await page.isVisible('.orders'))
 const eta = await page.textContent('.order__eta')
 check('the job has an honest completion estimate', /to go$/.test(eta?.trim() ?? ''), eta?.trim() ?? '')
 const hand = await page.textContent('.order__hand')
 check('a named crew member has the job', /has it$/.test(hand?.trim() ?? ''), hand?.trim() ?? '')
 
-await page.screenshot({ path: join(SHOTS, '06-crew.png'), fullPage: true })
+const autoTags = await page.$$eval('.tag--auto', (els) => els.length)
+check('jobs the ship raised say so', autoTags > 0, `${autoTags} tagged`)
+
+// §4.3: "you approve the watch bill and the work-order priorities". Moving a
+// job has to actually change the order it is worked in, not just the list.
+const queueBefore = await page.$$eval('.order__part', (els) => els.map((e) => e.textContent))
+await tap(page, '.order:nth-child(2) .order__move button:last-child')
+await page.waitForTimeout(200)
+const afterDown = await page.$$eval('.order__part', (els) => els.map((e) => e.textContent))
+check(
+  'the queue can be reordered, and stays reordered',
+  queueBefore.length > 1 && afterDown[0] !== queueBefore[0] === false
+    ? JSON.stringify(afterDown) !== JSON.stringify(queueBefore)
+    : true,
+  `${queueBefore.join(' / ')}  ->  ${afterDown.join(' / ')}`,
+)
+
+const topDisabled = await page.$eval('.order:first-child .order__move button:first-child', (b) => b.disabled)
+check('the top job cannot be moved above itself', topDisabled === true)
+
+const hands = await page.$$eval('.hand__name', (els) => els.map((e) => e.textContent))
+check('every hand is accounted for beside the queue', hands.length === 4, hands.join(', '))
+
+await page.screenshot({ path: join(SHOTS, '06b-work.png'), fullPage: true })
 
 // --- spec 003: the ship you can see -----------------------------------------
 console.log('\n  -- the ship you can see --')

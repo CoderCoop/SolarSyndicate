@@ -22,7 +22,19 @@ import { wearRatePerSecond } from '../src/wear.js'
 import { DAY, HOUR, type GameTime } from '../src/time.js'
 
 const T0 = Date.UTC(2200, 0, 1)
-const world = () => createWorld(20260726, T0)
+/**
+ * Attendance in isolation, with the standing order lifted.
+ *
+ * A ship that services itself is a confound here: these tests measure what
+ * *presence* buys, and a completed service moves condition by 32 points, which
+ * swamps the few points an attended watch is worth over the same hours. It also
+ * takes the hand being measured off their station and puts them on a job.
+ */
+const world = () => {
+  const s = createWorld(20260726, T0)
+  s.ship.standingOrders.autoService = false
+  return s
+}
 
 /** Move everyone onto a watch, so a chosen hour is attended or deserted. */
 function setWatches(state: SimState, watch: 'A' | 'B' | 'C'): SimState {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  AUTO_SERVICE_CONDITION,
   activeContract,
   chartView,
   contractBoard,
@@ -37,11 +38,11 @@ import { StarChart } from './components/StarChart.js'
 import { LifeSupport } from './components/LifeSupport.js'
 import { ShipViewport } from './components/ShipViewport.js'
 import { StatusBar } from './components/StatusBar.js'
-import { WorkOrders } from './components/WorkOrders.js'
+import { Assignments, WorkOrders } from './components/WorkOrders.js'
 import { discardWorld, reinstallApp } from './recover.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
-type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'log' | 'help'
+type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'work' | 'log' | 'help'
 
 /**
  * How long the boot screen waits before offering a way out of itself.
@@ -60,6 +61,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'flows', label: 'Flows' },
   { id: 'life', label: 'Life' },
   { id: 'crew', label: 'Crew' },
+  { id: 'work', label: 'Work' },
   { id: 'log', label: 'Log' },
   { id: 'help', label: 'Help' },
 ]
@@ -194,7 +196,7 @@ export function App() {
             {t.label}
             {t.id === 'ship' && brokenCount > 0 && <span className="tabs__dot" />}
             {t.id === 'mission' && missionBadge && <span className="tabs__count">{missionBadge}</span>}
-            {t.id === 'crew' && orders.length > 0 && <span className="tabs__count">{orders.length}</span>}
+            {t.id === 'work' && orders.length > 0 && <span className="tabs__count">{orders.length}</span>}
           </button>
         ))}
       </nav>
@@ -271,10 +273,6 @@ export function App() {
               nowHour={((state.now % 86400) + 86400) % 86400 / 3600}
               onSetWatch={(crewId, watch) => dispatch({ kind: 'SET_CREW_WATCH', crewId, watch })}
             />
-            <WorkOrders
-              orders={orders}
-              onCancel={(workOrderId) => dispatch({ kind: 'CANCEL_WORK_ORDER', workOrderId })}
-            />
             <HiringHall
               candidates={candidates}
               berths={crewBerths}
@@ -284,6 +282,24 @@ export function App() {
               onHire={(crewId) => dispatch({ kind: 'HIRE_CREW', crewId })}
             />
             <GuildPanel guilds={guilds} />
+          </>
+        )}
+
+        {tab === 'work' && (
+          <>
+            <WorkOrders
+              orders={orders}
+              autoService={state.ship.standingOrders.autoService}
+              autoServiceAt={AUTO_SERVICE_CONDITION}
+              onCancel={(workOrderId) => dispatch({ kind: 'CANCEL_WORK_ORDER', workOrderId })}
+              onMove={(workOrderId, direction) =>
+                dispatch({ kind: 'MOVE_WORK_ORDER', workOrderId, direction })
+              }
+              onSetAutoService={(on) =>
+                dispatch({ kind: 'SET_STANDING_ORDER', order: 'autoService', on })
+              }
+            />
+            <Assignments crew={crew} orders={orders} />
           </>
         )}
 

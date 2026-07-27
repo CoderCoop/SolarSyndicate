@@ -6,7 +6,7 @@
  * reading into a decision.
  */
 import { formatDuration, type LifeSupportView, type LifeStatus } from '@solsyn/sim'
-import { DAY } from '@solsyn/sim'
+import { DAY, HOUR } from '@solsyn/sim'
 
 function Days({ days }: { days: number }) {
   if (!Number.isFinite(days)) return <span className="gauge-row__horizon">holding</span>
@@ -50,10 +50,90 @@ function Row({
   )
 }
 
+/**
+ * What the air is doing to the people in it. Design doc §3.2, §7.4.
+ *
+ * The gauges below say what the numbers are. This says what they *mean* for
+ * the crew, in the clinical stage the real limits are written in -- because
+ * "8,400 ppm" is only actionable if you happen to know that OSHA's ceiling is
+ * 5,000 and NIOSH calls 40,000 immediately dangerous to life.
+ *
+ * It also carries §7.4's foreshadowing: when the air is bad enough to hurt
+ * somebody, this is where it says who and how long, before it happens.
+ */
+function Crew({ life }: { life: LifeSupportView }) {
+  const env = life.environment
+  const failing = life.casualties.filter((c) => !c.dead && Number.isFinite(c.secondsLeft))
+  const lost = life.casualties.filter((c) => c.dead)
+
+  if (env.exposures.length === 0 && lost.length === 0) {
+    return (
+      <p className="panel__note vitals vitals--nominal">
+        The air is clean, the cabin is comfortable, and nothing aboard is working against the
+        crew.
+      </p>
+    )
+  }
+
+  return (
+    <div className={`vitals vitals--${env.severity}`}>
+      <ul className="vitals__list">
+        {env.exposures.map((e) => (
+          <li key={e.hazard} className={`vital vital--${e.severity}`}>
+            <span className="vital__reading">{e.reading}</span>
+            <span className="vital__label">{e.label}</span>
+            <span className="vital__effect">
+              {e.capacity <= 0
+                ? 'cannot work'
+                : `working at ${Math.round(e.capacity * 100)}%`}
+              {e.healthPerDay < 0 && ` · ${e.healthPerDay.toFixed(0)} health/day`}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {env.incapacitating && (
+        <p className="vitals__stop">
+          Nobody aboard can work in this. Every job in the queue is stopped until the air is
+          fixed.
+        </p>
+      )}
+
+      {/* §7.4: no death without foreshadowing. Health is a reservoir, so the
+          moment it runs out is a division -- the game always knows, and so
+          should the player, well before it happens. */}
+      {failing.length > 0 && (
+        <p className="vitals__deadline">
+          {/* A crew signed on together shares an atmosphere and usually a
+              deadline, and four names against the same figure reads as noise.
+              Say it once when it is once. */}
+          {failing.every(
+            (c) => Math.abs(c.secondsLeft - failing[0]!.secondsLeft) < HOUR,
+          )
+            ? `At this rate the crew have ${formatDuration(failing[0]!.secondsLeft)}.`
+            : `At this rate ${failing
+                .slice()
+                .sort((a, b) => a.secondsLeft - b.secondsLeft)
+                .map((c) => `${c.name} has ${formatDuration(c.secondsLeft)}`)
+                .join(', ')}.`}
+        </p>
+      )}
+
+      {lost.length > 0 && (
+        <p className="vitals__lost">
+          Lost aboard: {lost.map((c) => c.name).join(', ')}.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function LifeSupport({ life }: { life: LifeSupportView }) {
   return (
     <section className="panel" aria-label="Life support">
       <h2 className="panel__title">Life Support</h2>
+
+      <Crew life={life} />
 
       <ul className="gauges">
         <Row
@@ -89,6 +169,9 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
           label="Oxygen"
           value={`${life.o2Kg.toFixed(1)} kg`}
           fill={life.o2Kg / 90}
+          /* Partial pressure alongside the tank reading: the mass is what you
+             buy, the kPa is what a body responds to. Sea level is 21.2. */
+          detail={`${life.o2KPa.toFixed(1)} kPa partial pressure`}
           horizon={<Days days={life.o2Days} />}
         />
 

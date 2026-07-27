@@ -9,6 +9,68 @@ means here.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-07-27
+
+A minor three times over: the ship now maintains itself to a policy you set,
+the work queue is a thing you can steer rather than a list you watch, and the
+atmosphere has a real physiology behind it. The last of those changes what the
+player can lose.
+
+### Added
+
+- **A standing order that services parts at the right moment.** A service puts
+  back a *fixed* 32 points of condition and the ceiling throws away the rest,
+  so servicing at 90% spends a whole spare to buy ten points. There is one
+  right moment on every part — at or below 68% — and finding it was pure
+  clerical work: watch seven parts, notice each crossing a line, tap the same
+  button. §7.3 calls standing orders "the policy toggles you set in advance",
+  and this is the first of them. It fires from its own scheduled crossing, so
+  it works to the minute while the app is closed; it declines when the locker
+  cannot pay, when the player has already ordered work, and always for a
+  repair — a failure is yours to answer. On by default, and a toggle because
+  the policy is the player's to set, not because the default is in doubt.
+- **A Work tab.** §4.3 promises that "you approve the watch bill and the
+  work-order priorities". The watch bill has had a panel since M1; the
+  priorities did not exist — the queue was strictly oldest-first, so the only
+  way to get a failed scrubber seen before a routine service raised an hour
+  earlier was to cancel the service and lose the hours already in it. Jobs now
+  move up and down, and the hours in a job survive being reordered. Beside the
+  queue, who has what: a job reading "waiting for a free hand" means nothing
+  until you can see that three of the four hands are asleep.
+- **Ordering a service too early now says what it costs** — "11 of the 32
+  points will hit the ceiling and be lost" — rather than quietly doing it.
+
+### Changed
+
+- **The atmosphere has a physiology.** The old model was four `if` statements:
+  CO2 over 5,000 ppm cost three health a day and over 10,000 cost nine, with
+  matching cuts to how well somebody worked. Two cliffs, nothing in between,
+  and no name for what was happening to anybody. It is now a graded model on
+  the published limits — OSHA's 5,000 ppm exposure limit, NASA's 7,000 ppm
+  180-day figure, NIOSH's 40,000 ppm "immediately dangerous to life", and the
+  Satish and Allen studies for the cognitive decline that starts around 1,000.
+  Oxygen is judged by **partial pressure** rather than by the tank reading,
+  because that is what a body responds to; there is a cold ladder as well as a
+  hot one, which there was not before. Hazards combine honestly: capacities
+  multiply, health costs add.
+- **Bad air stops the watch working before it makes them ill**, which is the
+  coupling that matters — a failed scrubber shows up in the numbers the player
+  is already watching. At NIOSH's IDLH figure nobody works at all, and the
+  queue stops rather than crawling.
+- **Crew can now die of it.** The health floor of 10 that made everything
+  survivable is gone. §4.5 is explicit that this is a permadeath game, and
+  §7.4's rule is not that death cannot happen — it is that it cannot happen
+  *without foreshadowing and a decision*. Health is a reservoir, so the moment
+  it runs out is a division: the game always knows who is in trouble and
+  exactly how long they have, and now it says so, by name, in the readout and
+  in a dispatch, long before it happens.
+
+### Fixed
+
+- **Nine sections did not fit across a phone.** Dividing the tab strip equally
+  gave every label about forty pixels, which wrapped "Mission" onto two lines
+  and clipped the last tab out of the bar entirely. The strip scrolls now.
+
 ## [0.7.0] — 2026-07-27
 
 A minor by the stated rule: coming home fast is a real option now, and on

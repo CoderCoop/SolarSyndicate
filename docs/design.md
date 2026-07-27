@@ -197,6 +197,45 @@ Heat is the underrated one: radiators are big, fragile, and mass-expensive, and 
 us a real engineering trade-off that most games skip. Reactor output is ultimately
 radiator-limited.
 
+#### The atmosphere is a medical problem, on the published numbers
+
+The failure modes in that table used to be two `if` statements each. CO2 over
+5,000 ppm cost three health a day and over 10,000 cost nine; heat had the same
+shape; oxygen had one state, "the tank hit zero", which is the moment
+everything is already over. Two cliffs, nothing in between, and no name for
+what was happening to anybody.
+
+It is a graded model now, and the bands are the real ones — worth getting right
+because §1 pillar 2 says the numbers are real, and because hypercapnia is one of
+the few hazards here a player might recognise. Apollo 13 is why most people have
+heard of a CO2 scrubber at all.
+
+| CO2 | What it is | What it does |
+|---|---|---|
+| 1,000–2,500 ppm | Allen 2016, Satish 2012 | decision-making measurably down |
+| 5,000 ppm | OSHA 8-hour limit | headaches; health starts to go |
+| 7,000 ppm | NASA 180-day SMAC | dulled; the ISS figure crews complain at |
+| 10,000–30,000 ppm | 1–3% | drowsy → breathless → tunnel vision |
+| 40,000 ppm | NIOSH IDLH | nobody works at all |
+| 70,000+ ppm | 7–10% | unconscious in minutes, then fatal |
+
+Three properties worth keeping:
+
+- **CO2 harms on its own terms.** It is not a shortage of oxygen and topping up
+  the tanks does not help, which is why a failed scrubber is an emergency on a
+  ship with full stores.
+- **Capacity goes before health.** Bad air makes people useless well before it
+  makes them ill — which is what makes a life-support failure show up in the
+  numbers the player already watches, rather than as a separate gauge nobody
+  opened.
+- **Oxygen is judged by partial pressure**, not by the tank reading. That is
+  what a body responds to, and it is why a climber is in trouble in air that is
+  still 21% oxygen.
+
+Hazards combine rather than compete: capacities multiply, health costs add. Two
+things each halving what somebody can do leave a quarter, and the arithmetic
+should say so rather than taking the worst and ignoring the rest.
+
 **Removers have a floor.** A sorbent bed does not strip a gas out of an
 atmosphere; it reaches equilibrium with its own sorbent. The ISS runs around
 2,000–3,000 ppm of CO2 with CDRA working perfectly, and Earth ambient is about
@@ -398,6 +437,23 @@ reshuffling as circumstances demand. This is what makes offline time work: the
 schedule *is* the AI. Skill growth: learning-by-doing (slow, capped by challenge
 level) + training work orders (uses another crew member's Leadership/skill, or
 courseware).
+
+#### Standing orders start with the one that is pure clerical work
+
+§4.3 says you approve the watch bill and the work-order priorities. Both now
+exist as controls; the third thing that needed doing was neither.
+
+A service restores a **fixed** number of condition points and the ceiling clips
+the overflow, so there is exactly one right moment to spend a spare on any
+part — at or below `100 − serviceRestore`. Finding it was not judgement, it was
+watching seven gauges for the same crossing and tapping the same button. That
+is the shape of thing a standing order is for (§7.3): the player states the
+policy once and the ship executes it, including while the app is closed.
+
+The order deliberately declines more often than it fires — no spares, a job
+already open, a part the player is already dealing with — and it will **never**
+raise a repair. A failure is a decision, and the game should not answer it on
+the player's behalf.
 
 ### 4.4 Hiring
 
@@ -1052,6 +1108,33 @@ consequences must always trace back to a choice the player actually made:
 - **The ship survives.** Crew are mortal; the campaign is not. Hull loss is not in
   v1 (a dead-crew ship gets recovered/towed at ruinous cost). Bounded decay still
   applies to everything non-living: condition, morale, standing have floors.
+#### What is implemented of this, and what is not
+
+The physiology is real now (see below), which means the rule above has teeth
+for the first time. Two of its three legs are standing:
+
+- **Foreshadowing is exact, not approximate.** Health is a reservoir, so the
+  moment it runs out is a division rather than a simulation. The game can
+  always name who is in trouble and how long they have, and it does — in the
+  Life readout and in a dispatch, escalating by stage rather than repeating
+  per resolve.
+- **The chain is traceable to a decision.** Bad air only reaches a lethal band
+  through neglect the player chose: lifting the standing order, declining a
+  repair, or flying with a scrubber the yard warned about.
+
+What is **not** built, and is a milestone of its own: the decision window
+itself. There is no push notification, no timer the captain waits out, no
+standing order that answers the emergency while you are away, and no automatic
+**safe mode** to fall back to. Until those exist, a player who closes the app
+with a failed scrubber and does not come back is not protected by anything but
+the length of the warning.
+
+The other gap is the tail: §7.4 says the ship survives and a dead-crew ship is
+recovered and towed at ruinous cost. Nothing implements that, so losing the
+whole watch currently leaves a working ship nobody can crew. Both belong to the
+same milestone, and neither is a reason to keep the health floor that hid the
+problem.
+
 - **Return is a story.** The session-open screen is your inbox: the captain's
   dispatches since you last read in, written in their voice — including, when it
   must be, an honest account of a death and the chain of orders that led there.

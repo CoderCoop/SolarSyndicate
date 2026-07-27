@@ -74,7 +74,7 @@ export function attendanceFor(state: SimState, roomId: string, t: GameTime): Att
   for (const crew of state.crew) {
     // Only a hand actually standing a watch here counts. Asleep in the same
     // compartment is not attendance, which is the whole point of the rule.
-    if (crew.activity !== 'watch') continue
+    if (crew.dead || crew.activity !== 'watch') continue
     if (crewRoomId(state, crew) !== roomId) continue
 
     const def = getCrewDef(crew.defId)
