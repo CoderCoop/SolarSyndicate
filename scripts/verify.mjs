@@ -348,6 +348,89 @@ check('and says why it is there', (fixtureBlurb?.length ?? 0) > 30, `${fixtureBl
 await page.click('.whois--fixture .whois__close')
 await page.click('.deck:nth-child(2) .deck__head')
 
+// --- an answer opens where the question was asked ---------------------------
+//
+// Crew and fixture cards used to render at the foot of the whole ship section:
+// tapping a person on deck 1 opened their card 1,400 px below the fold, which
+// is indistinguishable from a tap that did nothing -- and was reported as
+// exactly that. The card has to be near the thing it describes.
+await tap(page, '.deck .person .hit')
+const tappedName = await page.textContent('.whois:not(.whois--fixture) .whois__name')
+check('tapping a person opens them', Boolean(tappedName), tappedName ?? '')
+
+/* eslint-disable no-undef */
+const nearness = await page.evaluate(() => {
+  const card = document.querySelector('.whois:not(.whois--fixture)')
+  const deck = card?.closest('.deck')
+  const person = deck?.querySelector('.person .hit')
+  if (!card || !person) return null
+  return Math.abs(card.getBoundingClientRect().top - person.getBoundingClientRect().bottom)
+})
+/* eslint-enable no-undef */
+check(
+  'and opens beside them, not at the bottom of the ship',
+  nearness !== null && nearness < 400,
+  nearness === null ? 'card is not in the same deck' : `${Math.round(nearness)} px away`,
+)
+await page.click('.whois .whois__close')
+
+// --- nothing in a room is drawn through anything else (RF-8) ----------------
+//
+// The room lays itself out, so "it looks wrong" is a measurable claim: no two
+// objects may share space, and no two tap targets either -- an invisible
+// overlap steals taps meant for the machine behind the person.
+/* eslint-disable no-undef */
+const collisions = await page.evaluate(() => {
+  const bad = []
+  document.querySelectorAll('.schema').forEach((svg) => {
+    const boxes = []
+    svg.querySelectorAll('.glyph, .person').forEach((g) => {
+      const label = (g.querySelector('.hit')?.getAttribute('aria-label') ?? '?').split('.')[0]
+      const shape = g.querySelector('g')
+      const hit = g.querySelector('.hit')
+      if (shape) {
+        const b = shape.getBBox()
+        const t = shape.transform.baseVal.consolidate()
+        boxes.push({
+          kind: 'drawn',
+          label,
+          x: b.x + (t ? t.matrix.e : 0),
+          y: b.y + (t ? t.matrix.f : 0),
+          w: b.width,
+          h: b.height,
+        })
+      }
+      if (hit) {
+        boxes.push({
+          kind: 'tap target',
+          label,
+          x: +hit.getAttribute('x'),
+          y: +hit.getAttribute('y'),
+          w: +hit.getAttribute('width'),
+          h: +hit.getAttribute('height'),
+        })
+      }
+    })
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]
+        const c = boxes[j]
+        if (a.kind !== c.kind || a.label === c.label) continue
+        const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x)
+        const oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y)
+        if (ox > 0.5 && oy > 0.5) bad.push(`${a.kind}: ${a.label} × ${c.label}`)
+      }
+    }
+  })
+  return bad
+})
+/* eslint-enable no-undef */
+check(
+  'nothing in any room overlaps anything else, drawn or tappable',
+  collisions.length === 0,
+  collisions.slice(0, 3).join(' | '),
+)
+
 // --- crew stats explain themselves (RF-26) ----------------------------------
 await page.click('.tabs__btn:has-text("Crew")')
 await page.waitForSelector('.watchstrip')

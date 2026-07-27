@@ -305,12 +305,57 @@ export interface Placed<T> {
 }
 
 /**
+ * Space kept between anything and anything else, in drawing units.
+ *
+ * Glyphs are strokes, and a stroke straddles the path it is drawn on -- so a
+ * shape occupies slightly more room than the box it was given. Laying out to
+ * the nominal box alone produced drawings where a bunk clipped the bunk above
+ * it by a couple of units. This is the allowance that stops that.
+ */
+export const GAP = 4
+
+/**
+ * Space a person needs above their own head: the initials tag, and the top of
+ * a tap target drawn a little proud of the figure so it is reachable.
+ *
+ * Part of the room's height budget, because a tap target that overlaps the
+ * machine behind it steals taps meant for the machine (RF-8) -- invisible on
+ * the drawing, and infuriating to use.
+ */
+export const PERSON_TAG_U = 7
+
+/** How the deck is shared out before anything is placed on it. */
+export interface RoomLayoutOptions {
+  /**
+   * Width kept clear at the right-hand end of the deck line, for people.
+   *
+   * People stand on the deck; they are not furniture and cannot be packed
+   * around. Reserving their strip first is what stops the captain being drawn
+   * through the comms array -- equipment that will not fit in what is left
+   * moves up a tier instead of sharing the space.
+   */
+  deckReserve?: number
+  /**
+   * How far up the reserve goes.
+   *
+   * A person is taller than one tier of stores, so reserving only the deck line
+   * leaves their head in the tier above -- which is exactly what put three of
+   * the crew inside the bunks. The strip is a person's full height, not a
+   * person's footprint.
+   */
+  reserveHeight?: number
+  gap?: number
+}
+
+/**
  * Lay a room out. Spec 004 RF-3.
  *
  * Floor-standing objects sit on the deck in a row and wrap upward when the run
  * is full -- which is what makes six bunks read as two tiers of three rather
  * than a queue. Wall-mounted objects hang from the bulkhead in their own band,
  * filling from the far end so they do not collide with what is on the deck.
+ * Only the deck line itself is shortened by `deckReserve`: the tiers above it
+ * are clear of people and use the full width.
  *
  * Not an optimal packing, and it does not need to be: a deck holds a handful of
  * objects and a stable, predictable arrangement is worth more than a tight one.
@@ -319,8 +364,11 @@ export interface Placed<T> {
 export function layOutRoom<T>(
   items: Placeable<T>[],
   box: { left: number; right: number; top: number; bottom: number },
-  gap = 3,
+  options: RoomLayoutOptions = {},
 ): Placed<T>[] {
+  const gap = options.gap ?? GAP
+  const deckReserve = options.deckReserve ?? 0
+  const reserveHeight = options.reserveHeight ?? 0
   const out: Placed<T>[] = []
   const floor = items.filter((i) => i.fitting === 'floor')
   const mounted = items.filter((i) => i.fitting !== 'floor')
@@ -334,11 +382,23 @@ export function layOutRoom<T>(
   let x = box.left
   let tierBottom = box.bottom
   let tierHeight = 0
+  // A tier is in people's space while its floor is still below the top of
+  // their heads. Above that the full width is free again.
+  const rightOf = (bottom: number) =>
+    bottom > box.bottom - reserveHeight ? box.right - deckReserve : box.right
   for (const it of floor) {
     const w = it.sizeM.w * U_PER_M
     const h = it.sizeM.h * U_PER_M
-    if (x > box.left && x + w > box.right) {
-      tierBottom -= tierHeight + gap * 0.6
+    // Wrap when the run is full -- including on the very first object, which
+    // the deck line can be too short for once people have their strip. Bunks
+    // in a room with three people off watch is exactly that case: nothing fits
+    // beside them, so everything goes up.
+    // Keep going up while it still does not fit: one wrap is not enough when
+    // the tier above is also in the reserve. Bounded so a single oversized
+    // object can never spin here.
+    const full = box.right - box.left
+    for (let up = 0; x + w > rightOf(tierBottom) && (x > box.left || w <= full) && up < 8; up++) {
+      tierBottom -= tierHeight + gap
       tierHeight = 0
       x = box.left
     }
@@ -362,7 +422,7 @@ export function layOutRoom<T>(
 }
 
 /** Vertical space the wall-mounted band needs, in drawing units. */
-export function wallBandHeight<T>(items: Placeable<T>[], gap = 3): number {
+export function wallBandHeight<T>(items: Placeable<T>[], gap = GAP): number {
   const mounted = items.filter((i) => i.fitting !== 'floor')
   if (mounted.length === 0) return 0
   return Math.max(...mounted.map((i) => i.sizeM.h * U_PER_M)) + gap
@@ -371,16 +431,29 @@ export function wallBandHeight<T>(items: Placeable<T>[], gap = 3): number {
 /**
  * How tall a room must be to hold what is in it, in drawing units: the deck
  * tiers plus the reserved bulkhead band above them.
+ *
+ * Mirrors `layOutRoom`'s wrap rule exactly, `deckReserve` included -- a room
+ * sized by a different rule than it is filled by is a room that overflows.
  */
-export function requiredHeight<T>(items: Placeable<T>[], widthUnits: number, gap = 3): number {
+export function requiredHeight<T>(
+  items: Placeable<T>[],
+  widthUnits: number,
+  options: RoomLayoutOptions = {},
+): number {
+  const gap = options.gap ?? GAP
+  const deckReserve = options.deckReserve ?? 0
+  const reserveHeight = options.reserveHeight ?? 0
   let x = 0
   let stacked = 0
   let tierHeight = 0
+  // `stacked` is how far this tier's floor is above the deck line, so it is
+  // exactly the test layOutRoom makes against the reserve.
+  const rightAt = (up: number) => (up < reserveHeight ? widthUnits - deckReserve : widthUnits)
   for (const it of items.filter((i) => i.fitting === 'floor')) {
     const w = it.sizeM.w * U_PER_M
     const h = it.sizeM.h * U_PER_M
-    if (x > 0 && x + w > widthUnits) {
-      stacked += tierHeight + gap * 0.6
+    for (let up = 0; x + w > rightAt(stacked) && (x > 0 || w <= widthUnits) && up < 8; up++) {
+      stacked += tierHeight + gap
       tierHeight = 0
       x = 0
     }
