@@ -703,6 +703,31 @@ check(
   widths.map((w) => w.toFixed(1)).join(' > '),
 )
 
+// ...and it has to be *visible* to be true. The rows were 10 px apart with an
+// arrowhead in the gap, so every link was the same stub whatever its width
+// claimed -- "link width is magnitude" was correct in the DOM and unreadable on
+// the screen, which is not the same thing as working.
+const edgeLengths = await page.$$eval('.fdia__row .fdia__edge', (els) =>
+  els.map((e) => e.getBBox().height),
+)
+check(
+  'and the links are long enough for their width to read',
+  edgeLengths.every((h) => h >= 14),
+  edgeLengths.map((h) => Math.round(h)).join(' · '),
+)
+
+// The mockup's sub-label. The flow view's real question is not "what draws the
+// most" but "what can I switch off", and priority is the answer to it.
+const rowWhere = await page.$$eval('.fdia__row-where', (els) => els.map((e) => e.textContent))
+check(
+  'each consumer says where it is and what shedding it would cost',
+  rowWhere.every((t) => /·\s(critical|high|normal|low)$/.test(t ?? '')),
+  rowWhere.slice(0, 2).join(' | '),
+)
+
+const busLabel = await page.textContent('.fdia__bus-label')
+check('the bus is named the same on every channel', busLabel === 'MAIN BUS', busLabel ?? '')
+
 const powerNames = await page.$$eval('.fdia__src-name, .fdia__row-name', (els) =>
   els.map((e) => e.textContent),
 )

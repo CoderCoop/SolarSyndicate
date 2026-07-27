@@ -3020,6 +3020,13 @@ button {
   fill: var(--ink-faint);
 }
 
+/* Shed order, as colour. The flow view's real question is not "what draws the
+   most" but "what can I switch off", and priority is the answer to it. */
+.fdia__row-tab.is-critical { fill: var(--red); }
+.fdia__row-tab.is-high { fill: var(--amber); }
+.fdia__row-tab.is-normal { fill: var(--cyan); }
+.fdia__row-tab.is-low { fill: var(--green, #6fcf8f); }
+
 .fdia__row.is-idle .fdia__row-name {
   fill: var(--ink-faint);
 }
