@@ -3920,3 +3920,91 @@ button {
   font-size: 12px;
   color: var(--ink-dim);
 }
+
+/* ------------------------------------------------ light, depth and warmth */
+/*
+ * Spec 004's colour rule, applied as light rather than as fill: warm where
+ * people rest, green where things grow, cool where machines run. A room drawn
+ * in flat outline reads as a diagram of a room; the same outlines with a light
+ * source, a floor bounce and some haze read as a place you could stand in --
+ * and it costs three gradients rather than an art pipeline.
+ */
+
+.schema .soft {
+  fill: color-mix(in srgb, var(--amber) 16%, transparent);
+  stroke: color-mix(in srgb, var(--amber) 55%, transparent);
+  stroke-width: 0.5;
+}
+
+.schema .pillow {
+  fill: color-mix(in srgb, var(--amber) 30%, transparent);
+}
+
+.schema .strap {
+  stroke: color-mix(in srgb, var(--amber) 60%, transparent);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.schema .lamp-dot {
+  fill: var(--amber);
+  opacity: 0.85;
+}
+
+/* Rooms are lit from the overhead tray, so the top of every deck is brighter
+   than the bottom and the deck itself catches a little of it back. */
+/* Overhead tray above, deck below, and the room's own character in between. */
+.light-top { stop-color: color-mix(in srgb, var(--cyan) 7%, var(--bg-sunken)); }
+.light-mid { stop-color: var(--bg-sunken); }
+.light-deck { stop-color: color-mix(in srgb, #000 35%, var(--bg-sunken)); }
+
+.room--warm .light-top { stop-color: color-mix(in srgb, var(--amber) 12%, var(--bg-sunken)); }
+.room--warm .light-mid { stop-color: color-mix(in srgb, var(--amber) 4%, var(--bg-sunken)); }
+.room--grow .light-top { stop-color: color-mix(in srgb, var(--green, #6fcf8f) 12%, var(--bg-sunken)); }
+.room--grow .light-mid { stop-color: color-mix(in srgb, var(--green, #6fcf8f) 4%, var(--bg-sunken)); }
+.room--hot .light-top { stop-color: color-mix(in srgb, var(--red) 10%, var(--bg-sunken)); }
+.room--hot .light-mid { stop-color: color-mix(in srgb, var(--red) 3%, var(--bg-sunken)); }
+
+/* Depth: what is far from the light falls off. The ladder shaft is outside the
+   compartment, so it stays cold whatever the room is for. */
+.glyph--warm .kit,
+.glyph--warm .soft {
+  filter: drop-shadow(0 0 1.4px color-mix(in srgb, var(--amber) 45%, transparent));
+}
+
+.glyph--grow .grow {
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--green, #6fcf8f) 55%, transparent));
+}
+
+.glyph--hot .glow {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--red) 60%, transparent));
+}
+
+/* A machine that is running says so with light, not only with a label. Shed,
+   failed and switched-off kit goes dark, which is the fastest read on the
+   whole drawing. */
+.glyph.is-on .kit {
+  stroke-opacity: 1;
+}
+
+.glyph.is-off .kit,
+.glyph.is-shed .kit,
+.glyph.is-broken .kit {
+  stroke-opacity: 0.45;
+  filter: none;
+}
+
+.glyph.is-off .soft,
+.glyph.is-shed .soft,
+.glyph.is-broken .soft {
+  fill-opacity: 0.3;
+}
+
+/* People are lit from the same place as everything else. */
+.person .figure {
+  filter: drop-shadow(0 0 1.2px color-mix(in srgb, currentColor 40%, transparent));
+}
+
+.person--sleep .figure {
+  opacity: 0.75;
+}

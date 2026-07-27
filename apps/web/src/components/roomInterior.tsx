@@ -114,11 +114,25 @@ export function glyphShape(glyph: Glyph, w: number, h: number): JSX.Element {
       )
 
     case 'bay':
+      // An empty modular bay: corner castings, a ratchet strap across the
+      // mouth, and the tie-down points a full one would be lashed to.
       return (
         <>
           <rect className="kit" x="0.5" y="0.5" width={w - 1} height={h - 1} rx="1" />
-          <line className="hair" x1="0.5" y1={h * 0.26} x2={w - 0.5} y2={h * 0.26} />
-          <line className="hair" x1={w * 0.5} y1={h * 0.26} x2={w * 0.5} y2={h - 0.5} strokeDasharray="2 2" />
+          {[
+            [1.5, 1.5],
+            [w - 1.5, 1.5],
+            [1.5, h - 1.5],
+            [w - 1.5, h - 1.5],
+          ].map(([cx, cy]) => (
+            <rect key={`${cx}-${cy}`} className="hair" x={cx! - 1.4} y={cy! - 1.4} width="2.8" height="2.8" />
+          ))}
+          <line className="hair" x1="0.5" y1={h * 0.24} x2={w - 0.5} y2={h * 0.24} />
+          <line className="strap" x1="0.5" y1={h * 0.52} x2={w - 0.5} y2={h * 0.52} />
+          <rect className="hair" x={w * 0.42} y={h * 0.46} width={w * 0.16} height={h * 0.12} rx="0.6" />
+          {ticks(3, h * 0.62, h * 0.94).map((y) => (
+            <line key={y} className="hair" x1={w * 0.2} y1={y} x2={w * 0.8} y2={y} strokeDasharray="1.5 2.5" />
+          ))}
         </>
       )
 
@@ -221,36 +235,94 @@ export function glyphShape(glyph: Glyph, w: number, h: number): JSX.Element {
       )
 
     case 'bunk':
-      // A shelf you sleep on, with a pillow at the head end.
+      // A berth seen end-on: a padded box in a frame, with a privacy curtain
+      // rolled to one side, a reading lamp, and the personal locker every
+      // spacer's bunk has under the mattress.
       return (
         <>
-          <rect className="kit warm" x="0" y="0" width={w} height={h} />
-          <rect className="hair" x={w * 0.03} y={h * 0.16} width={w * 0.16} height={h * 0.68} />
-          <line className="hair" x1={w * 0.22} y1={h * 0.55} x2={w * 0.96} y2={h * 0.55} strokeDasharray="2.5 2" />
+          <rect className="kit warm" x="0" y="0" width={w} height={h} rx="1" />
+          {/* Mattress, inset, with the bedding turned down at the head. */}
+          <rect
+            className="soft"
+            x={w * 0.08}
+            y={h * 0.2}
+            width={w * 0.84}
+            height={h * 0.58}
+            rx="1"
+          />
+          <path
+            className="hair"
+            d={`M${w * 0.08} ${h * 0.44} H${w * 0.92}`}
+            strokeDasharray="2 1.6"
+          />
+          {/* The pillow end. */}
+          <rect
+            className="soft pillow"
+            x={w * 0.12}
+            y={h * 0.24}
+            width={w * 0.26}
+            height={h * 0.18}
+            rx="1.5"
+          />
+          {/* Curtain rail and the curtain gathered at the foot. */}
+          <line className="hair" x1={w * 0.04} y1={h * 0.12} x2={w * 0.96} y2={h * 0.12} />
+          {ticks(3, w * 0.72, w * 0.94).map((x) => (
+            <line key={x} className="hair" x1={x} y1={h * 0.12} x2={x} y2={h * 0.36} />
+          ))}
+          {/* Reading lamp, and the drawer beneath. */}
+          <circle className="lamp-dot" cx={w * 0.12} cy={h * 0.14} r={h * 0.045} />
+          <rect className="hair" x={w * 0.08} y={h * 0.82} width={w * 0.84} height={h * 0.12} rx="0.8" />
+          <line className="hair" x1={w * 0.44} y1={h * 0.88} x2={w * 0.56} y2={h * 0.88} />
         </>
       )
 
     case 'table':
+      // A fixed mess table: a top with a raised lip so nothing floats off it,
+      // a pedestal, and a foot bolted to the deck.
       return (
         <>
-          <line className="kit-line thick warm-line" x1="0" y1={h * 0.2} x2={w} y2={h * 0.2} />
-          <line className="kit-line warm-line" x1={w * 0.14} y1={h * 0.2} x2={w * 0.14} y2={h} />
-          <line className="kit-line warm-line" x1={w * 0.86} y1={h * 0.2} x2={w * 0.86} y2={h} />
+          <rect className="kit warm" x="0" y={h * 0.14} width={w} height={h * 0.14} rx="1.5" />
+          <line className="kit-line warm-line" x1="0" y1={h * 0.14} x2="0" y2={h * 0.05} />
+          <line className="kit-line warm-line" x1={w} y1={h * 0.14} x2={w} y2={h * 0.05} />
+          {/* Pedestal and foot. */}
+          <rect className="kit warm" x={w * 0.42} y={h * 0.28} width={w * 0.16} height={h * 0.6} />
+          <line className="hair" x1={w * 0.5} y1={h * 0.32} x2={w * 0.5} y2={h * 0.86} />
+          <rect className="kit warm plinth" x={w * 0.26} y={h * 0.88} width={w * 0.48} height={h * 0.1} rx="1" />
+          {/* Two mugs, magnetised down. Somebody was just here. */}
+          <rect className="soft" x={w * 0.14} y={h * 0.05} width={w * 0.08} height={h * 0.09} rx="0.6" />
+          <rect className="soft" x={w * 0.3} y={h * 0.07} width={w * 0.07} height={h * 0.07} rx="0.6" />
         </>
       )
 
     case 'locker':
+      // A spares locker: four drawers, latches, and a stencilled label plate.
       return (
         <>
-          <rect className="kit" x="0" y="0" width={w} height={h} />
-          {ticks(3, 0, h).map((y) => (
-            <line key={y} className="hair" x1="0" y1={y} x2={w} y2={y} />
-          ))}
-          {ticks(3, 0, h).map((y) => (
-            <circle key={`h${y}`} className="hair" cx={w * 0.8} cy={y} r="0.7" />
+          <rect className="kit" x="0" y="0" width={w} height={h} rx="1" />
+          <rect className="hair" x={w * 0.12} y={h * 0.03} width={w * 0.76} height={h * 0.08} rx="0.6" />
+          {ticks(4, h * 0.14, h).map((y, i) => (
+            <g key={y}>
+              <rect
+                className="hair"
+                x={w * 0.06}
+                y={y - h * 0.09}
+                width={w * 0.88}
+                height={h * 0.17}
+                rx="0.8"
+              />
+              {/* Recessed pull, alternating side so it reads as separate drawers. */}
+              <line
+                className="hair"
+                x1={w * (i % 2 ? 0.6 : 0.2)}
+                y1={y}
+                x2={w * (i % 2 ? 0.84 : 0.44)}
+                y2={y}
+              />
+            </g>
           ))}
         </>
       )
+
   }
 }
 

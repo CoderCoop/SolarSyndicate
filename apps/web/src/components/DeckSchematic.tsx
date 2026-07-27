@@ -101,6 +101,17 @@ export function DeckSchematic({
     })),
   ]
 
+  // What the room is for decides how it is lit: warm where people rest, green
+  // where things grow, cool where machines run (spec 004's colour rule).
+  const tone = room.fixtures.some((f) => f.occupiedBy)
+    ? 'warm'
+    : room.parts.some((p) => p.glyph === 'tray')
+      ? 'grow'
+      : room.parts.some((p) => p.glyph === 'core' || p.glyph === 'nozzle')
+        ? 'hot'
+        : 'cool'
+  const lightId = `deck-light-${room.id.replace(/[^a-z0-9]/gi, '')}`
+
   const humanH = HUMAN_H_M * U_PER_M
   const humanW = humanH * 0.42
   /** Standing room: the figure, plus the arm the on-watch posture reaches with. */
@@ -205,8 +216,19 @@ export function DeckSchematic({
       preserveAspectRatio="xMidYMid meet"
       aria-label={deckDescription(room, crew)}
     >
-      <g className="room">
-        <rect className="room__air" x="0" y="0" width={W} height={height} />
+      {/* The light in the room. A gradient per deck rather than one shared
+          definition, because ids are document-global and seven decks would
+          otherwise all inherit whichever one rendered last. */}
+      <defs>
+        <linearGradient id={lightId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" className="light-top" />
+          <stop offset="0.55" className="light-mid" />
+          <stop offset="1" className="light-deck" />
+        </linearGradient>
+      </defs>
+
+      <g className={`room room--${tone}`}>
+        <rect className="room__air" fill={`url(#${lightId})`} x="0" y="0" width={W} height={height} />
 
         {/* Structural ribs on the back wall. */}
         {[0.18, 0.42, 0.66].map((f) => (
