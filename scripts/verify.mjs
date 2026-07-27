@@ -309,14 +309,12 @@ check('parts and fixtures both come from content (SV-3, SV-4)', totalGlyphs === 
 // outlined by its own hit box, two units proud of the thing it belonged to.
 // Nothing in the DOM was wrong, which is why no test caught it: the drawing was
 // simply full of boxes nobody had drawn.
-/* eslint-disable no-undef */
 const strokedTargets = await page.$$eval('.schema .hit', (els) =>
   els.filter((e) => {
     const s = getComputedStyle(e)
     return s.stroke !== 'none' && parseFloat(s.strokeWidth) > 0
   }).length,
 )
-/* eslint-enable no-undef */
 check('tap targets are invisible, not drawn as boxes', strokedTargets === 0, `${strokedTargets} stroked`)
 
 // SV-7: everyone is somewhere, and nobody is in two places.
@@ -1222,6 +1220,21 @@ check(
 )
 
 await p2.screenshot({ path: join(SHOTS, '05-after-brownout.png'), fullPage: true })
+
+// The recovery panel has to say what happened and what pressing the button
+// would cost, or it is a warning the player cannot act on.
+const recoverText = (await p2.textContent('.recover')) ?? ''
+check(
+  'the brownout panel names what the ship switched off',
+  /switched off/.test(recoverText) && /NTR Preheat/.test(recoverText),
+  recoverText.slice(0, 90).replace(/\s+/g, ' '),
+)
+check(
+  'and prices restoring it, in kW, before the player commits',
+  /\d+\.\d kW/.test(recoverText) && /short/.test(recoverText),
+  (recoverText.match(/[-\d.]+ kW/g) ?? []).join(' | '),
+)
+await (await p2.$('.recover')).screenshot({ path: join(SHOTS, '05b-brownout-panel.png') })
 
 // Recovering has to be a decision, not a freebie.
 await p2.click('.recover .button')

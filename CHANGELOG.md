@@ -73,6 +73,18 @@ distance to filled and shaded forms, and this is most of the rest.
   the engine bell has cooling tubes and a throat that glows, and the battery
   says what is in it. A machine that is running now says so with light, and one
   that is shed or failed goes dark along with its shadow.
+- **The brownout panel says what happened and what the button costs.** It read
+  "Shed loads are still offline. Restoring them without fixing the balance will
+  simply drain the bank again", which never said the ship had switched anything
+  off, never said *which* things, and named no number for "fixing the balance"
+  — while offering exactly one control, the one its own text warned against. It
+  now names the kit the ship shed, states what that kit draws, and states what
+  pressing the button would leave: "It draws 14.0 kW and you only have 6.9 kW
+  spare. Switching it back on now would leave you -7.1 kW short… Find 7.1 kW
+  first." The panel turns from a warning into a confirmation once the balance
+  is good. The button stays live either way — restoring into a deficit is a
+  recoverable mistake, not a hazard, and §7.4 does not wall the player off from
+  consequences, it just stops them being a surprise.
 - **Compartments have walls rather than backgrounds.** Panel seams, structural
   frames drawn with a lit edge and a shadowed one, the compartment stencilled
   on, a return-air grille, and a painted deck edge where the reactor and the

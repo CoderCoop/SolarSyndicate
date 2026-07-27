@@ -1600,10 +1600,30 @@ button {
   background: color-mix(in srgb, #1a0f0f 55%, var(--bg-raised));
 }
 
+/* Once the balance is good again the panel stops being a warning and becomes
+   a confirmation, so it stops shouting in red. */
+.recover.is-safe {
+  border-color: color-mix(in srgb, var(--cyan) 40%, var(--line));
+  background: color-mix(in srgb, #0d1a1c 55%, var(--bg-raised));
+}
+
+/* What happened, in the sentence the player needs first. */
+.recover__what {
+  margin: 0 0 7px;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
 .recover__text {
   margin: 0 0 11px;
   font-size: 13px;
   color: var(--ink-dim);
+}
+
+/* The numbers carry the decision, so they are the part that reads first. */
+.recover strong {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* --------------------------------------------------------------------- log */
