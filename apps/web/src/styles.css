@@ -3757,3 +3757,166 @@ button {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------- the engineering panel (003 C) */
+
+.fgr__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 4px 0 10px;
+}
+
+.fgr__box {
+  fill: var(--bg-raised);
+  stroke: var(--line-bright);
+  stroke-width: 1;
+}
+
+.fgr__node--source .fgr__box {
+  stroke: var(--amber);
+  fill: color-mix(in srgb, var(--amber) 8%, var(--bg-raised));
+}
+
+.fgr__node--store .fgr__box {
+  stroke: var(--cyan);
+  fill: color-mix(in srgb, var(--cyan) 7%, var(--bg-raised));
+}
+
+.fgr__node--sink .fgr__box {
+  stroke: color-mix(in srgb, var(--amber) 60%, var(--line-bright));
+}
+
+.fgr__node.is-open .fgr__box {
+  stroke: var(--cyan);
+  stroke-width: 1.8;
+}
+
+.fgr__node.is-idle .fgr__box {
+  stroke: var(--line);
+}
+
+.fgr__name {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  fill: var(--ink);
+}
+
+.fgr__figure {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  fill: var(--ink-dim);
+}
+
+.fgr__node--source .fgr__figure {
+  fill: var(--green, #6fcf8f);
+}
+
+.fgr__node.is-idle .fgr__name,
+.fgr__node.is-idle .fgr__figure {
+  fill: var(--ink-faint);
+}
+
+.fgr__crew circle {
+  fill: color-mix(in srgb, var(--cyan) 22%, var(--bg-sunken));
+  stroke: var(--cyan);
+  stroke-width: 1;
+}
+
+.fgr__crew text {
+  font-family: var(--mono);
+  font-size: 6.5px;
+  fill: var(--cyan);
+}
+
+.fgr__hit {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+}
+
+/* The lines. Colour is the network; the dashes travel the way it flows, so a
+   line that has stopped moving is a network that has stopped. */
+.fgr__edge {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+
+.fgr__edge--battery { stroke: var(--cyan); }
+.fgr__edge--heat { stroke: var(--amber); }
+.fgr__edge--water { stroke: #6aa9e0; }
+.fgr__edge--o2 { stroke: var(--green, #6fcf8f); }
+.fgr__edge--co2 { stroke: var(--red); }
+
+.fgr__edge.is-live {
+  stroke-dasharray: 4 5;
+  animation: fgr-drift 2.4s linear infinite;
+}
+
+@keyframes fgr-drift {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fgr__edge.is-live {
+    animation: none;
+  }
+}
+
+.chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.chip__dot--battery { background: var(--cyan); }
+.chip__dot--heat { background: var(--amber); }
+.chip__dot--water { background: #6aa9e0; }
+.chip__dot--o2 { background: var(--green, #6fcf8f); }
+.chip__dot--co2 { background: var(--red); }
+
+.fgr__card {
+  margin-top: 6px;
+  padding: 10px 11px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.fgr__card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+
+.fgr__card-head span {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.fgr__links {
+  list-style: none;
+  margin: 0 0 9px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fgr__links li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}

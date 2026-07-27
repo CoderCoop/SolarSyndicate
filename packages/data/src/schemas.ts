@@ -241,6 +241,13 @@ export const PartDef = z.object({
   /**
    * Net electrical power at full output, kW. Positive produces, negative draws.
    */
+  /**
+   * The name on a box in the systems diagram, where "Navigation & Flight
+   * Computers" does not fit and truncating it produces "FLIGHT COMP".
+   * Authored rather than derived: no rule over the long name gets NAV, HAB and
+   * RADIATORS all right, and a label is content.
+   */
+  short: z.string().max(12),
   powerKw: z.number(),
   massKg: z.number().nonnegative(),
   priority: PowerPriority,

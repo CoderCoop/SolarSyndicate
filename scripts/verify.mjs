@@ -693,6 +693,90 @@ check(
   JSON.stringify(grammar),
 )
 
+// --- the engineering panel (mockup 003, option C) --------------------------
+//
+// Stations as nodes, networks as lines between them. The claim it has to
+// support is §1 pillar 1: that you can trace why a margin is thin by following
+// a line with your finger. That needs three things to be true at once, and all
+// three have been broken at some point in this file's history.
+const stations = await page.$$eval('.fgr__node .fgr__name', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  'the ship is drawn as its stations',
+  stations.includes('REACTOR') && stations.includes('SCRUBBER') && stations.includes('HAB'),
+  stations.slice(0, 5).join(' · '),
+)
+
+// Every label has to be *inside* its box. A label wider than its box is not
+// merely ugly: the next box along paints over the overflow, so it reads as
+// missing rather than as long -- which is exactly how this shipped once.
+/* eslint-disable no-undef */
+const clipped = await page.evaluate(() =>
+  [...document.querySelectorAll('.fgr__node')]
+    .filter((g) => {
+      const box = g.querySelector('.fgr__box')
+      const label = g.querySelector('.fgr__name')
+      if (!box || !label) return false
+      const b = label.getBBox()
+      return b.x + b.width > +box.getAttribute('x') + +box.getAttribute('width') - 2
+    })
+    .map((g) => g.querySelector('.fgr__name')?.textContent),
+)
+/* eslint-enable no-undef */
+check('and every station name fits in its box', clipped.length === 0, clipped.join(', '))
+
+// No box may sit on another. Same rule as the ship view, same reason.
+/* eslint-disable no-undef */
+const boxOverlaps = await page.evaluate(() => {
+  const boxes = [...document.querySelectorAll('.fgr__box')].map((r) => ({
+    x: +r.getAttribute('x'),
+    y: +r.getAttribute('y'),
+    w: +r.getAttribute('width'),
+    h: +r.getAttribute('height'),
+  }))
+  const bad = []
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i]
+      const b = boxes[j]
+      if (
+        Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0.5 &&
+        Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0.5
+      ) {
+        bad.push(`${i}×${j}`)
+      }
+    }
+  }
+  return bad
+})
+/* eslint-enable no-undef */
+check('and no two stations are drawn on top of each other', boxOverlaps.length === 0, boxOverlaps.join(' '))
+
+const netEdges = await page.$$eval('.fgr__edge', (els) =>
+  els.map((e) => e.getAttribute('class')?.match(/fgr__edge--(\w+)/)?.[1]),
+)
+check(
+  'more than one network runs between them',
+  new Set(netEdges).size > 1,
+  [...new Set(netEdges)].join(' · '),
+)
+
+// Crew presence is the one thing 003 said it would not compromise on.
+check('the crew are on the diagram, not just the machines', (await page.$$('.fgr__crew')).length > 0)
+
+// Tapping a station says what it is wired to.
+await tap(page, '.fgr__node .fgr__hit')
+check('tapping a station opens it', await page.isVisible('.fgr__card'))
+const wiring = await page.$$eval('.fgr__links li', (els) => els.map((e) => e.textContent?.trim()))
+check(
+  'and lists what it is connected to',
+  wiring.length > 0 && wiring.some((w) => /^(to|from) /.test(w ?? '')),
+  wiring.slice(0, 2).join(' | '),
+)
+
+await page.screenshot({ path: join(SHOTS, '08b-systems.png'), fullPage: true })
+
 // Link width is magnitude, so the biggest consumer must draw the thickest line.
 const widths = await page.$$eval('.fdia__row .fdia__edge', (els) =>
   els.map((e) => Number.parseFloat(e.getAttribute('stroke-width'))),

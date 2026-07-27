@@ -5,6 +5,7 @@ import {
   contractBoard,
   crewViews,
   flowChannels,
+  flowGraph,
   lastSettlement,
   ledgerView,
   berths,
@@ -25,6 +26,7 @@ import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
 import { Flows } from './components/Flows.js'
+import { FlowGraph } from './components/FlowGraph.js'
 import { Help, SITE_URL } from './components/Help.js'
 import { GuildPanel, HiringHall } from './components/Hall.js'
 import { InstallBanner } from './components/InstallOffer.js'
@@ -144,6 +146,7 @@ export function App() {
   const crew = crewViews(state)
   const orders = workOrderViews(state)
   const channels = flowChannels(state)
+  const graph = flowGraph(state)
   const chart = chartView(state)
   const ledger = ledgerView(state)
   const board = contractBoard(state)
@@ -251,7 +254,19 @@ export function App() {
 
         {tab === 'chart' && <StarChart chart={chart} />}
 
-        {tab === 'flows' && <Flows channels={channels} />}
+        {tab === 'flows' && (
+          <>
+            <FlowGraph
+              graph={graph}
+              onOpenPart={(partId) => {
+                const room = rooms.find((r) => r.parts.some((p) => p.id === partId))
+                if (room) setOpenRoom(room.id)
+                setTab('ship')
+              }}
+            />
+            <Flows channels={channels} />
+          </>
+        )}
 
         {tab === 'life' && <LifeSupport life={life} />}
 
