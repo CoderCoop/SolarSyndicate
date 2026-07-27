@@ -231,8 +231,10 @@ export function purchaseHull(state: SimState, hullId: string, at: GameTime): boo
     state,
     at,
     'info',
+    'money',
     `${hull.name} signed for. ${offer.priceCr.toLocaleString()} cr less ${offer.tradeInCr.toLocaleString()} for the ${old.name}. ` +
       `${(hull.propellantCapacityKg / 1000).toFixed(0)} t of tank against ${(old.propellantCapacityKg / 1000).toFixed(0)}, and stores for a window run.`,
+    `−${(offer.priceCr - offer.tradeInCr).toLocaleString()} cr`,
   )
   return true
 }

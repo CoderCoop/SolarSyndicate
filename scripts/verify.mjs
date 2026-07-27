@@ -177,6 +177,34 @@ check(
   logged.some((t) => t?.includes('NTR Preheat switched on')),
   logged[0] ?? '',
 )
+// --- the log is sorted, not just long (§7.4) --------------------------------
+const topics = await page.$$eval('.log__topic', (els) => [
+  ...new Set(els.map((e) => e.textContent?.trim())),
+])
+check('every dispatch says what it is about', topics.length > 1, topics.join(' · '))
+
+const logFigures = await page.$$eval('.log__figure', (els) => els.map((e) => e.textContent?.trim()))
+check(
+  'and the number that matters is pulled out of the prose',
+  logFigures.length > 0,
+  logFigures.slice(0, 3).join(' | '),
+)
+
+const allCount = await page.$$eval('.log__entry', (els) => els.length)
+await page.click('.log__filters .chip--power')
+const powerOnly = await page.$$eval('.log__topic', (els) => [
+  ...new Set(els.map((e) => e.textContent?.trim())),
+])
+const powerCount = await page.$$eval('.log__entry', (els) => els.length)
+check(
+  'filtering to one topic shows only that topic',
+  powerOnly.length === 1 && powerOnly[0] === 'Power' && powerCount < allCount,
+  `${powerCount} of ${allCount}`,
+)
+await page.click('.log__filters .chip:has-text("All")')
+
+await page.screenshot({ path: join(SHOTS, '03b-log.png'), fullPage: true })
+
 await page.click('.tabs__btn:has-text("Ship")')
 await page.waitForSelector('.ship')
 
@@ -347,6 +375,89 @@ const fixtureBlurb = await page.textContent('.whois--fixture .whois__blurb')
 check('and says why it is there', (fixtureBlurb?.length ?? 0) > 30, `${fixtureBlurb?.slice(0, 48)}…`)
 await page.click('.whois--fixture .whois__close')
 await page.click('.deck:nth-child(2) .deck__head')
+
+// --- an answer opens where the question was asked ---------------------------
+//
+// Crew and fixture cards used to render at the foot of the whole ship section:
+// tapping a person on deck 1 opened their card 1,400 px below the fold, which
+// is indistinguishable from a tap that did nothing -- and was reported as
+// exactly that. The card has to be near the thing it describes.
+await tap(page, '.deck .person .hit')
+const tappedName = await page.textContent('.whois:not(.whois--fixture) .whois__name')
+check('tapping a person opens them', Boolean(tappedName), tappedName ?? '')
+
+/* eslint-disable no-undef */
+const nearness = await page.evaluate(() => {
+  const card = document.querySelector('.whois:not(.whois--fixture)')
+  const deck = card?.closest('.deck')
+  const person = deck?.querySelector('.person .hit')
+  if (!card || !person) return null
+  return Math.abs(card.getBoundingClientRect().top - person.getBoundingClientRect().bottom)
+})
+/* eslint-enable no-undef */
+check(
+  'and opens beside them, not at the bottom of the ship',
+  nearness !== null && nearness < 400,
+  nearness === null ? 'card is not in the same deck' : `${Math.round(nearness)} px away`,
+)
+await page.click('.whois .whois__close')
+
+// --- nothing in a room is drawn through anything else (RF-8) ----------------
+//
+// The room lays itself out, so "it looks wrong" is a measurable claim: no two
+// objects may share space, and no two tap targets either -- an invisible
+// overlap steals taps meant for the machine behind the person.
+/* eslint-disable no-undef */
+const collisions = await page.evaluate(() => {
+  const bad = []
+  document.querySelectorAll('.schema').forEach((svg) => {
+    const boxes = []
+    svg.querySelectorAll('.glyph, .person').forEach((g) => {
+      const label = (g.querySelector('.hit')?.getAttribute('aria-label') ?? '?').split('.')[0]
+      const shape = g.querySelector('g')
+      const hit = g.querySelector('.hit')
+      if (shape) {
+        const b = shape.getBBox()
+        const t = shape.transform.baseVal.consolidate()
+        boxes.push({
+          kind: 'drawn',
+          label,
+          x: b.x + (t ? t.matrix.e : 0),
+          y: b.y + (t ? t.matrix.f : 0),
+          w: b.width,
+          h: b.height,
+        })
+      }
+      if (hit) {
+        boxes.push({
+          kind: 'tap target',
+          label,
+          x: +hit.getAttribute('x'),
+          y: +hit.getAttribute('y'),
+          w: +hit.getAttribute('width'),
+          h: +hit.getAttribute('height'),
+        })
+      }
+    })
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]
+        const c = boxes[j]
+        if (a.kind !== c.kind || a.label === c.label) continue
+        const ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x)
+        const oy = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y)
+        if (ox > 0.5 && oy > 0.5) bad.push(`${a.kind}: ${a.label} × ${c.label}`)
+      }
+    }
+  })
+  return bad
+})
+/* eslint-enable no-undef */
+check(
+  'nothing in any room overlaps anything else, drawn or tappable',
+  collisions.length === 0,
+  collisions.slice(0, 3).join(' | '),
+)
 
 // --- crew stats explain themselves (RF-26) ----------------------------------
 await page.click('.tabs__btn:has-text("Crew")')
@@ -582,6 +693,90 @@ check(
   JSON.stringify(grammar),
 )
 
+// --- the engineering panel (mockup 003, option C) --------------------------
+//
+// Stations as nodes, networks as lines between them. The claim it has to
+// support is §1 pillar 1: that you can trace why a margin is thin by following
+// a line with your finger. That needs three things to be true at once, and all
+// three have been broken at some point in this file's history.
+const stations = await page.$$eval('.fgr__node .fgr__name', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  'the ship is drawn as its stations',
+  stations.includes('REACTOR') && stations.includes('SCRUBBER') && stations.includes('HAB'),
+  stations.slice(0, 5).join(' · '),
+)
+
+// Every label has to be *inside* its box. A label wider than its box is not
+// merely ugly: the next box along paints over the overflow, so it reads as
+// missing rather than as long -- which is exactly how this shipped once.
+/* eslint-disable no-undef */
+const clipped = await page.evaluate(() =>
+  [...document.querySelectorAll('.fgr__node')]
+    .filter((g) => {
+      const box = g.querySelector('.fgr__box')
+      const label = g.querySelector('.fgr__name')
+      if (!box || !label) return false
+      const b = label.getBBox()
+      return b.x + b.width > +box.getAttribute('x') + +box.getAttribute('width') - 2
+    })
+    .map((g) => g.querySelector('.fgr__name')?.textContent),
+)
+/* eslint-enable no-undef */
+check('and every station name fits in its box', clipped.length === 0, clipped.join(', '))
+
+// No box may sit on another. Same rule as the ship view, same reason.
+/* eslint-disable no-undef */
+const boxOverlaps = await page.evaluate(() => {
+  const boxes = [...document.querySelectorAll('.fgr__box')].map((r) => ({
+    x: +r.getAttribute('x'),
+    y: +r.getAttribute('y'),
+    w: +r.getAttribute('width'),
+    h: +r.getAttribute('height'),
+  }))
+  const bad = []
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i]
+      const b = boxes[j]
+      if (
+        Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) > 0.5 &&
+        Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) > 0.5
+      ) {
+        bad.push(`${i}×${j}`)
+      }
+    }
+  }
+  return bad
+})
+/* eslint-enable no-undef */
+check('and no two stations are drawn on top of each other', boxOverlaps.length === 0, boxOverlaps.join(' '))
+
+const netEdges = await page.$$eval('.fgr__edge', (els) =>
+  els.map((e) => e.getAttribute('class')?.match(/fgr__edge--(\w+)/)?.[1]),
+)
+check(
+  'more than one network runs between them',
+  new Set(netEdges).size > 1,
+  [...new Set(netEdges)].join(' · '),
+)
+
+// Crew presence is the one thing 003 said it would not compromise on.
+check('the crew are on the diagram, not just the machines', (await page.$$('.fgr__crew')).length > 0)
+
+// Tapping a station says what it is wired to.
+await tap(page, '.fgr__node .fgr__hit')
+check('tapping a station opens it', await page.isVisible('.fgr__card'))
+const wiring = await page.$$eval('.fgr__links li', (els) => els.map((e) => e.textContent?.trim()))
+check(
+  'and lists what it is connected to',
+  wiring.length > 0 && wiring.some((w) => /^(to|from) /.test(w ?? '')),
+  wiring.slice(0, 2).join(' | '),
+)
+
+await page.screenshot({ path: join(SHOTS, '08b-systems.png'), fullPage: true })
+
 // Link width is magnitude, so the biggest consumer must draw the thickest line.
 const widths = await page.$$eval('.fdia__row .fdia__edge', (els) =>
   els.map((e) => Number.parseFloat(e.getAttribute('stroke-width'))),
@@ -591,6 +786,31 @@ check(
   widths.length > 1 && widths[0] === Math.max(...widths),
   widths.map((w) => w.toFixed(1)).join(' > '),
 )
+
+// ...and it has to be *visible* to be true. The rows were 10 px apart with an
+// arrowhead in the gap, so every link was the same stub whatever its width
+// claimed -- "link width is magnitude" was correct in the DOM and unreadable on
+// the screen, which is not the same thing as working.
+const edgeLengths = await page.$$eval('.fdia__row .fdia__edge', (els) =>
+  els.map((e) => e.getBBox().height),
+)
+check(
+  'and the links are long enough for their width to read',
+  edgeLengths.every((h) => h >= 14),
+  edgeLengths.map((h) => Math.round(h)).join(' · '),
+)
+
+// The mockup's sub-label. The flow view's real question is not "what draws the
+// most" but "what can I switch off", and priority is the answer to it.
+const rowWhere = await page.$$eval('.fdia__row-where', (els) => els.map((e) => e.textContent))
+check(
+  'each consumer says where it is and what shedding it would cost',
+  rowWhere.every((t) => /·\s(critical|high|normal|low)$/.test(t ?? '')),
+  rowWhere.slice(0, 2).join(' | '),
+)
+
+const busLabel = await page.textContent('.fdia__bus-label')
+check('the bus is named the same on every channel', busLabel === 'MAIN BUS', busLabel ?? '')
 
 const powerNames = await page.$$eval('.fdia__src-name, .fdia__row-name', (els) =>
   els.map((e) => e.textContent),
@@ -1026,6 +1246,40 @@ check(
   'and states how much of it has been flown',
   /per cent flown/.test(flownLabel ?? ''),
   flownLabel ?? '',
+)
+
+// --- the bar says where the ship is, and the panel says what it is doing ----
+const placeUnderway = await v1.textContent('.berth__place')
+check(
+  'the status bar says the ship is under way, and between where',
+  /→/.test(placeUnderway ?? ''),
+  placeUnderway?.trim() ?? '',
+)
+// The fill has zero width at nought per cent, so ask the meter rather than
+// the bar: a progress track that is legitimately empty is still present.
+const flownPct = await v1.getAttribute('.berth__track', 'aria-valuenow')
+check(
+  'and shows how far along it is',
+  flownPct !== null && Number(flownPct) >= 0,
+  `${flownPct}% flown`,
+)
+
+const phase = await v1.textContent('.telem__phase')
+const speed = await v1.textContent('.telem__speed')
+check('the crossing states its phase', Boolean(phase), `${phase?.trim()} at ${speed?.trim()}`)
+check(
+  'and a real speed, not a placeholder',
+  Number.parseFloat(speed ?? '') > 0.05,
+  speed?.trim() ?? '',
+)
+
+const burnRows = await v1.$$eval('.telem__burns li strong', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  'both burns are stated with their duration and their g (§3.4)',
+  burnRows.length === 2 && burnRows.every((r) => /km\/s · \d+ min · \d\.\d\d g/.test(r ?? '')),
+  burnRows.join(' | '),
 )
 
 await v1.screenshot({ path: join(SHOTS, '14-under-way.png'), fullPage: true })

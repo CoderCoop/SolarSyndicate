@@ -29,6 +29,7 @@ $.log[].at: number
 $.log[].level: string
 $.log[].seq: number
 $.log[].text: string
+$.log[].topic: string
 $.log[]: object
 $.nextSeq: number
 $.now: number

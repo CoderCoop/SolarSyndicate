@@ -113,7 +113,9 @@ export function acceptContract(state: SimState, contractId: string, at: GameTime
     state,
     at,
     'info',
-    `Contract accepted: ${def.title} for ${def.client}. ${(def.cargoKg / 1000).toFixed(1)} t aboard, ${def.deadlineDays} days, ${def.payCr.toLocaleString()} cr.`,
+    'voyage',
+    `Contract accepted: ${def.title} for ${def.client}. ${(def.cargoKg / 1000).toFixed(1)} t aboard, ${def.deadlineDays} days.`,
+    `${def.payCr.toLocaleString()} cr`,
   )
 }
 
@@ -141,6 +143,8 @@ export function abandonContract(state: SimState, at: GameTime): void {
     state,
     at,
     'warn',
-    `${def.title} abandoned. ${def.client} charged ${def.abandonCr.toLocaleString()} cr and will remember it.`,
+    'money',
+    `${def.title} abandoned. ${def.client} charged the desk and will remember it.`,
+    `−${def.abandonCr.toLocaleString()} cr`,
   )
 }

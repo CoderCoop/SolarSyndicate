@@ -20,7 +20,7 @@
  * Every figure comes from the same selectors the rest of the UI reads, so a
  * link the player can see is always a number they could also read (SV-14).
  */
-import { getHull, getPart } from '@solsyn/data'
+import { getHull, getPart, type PowerPriority } from '@solsyn/data'
 import { crewViews } from './engine.js'
 import { METABOLIC, activityLoad } from './crew.js'
 import {
@@ -53,6 +53,14 @@ export interface FlowNode {
   note?: string
   /** Not contributing right now (off, failed, or shed). */
   idle?: boolean
+  /**
+   * Load priority, for a part that has one.
+   *
+   * On the diagram it is half of "Engines · low priority" and the colour of
+   * the row's stripe -- which together answer the question the flow view is
+   * actually for: not "what is drawing the most" but "what can I switch off".
+   */
+  priority?: PowerPriority
 }
 
 export interface FlowChannel {
@@ -131,6 +139,7 @@ function partNodes(
       role,
       magnitude,
       partId: part.id,
+      priority: def.priority,
       ...(running ? {} : { idle: true }),
     })
   }
@@ -172,6 +181,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
           role: 'source' as const,
           magnitude: Math.max(0, partPowerKw(state, p, t)),
           partId: p.id,
+          priority: getPart(p.defId).priority,
           ...(partRunning(p) ? {} : { idle: true }),
         })),
     ),
@@ -185,6 +195,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
           role: 'consumer' as const,
           magnitude: Math.max(0, -partPowerKw(state, p, t)),
           partId: p.id,
+          priority: getPart(p.defId).priority,
           ...(p.shed ? { note: 'shed on brownout' } : {}),
           ...(partRunning(p) ? {} : { idle: true }),
         })),

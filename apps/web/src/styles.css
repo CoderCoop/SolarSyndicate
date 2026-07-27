@@ -1594,6 +1594,85 @@ button {
   color: var(--red);
 }
 
+/* Topics: a filter row, a label per line, and the figure in its own column
+   so the log reads down as well as across. */
+
+.log__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  border: 1px solid var(--line-bright);
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.chip.is-on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+}
+
+.chip__count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.is-on .chip__count {
+  color: inherit;
+}
+
+.log__entry {
+  align-items: baseline;
+}
+
+.log__topic {
+  flex: none;
+  width: 52px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.log__entry--power .log__topic { color: var(--cyan); }
+.log__entry--life .log__topic { color: var(--green, #6fcf8f); }
+.log__entry--upkeep .log__topic { color: var(--amber); }
+.log__entry--money .log__topic { color: var(--amber); }
+.log__entry--voyage .log__topic { color: var(--cyan); }
+
+.log__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.log__figure {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.log__entry--alert .log__figure {
+  color: var(--red);
+}
+
 /* ------------------------------------------------------------------- footer */
 
 .app__footer {
@@ -2941,6 +3020,13 @@ button {
   fill: var(--ink-faint);
 }
 
+/* Shed order, as colour. The flow view's real question is not "what draws the
+   most" but "what can I switch off", and priority is the answer to it. */
+.fdia__row-tab.is-critical { fill: var(--red); }
+.fdia__row-tab.is-high { fill: var(--amber); }
+.fdia__row-tab.is-normal { fill: var(--cyan); }
+.fdia__row-tab.is-low { fill: var(--green, #6fcf8f); }
+
 .fdia__row.is-idle .fdia__row-name {
   fill: var(--ink-faint);
 }
@@ -3534,4 +3620,303 @@ button {
 
 .qual--static {
   cursor: default;
+}
+
+/* ------------------------------------------------- where the ship actually is */
+
+.berth {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-raised) 70%, transparent);
+}
+
+.berth.is-underway {
+  border-color: color-mix(in srgb, var(--cyan) 45%, var(--line));
+}
+
+.berth__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.berth__place {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.berth.is-underway .berth__place {
+  color: var(--cyan);
+}
+
+.berth__detail {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.berth__track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.berth__flown {
+  height: 100%;
+  background: var(--cyan);
+}
+
+/* --------------------------------------------------- what the crossing is like */
+
+.telem {
+  margin-top: 12px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.telem--departure,
+.telem--arrival {
+  border-color: color-mix(in srgb, var(--amber, #e8a33d) 45%, var(--line));
+}
+
+.telem__now {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.telem__phase {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.telem__speed {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+.telem__row,
+.telem__burns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.telem__row {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 8px;
+}
+
+.telem__row li,
+.telem__burns li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.telem__burns {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.telem__burns li {
+  justify-content: space-between;
+}
+
+.telem__row span,
+.telem__burns span {
+  color: var(--ink-dim);
+}
+
+.telem__row strong,
+.telem__burns strong {
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------- the engineering panel (003 C) */
+
+.fgr__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 4px 0 10px;
+}
+
+.fgr__box {
+  fill: var(--bg-raised);
+  stroke: var(--line-bright);
+  stroke-width: 1;
+}
+
+.fgr__node--source .fgr__box {
+  stroke: var(--amber);
+  fill: color-mix(in srgb, var(--amber) 8%, var(--bg-raised));
+}
+
+.fgr__node--store .fgr__box {
+  stroke: var(--cyan);
+  fill: color-mix(in srgb, var(--cyan) 7%, var(--bg-raised));
+}
+
+.fgr__node--sink .fgr__box {
+  stroke: color-mix(in srgb, var(--amber) 60%, var(--line-bright));
+}
+
+.fgr__node.is-open .fgr__box {
+  stroke: var(--cyan);
+  stroke-width: 1.8;
+}
+
+.fgr__node.is-idle .fgr__box {
+  stroke: var(--line);
+}
+
+.fgr__name {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  fill: var(--ink);
+}
+
+.fgr__figure {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  fill: var(--ink-dim);
+}
+
+.fgr__node--source .fgr__figure {
+  fill: var(--green, #6fcf8f);
+}
+
+.fgr__node.is-idle .fgr__name,
+.fgr__node.is-idle .fgr__figure {
+  fill: var(--ink-faint);
+}
+
+.fgr__crew circle {
+  fill: color-mix(in srgb, var(--cyan) 22%, var(--bg-sunken));
+  stroke: var(--cyan);
+  stroke-width: 1;
+}
+
+.fgr__crew text {
+  font-family: var(--mono);
+  font-size: 6.5px;
+  fill: var(--cyan);
+}
+
+.fgr__hit {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+}
+
+/* The lines. Colour is the network; the dashes travel the way it flows, so a
+   line that has stopped moving is a network that has stopped. */
+.fgr__edge {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+
+.fgr__edge--battery { stroke: var(--cyan); }
+.fgr__edge--heat { stroke: var(--amber); }
+.fgr__edge--water { stroke: #6aa9e0; }
+.fgr__edge--o2 { stroke: var(--green, #6fcf8f); }
+.fgr__edge--co2 { stroke: var(--red); }
+
+.fgr__edge.is-live {
+  stroke-dasharray: 4 5;
+  animation: fgr-drift 2.4s linear infinite;
+}
+
+@keyframes fgr-drift {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fgr__edge.is-live {
+    animation: none;
+  }
+}
+
+.chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.chip__dot--battery { background: var(--cyan); }
+.chip__dot--heat { background: var(--amber); }
+.chip__dot--water { background: #6aa9e0; }
+.chip__dot--o2 { background: var(--green, #6fcf8f); }
+.chip__dot--co2 { background: var(--red); }
+
+.fgr__card {
+  margin-top: 6px;
+  padding: 10px 11px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.fgr__card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+
+.fgr__card-head span {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.fgr__links {
+  list-style: none;
+  margin: 0 0 9px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fgr__links li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-dim);
 }

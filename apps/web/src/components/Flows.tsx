@@ -30,7 +30,7 @@ const COL_W = 214
 /** Longest part name a row can show before it collides with its own figure. */
 const NAME_MAX = 21
 const ROW_H = 34
-const ROW_GAP = 10
+const ROW_GAP = 22
 const BUS_Y = 96
 const BUS_H = 24
 
@@ -141,7 +141,7 @@ function Diagram({ channel }: { channel: FlowChannel }) {
       <g className="fdia__bus">
         <rect x={PAD} y={BUS_Y} width={W - PAD * 2} height={BUS_H} rx="4" />
         <text className="fdia__bus-label" x={PAD + 10} y={BUS_Y + 16}>
-          {channel.level ? 'STORE' : 'BUS'}
+          MAIN BUS
         </text>
         <text
           className={`fdia__bus-net ${channel.net < 0 ? 'is-negative' : ''}`}
@@ -186,12 +186,19 @@ function Diagram({ channel }: { channel: FlowChannel }) {
               markerEnd="url(#fdia-ar)"
             />
             <rect x={PAD} y={y} width={COL_W} height={ROW_H} rx="5" />
-            <rect className="fdia__row-tab" x={PAD} y={y} width="4.5" height={ROW_H} rx="2" />
+            <rect
+              className={`fdia__row-tab ${n.priority ? `is-${n.priority}` : ''}`}
+              x={PAD}
+              y={y}
+              width="4.5"
+              height={ROW_H}
+              rx="2"
+            />
             <text className="fdia__row-name" x={PAD + 14} y={y + 13}>
               {n.name.length > NAME_MAX ? `${n.name.slice(0, NAME_MAX - 1)}…` : n.name}
             </text>
             <text className="fdia__row-where" x={PAD + 14} y={y + 24}>
-              {n.idle ? 'idle' : n.where}
+              {n.idle ? 'idle' : n.priority ? `${n.where} · ${n.priority}` : n.where}
             </text>
             <text className="fdia__row-value" x={PAD + COL_W - 8} y={y + 26} textAnchor="end">
               −{formatMagnitude(n.magnitude, channel.unit)}

@@ -39,7 +39,9 @@
     ],
     "priceCr": 430000,
     "bookValueCr": 165000,
-    "berths": 6
+    "berths": 6,
+    "ispS": 1200,
+    "thrustKn": 80
   },
   {
     "id": "hull.albatross",
@@ -81,6 +83,8 @@
     ],
     "priceCr": 1050000,
     "bookValueCr": 780000,
-    "berths": 10
+    "berths": 10,
+    "ispS": 1200,
+    "thrustKn": 140
   }
 ]

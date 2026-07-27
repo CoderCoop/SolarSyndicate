@@ -6,13 +6,20 @@
  * is away writes a line here, and the session-open screen reads them back.
  */
 import type { GameTime } from './time.js'
-import type { LogEntry, LogLevel, SimState } from './types.js'
+import type { LogEntry, LogLevel, LogTopic, SimState } from './types.js'
 
 /** Keep saves small; the inbox only ever shows the recent tail. */
 export const LOG_LIMIT = 200
 
-export function pushLog(state: SimState, at: GameTime, level: LogLevel, text: string): void {
-  const entry: LogEntry = { seq: state.nextSeq++, at, level, text }
+export function pushLog(
+  state: SimState,
+  at: GameTime,
+  level: LogLevel,
+  topic: LogTopic,
+  text: string,
+  figure?: string,
+): void {
+  const entry: LogEntry = { seq: state.nextSeq++, at, level, topic, text, ...(figure ? { figure } : {}) }
   state.log.push(entry)
   if (state.log.length > LOG_LIMIT) {
     state.log.splice(0, state.log.length - LOG_LIMIT)

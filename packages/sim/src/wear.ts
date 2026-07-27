@@ -115,7 +115,9 @@ export function applyThreshold(state: SimState, partId: string, at: GameTime): b
       state,
       at,
       'alert',
-      `${def.name} has failed at ${Math.round(condition)}% condition. It needs ${def.repairHours} hours and ${def.repairSpares} spares.`,
+      'upkeep',
+      `${def.name} has failed. It needs ${def.repairHours} hours and ${def.repairSpares} spares.`,
+      `${Math.round(condition)}% condition`,
     )
     return true
   }
@@ -124,7 +126,9 @@ export function applyThreshold(state: SimState, partId: string, at: GameTime): b
     state,
     at,
     threshold <= 25 ? 'warn' : 'info',
-    `${def.name} is down to ${Math.round(condition)}% — ${conditionLabel(condition)}. Service takes ${def.serviceHours} hours.`,
+    'upkeep',
+    `${def.name} is ${conditionLabel(condition)}. Service takes ${def.serviceHours} hours.`,
+    `${Math.round(condition)}% condition`,
   )
   return false
 }

@@ -340,6 +340,49 @@ function UnderWay({ voyage, active }: { voyage: VoyageView; active?: ActiveContr
         </li>
       </ul>
 
+      {/* The flight profile, stated rather than implied. A nuclear-thermal ship
+          burns at each end and falls the whole way between (§3.4) -- so the
+          honest answer to "what is the thrust right now" is nothing at all for
+          all but the first and last half hour, and the readout says so. */}
+      <div className={`telem telem--${voyage.phase}`}>
+        <div className="telem__now">
+          <span className="telem__phase">
+            {voyage.phase === 'coast'
+              ? 'Coasting'
+              : voyage.phase === 'departure'
+                ? 'Departure burn'
+                : 'Arrival burn'}
+          </span>
+          <span className="telem__speed">{(voyage.speedMs / 1000).toFixed(2)} km/s</span>
+        </div>
+        <ul className="telem__row">
+          <li>
+            <span>Thrust</span>
+            <strong>{voyage.thrustKn.toFixed(0)} kN</strong>
+          </li>
+          <li>
+            <span>Weight</span>
+            <strong>{voyage.gees.toFixed(2)} g</strong>
+          </li>
+        </ul>
+        <ul className="telem__burns">
+          {voyage.burns.map((b) => (
+            <li key={b.kind}>
+              <span>{b.kind === 'departure' ? 'Departure' : 'Arrival'}</span>
+              <strong>
+                {(b.deltaVMs / 1000).toFixed(2)} km/s · {Math.round(b.durationS / 60)} min ·{' '}
+                {b.gees.toFixed(2)} g
+              </strong>
+            </li>
+          ))}
+        </ul>
+        <p className="panel__note">
+          {voyage.phase === 'coast'
+            ? 'Engines cold and the crew weightless. She is falling along the transfer ellipse, fastest at the low end and slowest at the high one — the whole crossing is the fall between two burns, not a push all the way across.'
+            : 'Under thrust. Everything not stowed has weight again, and the crew are strapped in.'}
+        </p>
+      </div>
+
       {active && (
         <p className="panel__note">
           {active.late

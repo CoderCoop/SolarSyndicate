@@ -15,14 +15,17 @@
 import type { Glyph } from '@solsyn/data'
 import type { CrewView, RoomView } from '@solsyn/sim'
 import {
+  GAP,
   GLYPH_TONE,
   HUMAN_H_M,
   INTERIOR_W_M,
+  PERSON_TAG_U,
   U_PER_M,
   glyphShape,
   humanShape,
   layOutRoom,
   requiredHeight,
+  wallBandHeight,
   type Placeable,
 } from './roomInterior.js'
 
@@ -90,23 +93,33 @@ export function DeckSchematic({
     ),
   ]
 
+  const humanH = HUMAN_H_M * U_PER_M
+  const humanW = humanH * 0.42
+
+  // People stand on the deck at the ladder end. Their strip is taken out of the
+  // deck line before equipment is placed, so a machine can never be drawn
+  // through somebody -- it moves up a tier instead (RF-8).
+  const deckReserve = crew.length === 0 ? 0 : crew.length * (humanW + GAP)
+  const reserveHeight = crew.length === 0 ? 0 : humanH + PERSON_TAG_U
+
   // Data states the deck head height; contents raise the floor on it if they
-  // have to, so a room can never be drawn smaller than what it holds.
+  // have to, so a room can never be drawn smaller than what it holds. A person
+  // standing under the bulkhead band is part of "what it holds": the band has
+  // to clear their head, or the room is drawn with equipment through it.
   const interiorU = INNER_RIGHT - INNER_LEFT
   const declared = room.deckHeightM * U_PER_M
-  const interiorH = Math.max(declared, requiredHeight(items, interiorU) + 4)
+  const needed = requiredHeight(items, interiorU, { deckReserve, reserveHeight }) + 4
+  const headroom =
+    crew.length === 0 ? 0 : humanH + PERSON_TAG_U + wallBandHeight(items) + GAP
+  const interiorH = Math.max(declared, needed, headroom)
   const height = interiorH + OVERHEAD_U + DECK_U
   const deckLine = OVERHEAD_U + interiorH
 
-  const placed = layOutRoom(items, {
-    left: INNER_LEFT,
-    right: INNER_RIGHT,
-    top: OVERHEAD_U,
-    bottom: deckLine,
-  })
-
-  const humanH = HUMAN_H_M * U_PER_M
-  const humanW = humanH * 0.42
+  const placed = layOutRoom(
+    items,
+    { left: INNER_LEFT, right: INNER_RIGHT, top: OVERHEAD_U, bottom: deckLine },
+    { deckReserve, reserveHeight },
+  )
 
   return (
     <svg
@@ -215,9 +228,9 @@ export function DeckSchematic({
 
       {/* People, on the deck, at human scale. */}
       {crew.map((c, i) => {
-        // From the ladder inboard: equipment fills from the far side, so the
-        // two only meet in a room that is genuinely crowded.
-        const x = INNER_RIGHT - humanW - i * (humanW + 7)
+        // From the ladder inboard, inside the strip reserved above -- so this
+        // is not a hope that equipment stays out of the way, it is a fact.
+        const x = INNER_RIGHT - humanW - i * (humanW + GAP)
         const y = deckLine - humanH
         return (
           <g key={c.id} className={`person person--${c.activity}`}>
@@ -230,9 +243,9 @@ export function DeckSchematic({
             <rect
               className="hit"
               x={x - 1}
-              y={y - 6}
+              y={y - PERSON_TAG_U + 1}
               width={humanW + 2}
-              height={humanH + 7}
+              height={humanH + PERSON_TAG_U}
               role="button"
               tabIndex={0}
               aria-label={`${c.name}, ${c.role}. ${c.doing}.`}

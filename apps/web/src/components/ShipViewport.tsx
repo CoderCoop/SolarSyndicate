@@ -141,7 +141,10 @@ export function ShipViewport({
   const [openCrewId, setOpenCrewId] = useState<string | undefined>()
   const [openPartId, setOpenPartId] = useState<string | undefined>()
   // Furniture the sim does not model still answers when you tap it (SV-10).
-  const [openFixture, setOpenFixture] = useState<{ name: string; blurb: string } | undefined>()
+  // The room is carried with it so the answer can open in the room it is in.
+  const [openFixture, setOpenFixture] = useState<
+    { roomId: string; name: string; blurb: string } | undefined
+  >()
 
   const openCrew = crew.find((c) => c.id === openCrewId)
 
@@ -208,7 +211,7 @@ export function ShipViewport({
                     setOpenFixture(undefined)
                   }}
                   onSelectFixture={(f) => {
-                    setOpenFixture(f)
+                    setOpenFixture({ ...f, roomId: room.id })
                     setOpenPartId(undefined)
                     setOpenCrewId(undefined)
                   }}
@@ -224,6 +227,17 @@ export function ShipViewport({
                     onToggle={onTogglePart}
                     onOrderWork={onOrderWork}
                   />
+                )}
+
+                {/* Same rule as the station card above, for the same reason: an
+                    answer that opens two thousand pixels below the thing you
+                    tapped is indistinguishable from a tap that did nothing. */}
+                {openCrew?.roomId === room.id && (
+                  <WhoIs crew={openCrew} onClose={() => setOpenCrewId(undefined)} />
+                )}
+
+                {openFixture?.roomId === room.id && (
+                  <FixtureCard fixture={openFixture} onClose={() => setOpenFixture(undefined)} />
                 )}
 
                 {open && (
@@ -257,49 +271,50 @@ export function ShipViewport({
         <div className={`stack__plume ${power.netKw < 0 ? 'is-hot' : ''}`} aria-hidden="true" />
       </div>
 
-      {openCrew && (
-        <div className="whois" role="dialog" aria-label={openCrew.name}>
-          <div className="whois__head">
-            <span className="whois__initials">{openCrew.initials}</span>
-            <span className="whois__names">
-              <strong className="whois__name">{openCrew.name}</strong>
-              <span className="whois__role">
-                {openCrew.role} · {openCrew.age} · watch {openCrew.watch}
-              </span>
-            </span>
-            <button
-              type="button"
-              className="whois__close"
-              aria-label="Close"
-              onClick={() => setOpenCrewId(undefined)}
-            >
-              ×
-            </button>
-          </div>
-          <p className="whois__doing">{openCrew.doing}</p>
-          <p className="whois__blurb">{openCrew.blurb}</p>
-        </div>
-      )}
-
-      {openFixture && (
-        <div className="whois whois--fixture" role="dialog" aria-label={openFixture.name}>
-          <div className="whois__head">
-            <span className="whois__names">
-              <strong className="whois__name">{openFixture.name}</strong>
-              <span className="whois__role">Fitting — not simulated</span>
-            </span>
-            <button
-              type="button"
-              className="whois__close"
-              aria-label="Close"
-              onClick={() => setOpenFixture(undefined)}
-            >
-              ×
-            </button>
-          </div>
-          <p className="whois__blurb">{openFixture.blurb}</p>
-        </div>
-      )}
     </section>
+  )
+}
+
+function WhoIs({ crew, onClose }: { crew: CrewView; onClose: () => void }) {
+  return (
+    <div className="whois" role="dialog" aria-label={crew.name}>
+      <div className="whois__head">
+        <span className="whois__initials">{crew.initials}</span>
+        <span className="whois__names">
+          <strong className="whois__name">{crew.name}</strong>
+          <span className="whois__role">
+            {crew.role} · {crew.age} · watch {crew.watch}
+          </span>
+        </span>
+        <button type="button" className="whois__close" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+      </div>
+      <p className="whois__doing">{crew.doing}</p>
+      <p className="whois__blurb">{crew.blurb}</p>
+    </div>
+  )
+}
+
+function FixtureCard({
+  fixture,
+  onClose,
+}: {
+  fixture: { name: string; blurb: string }
+  onClose: () => void
+}) {
+  return (
+    <div className="whois whois--fixture" role="dialog" aria-label={fixture.name}>
+      <div className="whois__head">
+        <span className="whois__names">
+          <strong className="whois__name">{fixture.name}</strong>
+          <span className="whois__role">Fitting — not simulated</span>
+        </span>
+        <button type="button" className="whois__close" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+      </div>
+      <p className="whois__blurb">{fixture.blurb}</p>
+    </div>
   )
 }

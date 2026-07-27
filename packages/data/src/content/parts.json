@@ -25,7 +25,8 @@
     "repairHours": 26,
     "repairSpares": 4,
     "serviceSpares": 1,
-    "blurb": "22 kWe compact fission plant. Derived from Kilopower-class surface reactors, scaled up for shipboard use. Dumps three times its electrical output as waste heat."
+    "blurb": "22 kWe compact fission plant. Derived from Kilopower-class surface reactors, scaled up for shipboard use. Dumps three times its electrical output as waste heat.",
+    "short": "REACTOR"
   },
   {
     "id": "power.solar.foldout",
@@ -50,7 +51,8 @@
     "serviceHours": 3,
     "repairHours": 8,
     "repairSpares": 1,
-    "blurb": "Supplementary array. Useful in the inner system, dead weight past the Belt. Must be stowed before any burn."
+    "blurb": "Supplementary array. Useful in the inner system, dead weight past the Belt. Must be stowed before any burn.",
+    "short": "SOLAR WING"
   },
   {
     "id": "power.battery.bank",
@@ -75,7 +77,8 @@
     "serviceHours": 4,
     "repairHours": 14,
     "repairSpares": 3,
-    "blurb": "200 kWh at 350 Wh/kg. The margin between a quiet watch and a dark one."
+    "blurb": "200 kWh at 350 Wh/kg. The margin between a quiet watch and a dark one.",
+    "short": "BATTERY BANK"
   },
   {
     "id": "life.scrubber.co2",
@@ -104,7 +107,8 @@
     "repairHours": 13,
     "repairSpares": 2,
     "serviceSpares": 1,
-    "blurb": "Amine-bed scrubber, ISS CDRA lineage. Removes roughly 1 kg of CO2 per crew per day, and wears faster than anything else aboard."
+    "blurb": "Amine-bed scrubber, ISS CDRA lineage. Removes roughly 1 kg of CO2 per crew per day, and wears faster than anything else aboard.",
+    "short": "SCRUBBER"
   },
   {
     "id": "life.oxygen.electrolysis",
@@ -133,7 +137,8 @@
     "repairHours": 15,
     "repairSpares": 2,
     "serviceSpares": 1,
-    "blurb": "Splits reclaimed water for breathing oxygen. The single largest steady draw on the ship."
+    "blurb": "Splits reclaimed water for breathing oxygen. The single largest steady draw on the ship.",
+    "short": "O2 PLANT"
   },
   {
     "id": "life.water.recycler",
@@ -160,7 +165,8 @@
     "serviceHours": 5,
     "repairHours": 12,
     "repairSpares": 2,
-    "blurb": "97% closure. Every point below that is mass you have to carry -- and with it offline, the tanks are a three-week clock."
+    "blurb": "97% closure. Every point below that is mass you have to carry -- and with it offline, the tanks are a three-week clock.",
+    "short": "RECYCLER"
   },
   {
     "id": "life.hydroponics.lamps",
@@ -191,7 +197,8 @@
     "serviceHours": 3,
     "repairHours": 7,
     "repairSpares": 1,
-    "blurb": "Grow lights and trays. Food, a little oxygen, and the only green anyone sees for months."
+    "blurb": "Grow lights and trays. Food, a little oxygen, and the only green anyone sees for months.",
+    "short": "HYDROPONICS"
   },
   {
     "id": "thermal.loop.radiators",
@@ -219,7 +226,8 @@
     "repairHours": 18,
     "repairSpares": 3,
     "serviceSpares": 1,
-    "blurb": "Pumps and panels for the radiator loop. Everything the ship does becomes heat, and heat has to go somewhere."
+    "blurb": "Pumps and panels for the radiator loop. Everything the ship does becomes heat, and heat has to go somewhere.",
+    "short": "RADIATORS"
   },
   {
     "id": "nav.computers",
@@ -244,7 +252,8 @@
     "serviceHours": 2,
     "repairHours": 6,
     "repairSpares": 1,
-    "blurb": "Astrogation solver and flight control. Off means flying blind."
+    "blurb": "Astrogation solver and flight control. Off means flying blind.",
+    "short": "NAV"
   },
   {
     "id": "comms.array",
@@ -269,7 +278,8 @@
     "serviceHours": 3,
     "repairHours": 8,
     "repairSpares": 1,
-    "blurb": "High-gain dish. Your only link to the Local, and it travels no faster than light."
+    "blurb": "High-gain dish. Your only link to the Local, and it travels no faster than light.",
+    "short": "COMMS"
   },
   {
     "id": "hab.systems",
@@ -294,7 +304,8 @@
     "serviceHours": 4,
     "repairHours": 9,
     "repairSpares": 1,
-    "blurb": "Lighting, galley, water heating, and the exercise rig that keeps bone density off the medic's list."
+    "blurb": "Lighting, galley, water heating, and the exercise rig that keeps bone density off the medic's list.",
+    "short": "HAB"
   },
   {
     "id": "engine.ntr.preheat",
@@ -320,7 +331,8 @@
     "repairHours": 22,
     "repairSpares": 3,
     "serviceSpares": 1,
-    "blurb": "Brings the nuclear thermal cluster to readiness. Enormous draw, and you cannot burn without it."
+    "blurb": "Brings the nuclear thermal cluster to readiness. Enormous draw, and you cannot burn without it.",
+    "short": "NTR PREHEAT"
   },
   {
     "id": "life.scrubber.co2.mk2",
@@ -349,7 +361,8 @@
     "repairHours": 14,
     "repairSpares": 2,
     "serviceSpares": 1,
-    "blurb": "Thermally regenerated bed: it bakes itself out on a cycle instead of being swapped. Heavier, thirstier, and it holds the cabin a good deal cleaner."
+    "blurb": "Thermally regenerated bed: it bakes itself out on a cycle instead of being swapped. Heavier, thirstier, and it holds the cabin a good deal cleaner.",
+    "short": "SCRUBBER II"
   },
   {
     "id": "life.scrubber.co2.mk3",
@@ -378,7 +391,8 @@
     "repairHours": 16,
     "repairSpares": 3,
     "serviceSpares": 1,
-    "blurb": "Two beds swinging against each other, one adsorbing while the other vents. Belt yards fit these to long-haul hulls and argue the price back on crew performance."
+    "blurb": "Two beds swinging against each other, one adsorbing while the other vents. Belt yards fit these to long-haul hulls and argue the price back on crew performance.",
+    "short": "SCRUBBER III"
   },
   {
     "id": "life.water.recycler.mk2",
@@ -405,7 +419,8 @@
     "serviceHours": 6,
     "repairHours": 14,
     "repairSpares": 2,
-    "blurb": "Distillation under compression rather than filtration alone. 98.3% closure -- little more than a percentage point, and a percentage point here is weeks of range."
+    "blurb": "Distillation under compression rather than filtration alone. 98.3% closure -- little more than a percentage point, and a percentage point here is weeks of range.",
+    "short": "RECYCLER II"
   },
   {
     "id": "life.water.recycler.mk3",
@@ -433,6 +448,7 @@
     "repairHours": 17,
     "repairSpares": 3,
     "blurb": "Catalytic oxidation of the brine the others throw away. The last six tenths of a percent cost more than the first ninety-seven, which is how closure always goes.",
-    "serviceSpares": 1
+    "serviceSpares": 1,
+    "short": "RECYCLER III"
   }
 ]
