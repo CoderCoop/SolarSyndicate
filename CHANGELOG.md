@@ -9,6 +9,71 @@ means here.
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-27
+
+A minor by the stated rule: the ship view, the status bar and the log all
+changed what the player can *see*, and one of them changed what is true about
+the ship. All six items came from playing it.
+
+### Fixed
+
+- **Tapping a person did nothing, and only some objects answered.** One cause:
+  parts opened a station card inline under their deck, while crew and fixtures
+  opened theirs at the foot of the whole ship section — y≈2200 in an 844 px
+  viewport. Every tap worked; the answer appeared 1,400 px below the fold. Both
+  now open in the deck they belong to, and the end-to-end pass measures the
+  distance rather than trusting it.
+- **The room layout was drawing through itself** — 20 overlapping pairs across
+  four of seven decks. Bunks through bunks, the captain through the comms
+  array, three of the crew inside the bunks. People were placed independently of
+  the room, so the deck line now reserves their strip first; that reserve is a
+  person's full height rather than their footprint, because a standing figure
+  is taller than one tier of stores; the first object on a tier never wrapped;
+  and tier spacing was 1.8 units against strokes that need about 4. Nothing
+  overlaps now, drawn *or* tappable — an invisible tap-target overlap steals
+  taps meant for the machine behind the person, which is RF-8's whole point.
+- **The flow diagram lost the mockup's spacing.** Rows 10 px apart with an
+  arrowhead in the gap made every link the same stub whatever its width
+  claimed: "link width is magnitude" was true in the DOM and unreadable on the
+  screen. Consumers also carry their shed priority now, in the sub-label and as
+  the colour of the row's stripe — because the flow view's real question is not
+  "what draws the most" but "what can I switch off".
+
+### Added
+
+- **The status bar says where the ship is.** It carried the clock, the power
+  balance and the CO2, and never once said whether she was alongside or in
+  space. It now leads with the berth, or both ends of the crossing and how much
+  has been flown.
+- **What the crossing is actually like** — phase, speed, thrust and g. She does
+  *not* accelerate for half the distance and decelerate for the other half:
+  §3.4 puts a nuclear-thermal ship at 0.05–0.3 g, which buys Hohmann-class
+  transfers — burn hard at each end, fall the whole way between.
+  Accelerate-flip-decelerate is the fusion-torch tier. Rather than invent a
+  thrust figure to fill the coast, the readout states the truth: engines cold,
+  crew weightless, and a speed that really does vary. On the Luna run:
+  departure 3.08 km/s over 29 min at 0.16 g, arrival 0.83 km/s over 8 min, and
+  10.75 km/s leaving low Earth orbit decaying to 0.19 km/s at lunar distance —
+  trans-lunar injection to two decimal places, all of it derived. Position
+  comes from Kepler's equation against the transfer ellipse, recomputed from
+  what the voyage already records, so the save format is unaffected.
+- **Engines are data**: `ispS` and `thrustKn` per hull, since a bigger ship has
+  a bigger engine.
+- **The log is sorted, and the number is hoisted out of the prose.** Seven
+  topics, authored where each line is raised rather than guessed from its
+  wording at render time, with a filter row that only offers a topic that
+  actually occurred. And a figure per line, in its own column — every dispatch
+  has one number that decides whether it needs you, and buried mid-sentence it
+  makes the reader parse every word to find it. In a column the log reads
+  *down*: 79%, 61%, 43%, failed.
+
+### Save format
+
+`SIM_STATE_VERSION` 7 → 8: dispatches carry a topic, and every line in a v7
+save has none. The shape test added in 0.5.1 caught this within seconds of the
+field being added, with the remedy in the failure message — which is exactly
+what it was built for.
+
 ## [0.5.2] — 2026-07-26
 
 ### Added
