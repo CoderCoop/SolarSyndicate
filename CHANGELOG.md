@@ -9,6 +9,46 @@ means here.
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-07-30
+
+A minor, and the one that finishes §7.4. "No death without foreshadowing **and a
+decision**" has been the non-negotiable rule since the design doc was written;
+`0.8.0` built the foreshadowing and left the decision, so a player who closed
+the app on a failed scrubber was protected by nothing but the length of the
+warning. Now the captain is.
+
+### Added
+
+- **An acute emergency opens a decision window.** Raised the moment the air
+  starts costing health rather than when it starts killing — seven hours after
+  a scrubber dies, not nineteen — with a deadline scaled to how long the crew
+  actually have: a quarter of their margin, capped at six hours. Answer it and
+  the captain stands by. Ordering the repair yourself *is* answering, because
+  that job is his entire response.
+- **Unanswered, the captain stands the ship to.** §4.6's whole premise is that
+  you are not aboard and the person who is does not wait for a round trip. He
+  orders the repair on the failing part, puts it at the head of the queue,
+  sheds everything not keeping somebody alive, and secures the idle hands.
+- **The window is on screen wherever you are** — under the status bar on every
+  tab, because a window the player has to go looking for is not one.
+
+### Changed
+
+- **§7.4's central claim is now true and tested.** "If margins were sane at
+  departure, safe mode always suffices." Same seed, same failed scrubber, same
+  twenty days: with the captain allowed to act, nobody dies and the scrubber is
+  repaired. Without, all four die. Spares in the locker and a hand able to turn
+  a wrench is what "sane margins" means, and the counterfactual is pinned as a
+  test.
+- **Safe mode is not "everybody rest", because the numbers say that is
+  lethal.** §7.4 describes the captain's default as "crew secured on rations",
+  and the obvious reading is to cut metabolism and buy time. Measured before
+  building it: resting the whole crew buys about a quarter more time and costs
+  the thirteen-hour repair, converting a survivable failure into a certain
+  death slightly later. The dominant lever is fixing the thing that is killing
+  you. So the response protects repair capacity first and takes the metabolic
+  saving only from hands who were idle anyway.
+
 ## [0.9.0] — 2026-07-30
 
 A minor by the stated rule: losing your whole crew used to end the campaign, and

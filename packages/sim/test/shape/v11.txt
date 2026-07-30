@@ -128,6 +128,7 @@ $.ship.rooms[].defId: string
 $.ship.rooms[].id: string
 $.ship.rooms[]: object
 $.ship.standingOrders.autoService: boolean
+$.ship.standingOrders.safeMode: boolean
 $.ship.standingOrders: object
 $.ship.thermalTrip: boolean
 $.ship: object

@@ -52,6 +52,7 @@ import {
   restoreShedLoads,
 } from './networks.js'
 import { environmentAt, o2KPaAt, type Environment } from './physiology.js'
+import { answerEmergency, standDown, standTo } from './emergency.js'
 import { peekDue, pop, schedule } from './queue.js'
 import { livingCrew } from './crew.js'
 import { fillFraction, levelAt, makeReservoir, settle } from './resources.js'
@@ -168,7 +169,7 @@ export function createWorld(seed: number, utcMs: number): SimState {
       // new player discover it by wasting a locker's worth first is a tutorial
       // nobody asked for. It is a toggle because §7.3 says standing orders are
       // the player's to set, not because the default is in doubt.
-      standingOrders: { autoService: true },
+      standingOrders: { autoService: true, safeMode: true },
       thermalTrip: false,
     },
     crew,
@@ -259,6 +260,12 @@ function applyEvent(state: SimState, event: SimEvent): void {
       // declines far more often than it fires -- no spares, a job already open,
       // the part repaired in the meantime.
       if (autoQueueService(state, event.ref, event.at)) resolveAll(state, event.at)
+      break
+    }
+
+    case 'EMERGENCY_WINDOW': {
+      if (!event.ref) break
+      if (standTo(state, event.ref, event.at)) resolveAll(state, event.at)
       break
     }
 
@@ -426,6 +433,10 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
     }
 
     case 'QUEUE_WORK_ORDER': {
+      // Raising the repair on whatever is causing the emergency *is* the
+      // answer -- the captain's whole response is that job, so a player who
+      // has already ordered it has made the same call sooner (§7.4).
+      if (state.emergency?.causePartId === command.partId) answerEmergency(state, at)
       if (createWorkOrder(state, command.partId, command.orderKind, at)) resolveAll(state, at)
       break
     }
@@ -434,6 +445,17 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
       if (reprioritiseWorkOrder(state, command.workOrderId, command.direction)) {
         resolveAll(state, at)
       }
+      break
+    }
+
+    case 'ANSWER_EMERGENCY': {
+      if (answerEmergency(state, at)) resolveAll(state, at)
+      break
+    }
+
+    case 'STAND_DOWN': {
+      standDown(state, at)
+      resolveAll(state, at)
       break
     }
 
@@ -774,6 +796,55 @@ export function workOrderViews(state: SimState): WorkOrderView[] {
         wasted: order.kind === 'service' ? serviceWasteAt(condition) : 0,
       }
     })
+}
+
+/**
+ * The open emergency, for the banner. Design doc §7.4.
+ *
+ * Its own selector rather than a field on the life-support view, because the
+ * banner is global: an acute emergency is the one thing in the game that has
+ * to reach the player on whichever tab they happen to be looking at.
+ */
+export interface EmergencyView {
+  hazard: string
+  severity: string
+  /** The reading that opened it, e.g. "8,400 ppm CO2". */
+  reading: string
+  /** The clinical stage: "headaches", "drowsy". */
+  label: string
+  /** Seconds until the captain acts. Zero once he has, Infinity if he will not. */
+  secondsToRespond: number
+  answered: boolean
+  /** The captain has already stood the ship to. */
+  stoodTo: boolean
+  /** Whether standing orders let him act at all. */
+  captainMayAct: boolean
+  /** What is broken behind it, named, when a failure is the cause. */
+  causeName?: string
+}
+
+export function emergencyView(state: SimState): EmergencyView | undefined {
+  const em = state.emergency
+  if (!em) return undefined
+  const env = environmentAt(state, state.now)
+  const worst = env.exposures.find((e) => e.hazard === em.hazard) ?? env.exposures[0]
+  const cause = em.causePartId
+    ? state.ship.parts.find((p) => p.id === em.causePartId)
+    : undefined
+
+  return {
+    hazard: em.hazard,
+    severity: em.severity,
+    reading: worst?.reading ?? '',
+    label: worst?.label ?? '',
+    secondsToRespond: !state.ship.standingOrders.safeMode
+      ? Infinity
+      : Math.max(0, em.respondBy - state.now),
+    answered: em.answered ?? false,
+    stoodTo: state.ship.safeMode ?? false,
+    captainMayAct: state.ship.standingOrders.safeMode,
+    ...(cause ? { causeName: getPart(cause.defId).name } : {}),
+  }
 }
 
 export interface RoomView {

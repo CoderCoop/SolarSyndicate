@@ -1122,12 +1122,32 @@ for the first time. Two of its three legs are standing:
   through neglect the player chose: lifting the standing order, declining a
   repair, or flying with a scrubber the yard warned about.
 
-What is **not** built, and is a milestone of its own: the decision window
-itself. There is no push notification, no timer the captain waits out, no
-standing order that answers the emergency while you are away, and no automatic
-**safe mode** to fall back to. Until those exist, a player who closes the app
-with a failed scrubber and does not come back is not protected by anything but
-the length of the warning.
+- **The decision window is real.** An emergency is raised the moment the air
+  starts costing health, with a deadline scaled to the crew's actual margin — a
+  quarter of it, capped at six hours. Unanswered, the captain stands the ship
+  to on his own authority (§4.6): he orders the repair on the failing part,
+  puts it at the head of the queue, sheds what is not keeping anybody alive,
+  and secures the idle hands.
+
+**Safe mode is not "everybody rest", and the numbers are why.** The obvious
+reading of "crew secured on rations" is to cut metabolism and buy time. That
+reading is lethal. With the scrubber dead the cabin reaches the first harmful
+band in about seven hours and the dangerous one in nineteen; resting the whole
+crew buys roughly a quarter more time and costs the thirteen-hour repair. It
+converts a survivable failure into a certain death slightly later. The dominant
+lever is fixing the thing that is killing you, so the captain's response
+protects repair capacity first and takes the metabolic saving only from hands
+who were idle anyway.
+
+The claim the section turns on is now testable, and tested: same seed, same
+failed scrubber, same twenty days — with the captain allowed to act nobody dies
+and the scrubber is repaired; without, all four die.
+
+What is still **not** built: the push notification itself. The sim raises the
+emergency and the banner carries it on every tab, but nothing reaches a phone
+that is not looking at the game. That is a service-worker and permissions
+change rather than a simulation one, and it belongs with the rest of the PWA
+work.
 
 The tail is now built. A dead-crew ship is recovered: the last casualty ends the
 voyage rather than letting it count down to an arrival nobody is alive to make,

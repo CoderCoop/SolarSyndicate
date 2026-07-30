@@ -4513,3 +4513,70 @@ button {
 .berth.is-salvage .berth__detail {
   color: var(--red);
 }
+
+/* --------------------------------------------------------------- emergency */
+
+/*
+ * The decision window (§7.4). Sits under the status bar on every tab, because
+ * a window the player has to go looking for is not one -- and this is the only
+ * thing in the game that can kill somebody while they read another screen.
+ */
+.emergency {
+  margin: 0 var(--pad) 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--red) 60%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #1e0e0e 65%, var(--bg-raised));
+}
+
+/* Stood to: the captain has it, so it stops shouting and starts reporting. */
+.emergency.is-stood-to {
+  border-color: color-mix(in srgb, var(--amber) 45%, var(--line));
+  background: color-mix(in srgb, #1a140a 60%, var(--bg-raised));
+}
+
+.emergency__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+
+.emergency__reading {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.emergency__label {
+  font-size: 13.5px;
+  color: var(--red);
+}
+
+.emergency.is-stood-to .emergency__label {
+  color: var(--amber);
+}
+
+.emergency__cause {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.emergency__state {
+  margin: 0 0 11px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.emergency__state strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nobody is coming. The one case where the copy should feel colder. */
+.emergency__state--alone {
+  color: var(--red);
+  margin-bottom: 0;
+}

@@ -23,6 +23,7 @@ import {
 import { pushLog } from './log.js'
 import { boundTime, levelAt, settle } from './resources.js'
 import { cancelKind, schedule } from './queue.js'
+import { resolveEmergency } from './emergency.js'
 import { recoverShip } from './recovery.js'
 import { DAY, formatDuration, type GameTime } from './time.js'
 import {
@@ -455,6 +456,9 @@ function updateCrewRates(state: SimState, at: GameTime): void {
   }
 
   scheduleCasualties(state, at, env)
+  // The emergency is derived from the same environment, so it opens, escalates
+  // and closes itself without anybody having to remember to check.
+  resolveEmergency(state, at, env)
 }
 
 /**
