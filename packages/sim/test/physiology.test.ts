@@ -22,7 +22,19 @@ import { advanceTo, applyCommand, createWorld, lifeSupportView } from '../src/en
 import { DAY, HOUR } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
-const world = () => createWorld(7, Date.UTC(2026, 6, 25, 14, 30, 0))
+/**
+ * With the captain's standing order lifted.
+ *
+ * §7.4's safe mode repairs whatever is causing an emergency, which is exactly
+ * the confound here: these tests measure what bad air *does*, and a ship that
+ * fixes its own scrubber halfway through is measuring the response instead.
+ * The response has its own tests in `emergency.test.ts`.
+ */
+const world = () => {
+  const s = createWorld(7, Date.UTC(2026, 6, 25, 14, 30, 0))
+  s.ship.standingOrders.safeMode = false
+  return s
+}
 
 function breakPart(s: SimState, id: string): SimState {
   const next = structuredClone(s)

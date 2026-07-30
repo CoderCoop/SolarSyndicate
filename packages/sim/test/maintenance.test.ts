@@ -377,6 +377,10 @@ describe('the ship services itself when a service would not be wasted', () => {
 
   it('never orders a repair on its own -- a failure is the player\'s call', () => {
     const s = tended()
+    // The *standing order* never raises a repair. The captain does, under §7.4
+    // safe mode, and that is a different mechanism with its own tests -- so it
+    // is lifted here rather than allowed to answer for the thing under test.
+    s.ship.standingOrders.safeMode = false
     for (const p of s.ship.parts) p.condition.value = 95
     const scrubber = part(s, 'life.scrubber.co2')
     scrubber.condition.value = 20

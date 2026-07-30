@@ -196,7 +196,11 @@ export function updateActivities(state: SimState, t: GameTime): boolean {
   let changed = false
   for (const crew of state.crew) {
     if (crew.dead) continue
-    const next = activityAt(crew.watch, t)
+    let next = activityAt(crew.watch, t)
+    // Stood to: hands with nothing to do are secured rather than left idle at
+    // full metabolic load. Only the off-watch -- taking the watch itself would
+    // stop the repair, which is the thing actually keeping them alive.
+    if (state.ship.safeMode && next === 'off' && !crew.workOrderId) next = 'sleep'
     if (next !== crew.activity) {
       crew.activity = next
       changed = true

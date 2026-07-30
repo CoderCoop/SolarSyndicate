@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   AUTO_SERVICE_CONDITION,
   activeContract,
+  emergencyView,
   chartView,
   contractBoard,
   crewViews,
@@ -28,6 +29,7 @@ import {
 import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
 import { DispatchLog } from './components/DispatchLog.js'
+import { EmergencyBanner } from './components/EmergencyBanner.js'
 import { Flows } from './components/Flows.js'
 import { FlowGraph } from './components/FlowGraph.js'
 import { Help, SITE_URL } from './components/Help.js'
@@ -165,6 +167,7 @@ export function App() {
   const crewBerths = berths(state)
   const payroll = dailyWagesCr(state)
   const brokenCount = state.ship.parts.filter((p) => p.broken).length
+  const emergency = emergencyView(state)
 
   // The Mission tab is where the only timed decision in the game lives, so the
   // nav says when it wants attention: work on offer, or a deadline running.
@@ -179,6 +182,17 @@ export function App() {
   return (
     <div className="app">
       <StatusBar now={state.now} power={power} life={life} brokenCount={brokenCount} where={where} />
+
+      {/* Above the install offer and above the tabs: an acute emergency is the
+          one thing that should interrupt whatever the player came here to do,
+          and §7.4 says the window has to actually reach them. */}
+      {emergency && (
+        <EmergencyBanner
+          emergency={emergency}
+          onAnswer={() => dispatch({ kind: 'ANSWER_EMERGENCY' })}
+          onStandDown={() => dispatch({ kind: 'STAND_DOWN' })}
+        />
+      )}
 
       {/* Under the status bar, never over it: the offer must not cover a gauge
           the player is watching. */}

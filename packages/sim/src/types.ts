@@ -6,6 +6,7 @@
  * both the save format and (eventually) the wire format.
  */
 import type { Watch } from '@solsyn/data'
+import type { Emergency } from './emergency.js'
 import type { ContractState } from './contracts.js'
 import type { LedgerEntry } from './ledger.js'
 import type { Settlement } from './reconcile.js'
@@ -24,7 +25,7 @@ import type { GameTime } from './time.js'
  * the shape and a test refuses any change to it that this number did not
  * follow.
  */
-export const SIM_STATE_VERSION = 10
+export const SIM_STATE_VERSION = 11
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -120,6 +121,8 @@ export interface ShipState {
    * Cleared when somebody signs on, so she can be crewed and flown again.
    */
   recovered?: boolean
+  /** Stood to by the captain after an unanswered emergency (§7.4, §4.6). */
+  safeMode?: boolean
   /**
    * The emergency the log has already announced, so escalating air raises one
    * dispatch per stage instead of one per network resolve.
@@ -141,6 +144,13 @@ export interface StandingOrders {
    * service will not overflow the condition ceiling.
    */
   autoService: boolean
+  /**
+   * Let the captain stand the ship to when an emergency goes unanswered
+   * (§7.4). Off means the decision window never closes on its own -- which is
+   * a choice the player is allowed to make, and the dispatch says so at the
+   * moment they would need to know.
+   */
+  safeMode: boolean
 }
 
 /** What a crew member is doing right now. Driven by the watch bill (§4.3). */
@@ -208,6 +218,7 @@ export type EventKind =
   | 'PART_THRESHOLD'
   | 'AUTO_SERVICE'
   | 'CREW_DOWN'
+  | 'EMERGENCY_WINDOW'
   | 'WORK_ORDER_DONE'
 
 export interface SimEvent {
@@ -281,6 +292,8 @@ export interface SimState {
   ledger: LedgerEntry[]
   /** The run under way, if any. One ship, one contract. */
   contract?: ContractState
+  /** The acute emergency currently open, if any (§7.4). */
+  emergency?: Emergency
   /** The crossing under way, if the ship is not berthed. */
   voyage?: VoyageState
   /** How the last delivery settled, for the arrival screen. */
@@ -301,6 +314,8 @@ export type Command =
   | { kind: 'CANCEL_WORK_ORDER'; workOrderId: string }
   | { kind: 'MOVE_WORK_ORDER'; workOrderId: string; direction: 'up' | 'down' }
   | { kind: 'SET_STANDING_ORDER'; order: keyof StandingOrders; on: boolean }
+  | { kind: 'ANSWER_EMERGENCY' }
+  | { kind: 'STAND_DOWN' }
   | { kind: 'SET_CREW_WATCH'; crewId: string; watch: Watch }
   /**
    * Move money. Negative credits receive rather than spend. Never refused --

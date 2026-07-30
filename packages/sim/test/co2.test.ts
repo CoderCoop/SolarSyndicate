@@ -16,7 +16,19 @@ import { advanceTo, applyCommand, createWorld, lifeSupportView } from '../src/in
 import { DAY } from '../src/time.js'
 
 const T0 = Date.UTC(2200, 0, 1)
-const world = () => createWorld(20260726, T0)
+/**
+ * With the captain's standing order lifted.
+ *
+ * §7.4's safe mode repairs whatever is causing an emergency, which is exactly
+ * the confound here: these tests measure what bad air *does*, and a ship that
+ * fixes its own scrubber halfway through is measuring the response instead.
+ * The response has its own tests in `emergency.test.ts`.
+ */
+const world = () => {
+  const s = createWorld(20260726, T0)
+  s.ship.standingOrders.safeMode = false
+  return s
+}
 
 /** Earth ambient, roughly. Nothing aboard should ever read below this. */
 const EARTH_AMBIENT_PPM = 420
