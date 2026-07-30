@@ -4,13 +4,31 @@
 
 Standard GitHub flow, no special cases:
 
-- **Branch, commit, push, open a PR.**
+- **One branch per feature or bugfix.** Not per session, not per release.
+- **Name it `feature/<name>` or `bug/<name>`** — the prefix says which of the
+  two it is, and the name says what it is: `feature/work-orders-tab`,
+  `bug/star-chart-ignores-profile`.
+- **Branch, commit, push, open a PR.** Always a PR, however small the change.
 - **Merge once CI is green** — squash by default. No need to ask first; this is
   a standing instruction. If CI fails, fix it and push again rather than
   merging around it.
-- After a merge, start the next change from a freshly updated `main`.
+- After a merge, start the next change from a freshly updated `main`:
+  `git checkout -B feature/<name> origin/main`.
 - CI is `.github/workflows/ci.yml`: `pnpm check` (typecheck, lint, tests) plus
   the Chromium end-to-end pass. Both must pass.
+
+The one-change rule is the newest of these and the easiest to let slide, because
+bundling is always cheaper *in the moment* — the work is done, it is green, and
+splitting it costs an afternoon. It is worth holding anyway. `0.8.0` went in as
+one PR carrying six unrelated changes, and by then the version and `CHANGELOG`
+had been touched by four of them, so unpicking it would have meant re-deriving
+the `SIM_STATE_VERSION` chain per branch. A PR that does one thing can be
+reviewed, reverted and bisected on its own; one that does six can only be taken
+or left whole.
+
+Scope is judged by *what changed for the player*, not by how many files moved. A
+fix and the test that pins it are one change. A fix and an unrelated tidy-up
+found along the way are two — take the note, do it next.
 
 ## Versioning
 
