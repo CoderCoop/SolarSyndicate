@@ -23,6 +23,7 @@ import {
 import { pushLog } from './log.js'
 import { boundTime, levelAt, settle } from './resources.js'
 import { cancelKind, schedule } from './queue.js'
+import { recoverShip } from './recovery.js'
 import { DAY, formatDuration, type GameTime } from './time.js'
 import {
   RESOURCE_KEYS,
@@ -563,6 +564,11 @@ export function applyCasualty(state: SimState, crewId: string, at: GameTime): bo
     `${getCrewDef(crew.defId).name} has died aboard. ${cause ? `Cause: ${cause.label} — ${cause.reading}.` : ''}`.trim(),
     cause?.reading,
   )
+
+  // The last one out. §7.4: the ship survives even when the crew does not, so
+  // she is recovered and towed rather than left coasting toward an arrival
+  // nobody is alive to make.
+  recoverShip(state, at)
   return true
 }
 

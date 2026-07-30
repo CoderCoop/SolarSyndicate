@@ -1129,11 +1129,19 @@ standing order that answers the emergency while you are away, and no automatic
 with a failed scrubber and does not come back is not protected by anything but
 the length of the warning.
 
-The other gap is the tail: §7.4 says the ship survives and a dead-crew ship is
-recovered and towed at ruinous cost. Nothing implements that, so losing the
-whole watch currently leaves a working ship nobody can crew. Both belong to the
-same milestone, and neither is a reason to keep the health floor that hid the
-problem.
+The tail is now built. A dead-crew ship is recovered: the last casualty ends the
+voyage rather than letting it count down to an arrival nobody is alive to make,
+she is towed to the port she was bound for, the contract is forfeited because
+the cargo did not arrive, and a salvage bill of 18% of the hull's book value is
+posted — 77,400 Cr on the Kestrel against a 240,000 Cr opening balance. Ruinous,
+and still a debt rather than a wall (TR-21). One hire releases her.
+
+What that exposed is worth recording, because it is the shape of bug this
+section exists to prevent: the dead were still counted as crew in four places,
+and the worst of them was **berths**. The people who had died aboard occupied
+the bunks their replacements needed, so on a full hull the campaign could not
+continue *because of the casualties* — a wall built out of the consequence
+itself. Anything that iterates the crew wants `livingCrew`.
 
 - **Return is a story.** The session-open screen is your inbox: the captain's
   dispatches since you last read in, written in their voice — including, when it

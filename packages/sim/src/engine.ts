@@ -53,6 +53,7 @@ import {
 } from './networks.js'
 import { environmentAt, o2KPaAt, type Environment } from './physiology.js'
 import { peekDue, pop, schedule } from './queue.js'
+import { livingCrew } from './crew.js'
 import { fillFraction, levelAt, makeReservoir, settle } from './resources.js'
 import { DAY, formatDuration, gameTimeFromUtc, type GameTime } from './time.js'
 import { resolveTune, tuneLabel, tuneOf } from './tune.js'
@@ -673,7 +674,12 @@ export interface CrewView {
 
 export function crewViews(state: SimState): CrewView[] {
   const t = state.now
-  return state.crew.map((crew) => {
+  // The roster is who is aboard to work. A crew member who has died is carried
+  // on `state.crew` as a record, but publishing them here put four corpses on
+  // the watch bill reporting "On watch" and "Asleep", and stood them at their
+  // stations in the ship view. They are named in the dispatch log and in the
+  // Life readout's casualty line instead, which is where a loss belongs.
+  return livingCrew(state).map((crew) => {
     const def = getCrewDef(crew.defId)
     const order = crew.workOrderId
       ? state.workOrders.find((w) => w.id === crew.workOrderId)

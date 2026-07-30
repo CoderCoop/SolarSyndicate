@@ -303,6 +303,24 @@ export function CrewPanel({
     <section className="panel" aria-label="Crew">
       <h2 className="panel__title">Crew</h2>
 
+      {/* A ship can have no crew now, and an empty list explains nothing. The
+          only route out of salvage is hiring, and the hall is directly below
+          this panel -- so say what happened and point at it (§7.4). */}
+      {crew.length === 0 && (
+        <div className="salvage">
+          <p className="salvage__lede">There is nobody aboard.</p>
+          <p className="salvage__what">
+            The ship was recovered and towed in after the last of her crew was lost. She is
+            intact and she is yours — the reactor is running and the berth is held — but she
+            cannot fly, take a contract, or repair herself until somebody signs on.
+          </p>
+          <p className="panel__note">
+            Hire from the hall below. One hand is enough to release her from salvage; a full
+            watch bill is what makes her earn again.
+          </p>
+        </div>
+      )}
+
       <ul className="roster">
         {crew.map((member) => {
           const open = member.id === openId

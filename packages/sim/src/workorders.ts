@@ -8,7 +8,7 @@
  * engineer shows up as a number the player watches: days-to-fix.
  */
 import { content, getCrewDef, getPart } from '@solsyn/data'
-import { laborRate } from './crew.js'
+import { laborRate, livingCrew } from './crew.js'
 import { pushLog } from './log.js'
 import { cancelKind, schedule } from './queue.js'
 import { boundTime, levelAt, makeReservoir, settle } from './resources.js'
@@ -165,6 +165,10 @@ export function autoQueueService(
   at: GameTime,
 ): WorkOrder | undefined {
   if (!state.ship.standingOrders.autoService) return undefined
+  // A standing order is a policy the crew execute. With nobody alive aboard
+  // there is no one to execute it, and a derelict under salvage was quietly
+  // raising services for itself against a locker nobody could open.
+  if (livingCrew(state).length === 0) return undefined
 
   const part = state.ship.parts.find((p) => p.id === partId)
   if (!part || part.broken) return undefined

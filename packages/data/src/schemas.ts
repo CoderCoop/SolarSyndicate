@@ -662,11 +662,27 @@ export const UpkeepTuning = z.object({
 })
 export type UpkeepTuning = z.infer<typeof UpkeepTuning>
 
+/**
+ * Recovering a ship nobody is left alive to fly. Design doc §7.4, §4.5.
+ *
+ * "The ship survives. Crew are mortal; the campaign is not. Hull loss is not in
+ * v1 (a dead-crew ship gets recovered/towed at ruinous cost)." Ruinous is the
+ * operative word and it needs a number: large enough that losing a crew is the
+ * worst thing that can happen to a desk, bounded enough that it is a debt
+ * rather than a wall (TR-21 -- consequences are financial and never a block).
+ */
+export const RecoveryTuning = z.object({
+  /** Tow and salvage fee, as a fraction of the hull's book value. */
+  towFeeHullFraction: z.number().positive().max(1),
+})
+export type RecoveryTuning = z.infer<typeof RecoveryTuning>
+
 export const Tuning = z.object({
   survey: SurveyTuning,
   attendance: AttendanceTuning,
   tune: TuneTuning,
   upkeep: UpkeepTuning,
+  recovery: RecoveryTuning,
 })
 export type Tuning = z.infer<typeof Tuning>
 

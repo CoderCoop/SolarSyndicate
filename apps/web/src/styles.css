@@ -4480,3 +4480,36 @@ button {
   border-top: 1px solid var(--line);
   padding-top: 9px;
 }
+
+/* ------------------------------------------------------------------ salvage */
+
+/*
+ * A ship with no crew. §7.4 says the campaign survives the crew, so this is
+ * the panel that has to make an empty roster read as a recoverable state
+ * rather than as a broken screen.
+ */
+.salvage {
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--red) 45%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #1a0f0f 55%, var(--bg-raised));
+}
+
+.salvage__lede {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.salvage__what {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  color: var(--ink-dim);
+}
+
+/* The status bar carries it too: it is the one state the player cannot trade
+   their way out of without acting. */
+.berth.is-salvage .berth__detail {
+  color: var(--red);
+}

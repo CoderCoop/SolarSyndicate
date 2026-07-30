@@ -343,6 +343,8 @@ export interface Whereabouts {
   detail: string
   /** 0–1 under way, undefined alongside. */
   fractionComplete?: number
+  /** Recovered after losing her crew, and not yet re-crewed (§7.4). */
+  salvage?: boolean
 }
 
 export function whereabouts(state: SimState): Whereabouts {
@@ -351,7 +353,15 @@ export function whereabouts(state: SimState): Whereabouts {
     return {
       docked: true,
       place: getPort(state.ship.portId).name,
-      detail: state.contract ? 'Berthed · cargo aboard' : 'Berthed',
+      // Salvage outranks anything else the bar could say about her. It is the
+      // only state in the game the player cannot trade their way out of
+      // without acting, so the always-visible line carries it (§7.4).
+      detail: state.ship.recovered
+        ? 'Under salvage · no crew aboard'
+        : state.contract
+          ? 'Berthed · cargo aboard'
+          : 'Berthed',
+      ...(state.ship.recovered ? { salvage: true } : {}),
     }
   }
 
