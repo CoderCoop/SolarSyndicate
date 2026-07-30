@@ -11,13 +11,19 @@
  * function runs only when something actually changes: a part toggles, a watch
  * turns over, a component fails.
  */
-import { getHull, getPart, SHED_ORDER, type PartProvides, type PowerPriority } from '@solsyn/data'
+import { getCrewDef, getHull, getPart, SHED_ORDER, type PartProvides, type PowerPriority } from '@solsyn/data'
 import { tuneOutputScale, tuneOf } from './tune.js'
 import { activityLoad, co2KgForPpm, fatigueRatePerSecond, METABOLIC } from './crew.js'
+import {
+  BASELINE_RECOVERY_PER_DAY,
+  SLEEP_RECOVERY_SCALE,
+  environmentAt,
+  type Environment,
+} from './physiology.js'
 import { pushLog } from './log.js'
 import { boundTime, levelAt, settle } from './resources.js'
 import { cancelKind, schedule } from './queue.js'
-import { DAY, type GameTime } from './time.js'
+import { DAY, formatDuration, type GameTime } from './time.js'
 import {
   RESOURCE_KEYS,
   type LogLevel,
@@ -199,6 +205,9 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
   let crewLoad = 0
   let crewHeatKw = 0
   for (const crew of state.crew) {
+    // The dead draw no oxygen and eat nothing. Leaving them in the metabolic
+    // load would have a ship's consumables get *worse* after a casualty.
+    if (crew.dead) continue
     const load = activityLoad(crew.activity)
     crewLoad += load
     crewHeatKw += METABOLIC.heatKw * load
@@ -426,32 +435,135 @@ export function resolveNetworks(state: SimState, at: GameTime): void {
  * problem" is a division rather than a simulation.
  */
 function updateCrewRates(state: SimState, at: GameTime): void {
-  const temp = levelAt(state.ship.resources.heat, at)
-  const co2Kg = levelAt(state.ship.resources.co2, at)
-  const hull = getHull(state.ship.hullId)
-  const ppm = ((co2Kg / 0.044) / (41.45 * hull.cabinVolumeM3)) * 1e6
-
-  const starving = levelAt(state.ship.resources.food, at) <= 0
-  const thirsty = levelAt(state.ship.resources.water, at) <= 0
-  const suffocating = levelAt(state.ship.resources.o2, at) <= 0
-
-  let healthPerDay = 2.5 // baseline recovery when things are fine
-  if (ppm > 10000) healthPerDay -= 9
-  else if (ppm > 5000) healthPerDay -= 3
-  if (temp > 35) healthPerDay -= 8
-  else if (temp > 28) healthPerDay -= 2.5
-  if (starving) healthPerDay -= 6
-  if (thirsty) healthPerDay -= 12
-  if (suffocating) healthPerDay -= 20
+  const env = environmentAt(state, at)
 
   for (const crew of state.crew) {
     settle(crew.fatigue, at)
     settle(crew.health, at)
     crew.fatigue.rate = fatigueRatePerSecond(crew.activity)
-    // Sleep is when people actually mend.
-    const recovery = crew.activity === 'sleep' ? 1.4 : 1
-    crew.health.rate = PER_DAY(healthPerDay > 0 ? healthPerDay * recovery : healthPerDay)
+
+    // Recovery only applies when nothing is harming them. Scaling a *negative*
+    // rate by the sleep bonus made resting in bad air worse than standing in
+    // it, which is exactly backwards.
+    const perDay =
+      env.healthPerDay < 0
+        ? env.healthPerDay
+        : BASELINE_RECOVERY_PER_DAY *
+          (crew.activity === 'sleep' ? SLEEP_RECOVERY_SCALE : 1)
+    crew.health.rate = PER_DAY(perDay)
   }
+
+  scheduleCasualties(state, at, env)
+}
+
+/**
+ * Warn about, and then schedule, the moment somebody's health runs out.
+ *
+ * §7.4 is non-negotiable: **no death without foreshadowing and a decision.**
+ * Health is a reservoir, so the moment it reaches zero is a division rather
+ * than a simulation -- which means the game can always say, in advance and
+ * exactly, who is in trouble and how long they have. That is the foreshadowing
+ * the rule demands, and it is why the dispatch names people and hours instead
+ * of reporting a number that moved.
+ *
+ * What is deliberately still missing, and is a milestone of its own: the rest
+ * of §7.4's machinery -- a decision window with a push notification, standing
+ * orders that answer it while you are away, and a captain who falls back to
+ * safe mode. Until that exists this is the interim honest version: the game
+ * announces the emergency, names the crew, states the deadline, and only takes
+ * somebody if the whole announced window passes with the air still bad.
+ */
+function scheduleCasualties(state: SimState, at: GameTime, env: Environment): void {
+  cancelKind(state.queue, 'CREW_DOWN')
+  if (env.healthPerDay >= 0) return
+
+  for (const crew of state.crew) {
+    if (crew.dead) continue
+    const health = levelAt(crew.health, at)
+
+    // Clamped at zero, not skipped. A crew hired together starts on identical
+    // health and shares an atmosphere, so all four reach the floor in the same
+    // instant -- and handling the first one re-resolves, which cancelled the
+    // other three's events and then declined to reissue them because they were
+    // already at the bottom. Three people sat dead-but-alive at zero health.
+    const secondsLeft = Math.max(0, (health - crew.health.min) / -crew.health.rate)
+    if (!Number.isFinite(secondsLeft)) continue
+
+    schedule(state.queue, {
+      seq: state.nextSeq++,
+      at: at + secondsLeft,
+      kind: 'CREW_DOWN',
+      ref: crew.id,
+    })
+  }
+
+  // One dispatch for the emergency, not one per person per resolve. The worst
+  // hazard names itself, and the soonest deadline is the one that matters.
+  if (env.severity === 'nominal' || env.severity === 'noticeable') return
+  const worst = env.exposures[0]
+  if (!worst) return
+
+  const soonest = state.crew
+    .filter((c) => !c.dead)
+    .map((c) => (levelAt(c.health, at) - c.health.min) / -c.health.rate)
+    .filter((s) => Number.isFinite(s) && s > 0)
+    .sort((a, b) => a - b)[0]
+
+  const key = `${worst.hazard}:${env.severity}`
+  if (state.ship.lastCasualtyWarning === key) return
+  state.ship.lastCasualtyWarning = key
+
+  const names = state.crew
+    .filter((c) => !c.dead)
+    .map((c) => getCrewDef(c.defId).name.split(' ').slice(-1)[0])
+    .join(', ')
+
+  pushLog(
+    state,
+    at,
+    env.severity === 'impaired' ? 'warn' : 'alert',
+    'life',
+    env.severity === 'impaired'
+      ? `${worst.reading}. The watch is ${worst.label}; work is slower than it should be.`
+      : soonest !== undefined
+        ? `${worst.reading} — the crew are ${worst.label}. ${names} have ${formatDuration(soonest)} at this rate.`
+        : `${worst.reading} — the crew are ${worst.label}.`,
+    worst.reading,
+  )
+}
+
+/**
+ * Somebody's health has run out. Design doc §4.5 (permadeath), §7.4.
+ *
+ * Reached only after the whole announced window has elapsed with the air still
+ * bad, which is what makes it a consequence of a decision rather than a dice
+ * roll. The ship survives: §7.4 is explicit that crew are mortal and the
+ * campaign is not.
+ */
+export function applyCasualty(state: SimState, crewId: string, at: GameTime): boolean {
+  const crew = state.crew.find((c) => c.id === crewId)
+  if (!crew || crew.dead) return false
+
+  settle(crew.health, at)
+  if (levelAt(crew.health, at) > crew.health.min + 1e-9) return false
+
+  crew.dead = true
+  crew.health.rate = 0
+  crew.health.value = crew.health.min
+  crew.fatigue.rate = 0
+  crew.workOrderId = undefined
+
+  const env = environmentAt(state, at)
+  const cause = env.exposures[0]
+  pushLog(
+    state,
+    at,
+    'alert',
+    'life',
+    `${getCrewDef(crew.defId).name} has died aboard. ${cause ? `Cause: ${cause.label} — ${cause.reading}.` : ''}`.trim(),
+    cause?.reading,
+  )
+  return true
 }
 
 /** Restore every load that shedding switched off. */

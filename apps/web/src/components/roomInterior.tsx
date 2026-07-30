@@ -86,15 +86,29 @@ export function glyphShape(glyph: Glyph, w: number, h: number): JSX.Element {
       )
 
     case 'nozzle':
+      // The bell, with the regenerative cooling tubes that make it survivable
+      // and the injector head above the throat. It glows at the throat when
+      // there is anything going through it.
       return (
         <>
-          <path className="kit" d={`M${w * 0.28} 0 H${w * 0.72} L${w} ${h} H0 Z`} />
-          {ticks(4, h * 0.15, h * 0.95).map((y) => {
+          <rect className="kit" x={w * 0.24} y="0" width={w * 0.52} height={h * 0.14} rx="1" />
+          <path className="kit" d={`M${w * 0.28} ${h * 0.14} H${w * 0.72} L${w} ${h} H0 Z`} />
+          {/* Cooling tubes, splaying with the bell. */}
+          {[0.25, 0.5, 0.75].map((f) => (
+            <line
+              key={f}
+              className="hair"
+              x1={w * (0.28 + 0.44 * f)}
+              y1={h * 0.16}
+              x2={w * (0.02 + 0.96 * f)}
+              y2={h * 0.98}
+            />
+          ))}
+          {ticks(3, h * 0.3, h * 0.9).map((y) => {
             const spread = 0.28 - (0.28 * y) / h
-            return (
-              <line key={y} className="hair" x1={w * spread} y1={y} x2={w * (1 - spread)} y2={y} />
-            )
+            return <line key={y} className="hair" x1={w * spread} y1={y} x2={w * (1 - spread)} y2={y} />
           })}
+          <ellipse className="glow" cx={w * 0.5} cy={h * 0.18} rx={w * 0.2} ry={h * 0.05} />
         </>
       )
 
@@ -150,87 +164,167 @@ export function glyphShape(glyph: Glyph, w: number, h: number): JSX.Element {
       )
 
     case 'panel':
+      // A fold-out photovoltaic wing: hinge spine inboard, jack, and the cells
+      // themselves -- which are a surface that catches light rather than a
+      // grid ruled onto a rectangle.
       return (
         <>
-          <rect className="kit" x="0.5" y="0.5" width={w - 1} height={h - 1} />
-          {ticks(5, 0.5, w - 0.5).map((x) => (
-            <line key={x} className="hair" x1={x} y1="0.5" x2={x} y2={h - 0.5} />
+          <rect className="kit" x="0.5" y="0.5" width={w - 1} height={h - 1} rx="0.8" />
+          <rect className="screen" x={w * 0.11} y={h * 0.16} width={w * 0.83} height={h * 0.68} />
+          {ticks(6, w * 0.11, w * 0.94).map((x) => (
+            <line key={x} className="hair" x1={x} y1={h * 0.16} x2={x} y2={h * 0.84} />
           ))}
-          <line className="hair" x1="0.5" y1={h * 0.5} x2={w - 0.5} y2={h * 0.5} />
+          <line className="hair" x1={w * 0.11} y1={h * 0.5} x2={w * 0.94} y2={h * 0.5} />
+          {/* The spine it folds against, and the jack that swings it out. */}
+          <rect className="kit" x="0" y={h * 0.06} width={w * 0.07} height={h * 0.88} rx="0.8" />
+          <line className="kit-line" x1={w * 0.07} y1={h * 0.5} x2={w * 0.14} y2={h * 0.5} />
         </>
       )
 
     case 'hab':
-      // Galley run, and the exercise rig that keeps bone density off the
-      // medic's list.
+      // Galley run with a worktop and a water point, and the resistance rig
+      // that keeps bone density off the medic's list.
       return (
         <>
-          <rect className="kit" x="0" y={h * 0.2} width={w * 0.58} height={h * 0.8} />
-          {ticks(3, h * 0.3, h * 0.94).map((y) => (
-            <line key={y} className="hair" x1={w * 0.06} y1={y} x2={w * 0.52} y2={y} />
+          <rect className="kit" x="0" y={h * 0.22} width={w * 0.56} height={h * 0.78} rx="1" />
+          {/* Worktop lip, cupboard doors, and the dispenser over the basin. */}
+          <line className="kit-line" x1="0" y1={h * 0.3} x2={w * 0.56} y2={h * 0.3} />
+          <line className="hair" x1={w * 0.28} y1={h * 0.34} x2={w * 0.28} y2={h * 0.96} />
+          {[0.46, 0.72].map((f) => (
+            <line key={f} className="hair" x1={w * 0.04} y1={h * f} x2={w * 0.52} y2={h * f} />
           ))}
-          <circle className="hair" cx={w * 0.8} cy={h * 0.3} r={h * 0.13} />
-          <line className="kit-line" x1={w * 0.8} y1={h * 0.43} x2={w * 0.8} y2={h} />
-          <line className="kit-line" x1={w * 0.66} y1={h} x2={w * 0.94} y2={h} />
+          <rect className="hair" x={w * 0.06} y={h * 0.36} width={w * 0.16} height={h * 0.06} rx="0.6" />
+          <path className="pipe" d={`M${w * 0.4} ${h * 0.22} V${h * 0.12} H${w * 0.46}`} />
+          {/* Resistance rig: frame, pulley, and the bar somebody hauls on. */}
+          <line className="kit-line" x1={w * 0.72} y1={h * 0.14} x2={w * 0.72} y2={h} />
+          <line className="kit-line" x1={w * 0.72} y1={h * 0.14} x2={w * 0.96} y2={h * 0.14} />
+          <circle className="hair" cx={w * 0.94} cy={h * 0.18} r={h * 0.05} />
+          <line className="hair" x1={w * 0.94} y1={h * 0.23} x2={w * 0.94} y2={h * 0.5} />
+          <line className="kit-line" x1={w * 0.84} y1={h * 0.52} x2={w} y2={h * 0.52} />
+          {ticks(3, h * 0.62, h * 0.94).map((y) => (
+            <rect key={y} className="hair" x={w * 0.76} y={y - h * 0.05} width={w * 0.2} height={h * 0.08} rx="0.6" />
+          ))}
+          <line className="kit-line" x1={w * 0.62} y1={h} x2={w} y2={h} />
         </>
       )
 
     case 'pump':
+      // Motor, volute and the flanged pipework either side of it. A pump reads
+      // as a pump because you can see where the fluid goes in and out.
       return (
         <>
-          <rect className="kit" x="0" y="0" width={w} height={h} rx="1.5" />
-          <circle className="hair" cx={w * 0.28} cy={h * 0.5} r={h * 0.26} />
-          <line className="hair" x1={w * 0.28} y1={h * 0.24} x2={w * 0.28} y2={h * 0.76} />
-          {ticks(4, w * 0.52, w * 0.94).map((x) => (
-            <line key={x} className="hair" x1={x} y1={h * 0.14} x2={x} y2={h * 0.86} />
+          <rect className="kit" x="0" y={h * 0.08} width={w} height={h * 0.84} rx="1.5" />
+          {/* Volute casing and the impeller inside it. */}
+          <circle className="kit" cx={w * 0.3} cy={h * 0.5} r={h * 0.3} />
+          <circle className="hair" cx={w * 0.3} cy={h * 0.5} r={h * 0.13} />
+          {[0, 1, 2, 3].map((i) => {
+            const a = (i * Math.PI) / 4 + 0.4
+            return (
+              <line
+                key={i}
+                className="hair"
+                x1={w * 0.3 - Math.cos(a) * h * 0.26}
+                y1={h * 0.5 - Math.sin(a) * h * 0.26}
+                x2={w * 0.3 + Math.cos(a) * h * 0.26}
+                y2={h * 0.5 + Math.sin(a) * h * 0.26}
+              />
+            )
+          })}
+          {/* Motor can, finned for the heat it sheds. */}
+          <rect className="kit" x={w * 0.58} y={h * 0.2} width={w * 0.38} height={h * 0.6} rx="1" />
+          {ticks(4, w * 0.62, w * 0.92).map((x) => (
+            <line key={x} className="hair" x1={x} y1={h * 0.24} x2={x} y2={h * 0.76} />
           ))}
-          <path className="pipe" d={`M${w * 0.5} ${h} V${h + 5}`} />
+          {/* Suction below, discharge to the header above. */}
+          <path className="pipe" d={`M${w * 0.3} ${h * 0.92} V${h}`} />
+          <path className="pipe" d={`M${w * 0.3} ${h * 0.08} V0`} />
+          <line className="kit-line" x1={w * 0.2} y1={h * 0.04} x2={w * 0.4} y2={h * 0.04} />
         </>
       )
 
     case 'battery':
+      // A rack of cells with a state-of-charge strip along the top, which is
+      // the only thing on the drawing that says how much is left in it.
       return (
         <>
           <rect className="kit" x="0" y={h * 0.12} width={w - 2} height={h * 0.8} rx="1" />
           {ticks(5, 1.5, w - 3.5).map((x) => (
-            <line key={x} className="kit-line" x1={x} y1={h * 0.2} x2={x} y2={h * 0.84} />
+            <line key={x} className="kit-line" x1={x} y1={h * 0.24} x2={x} y2={h * 0.84} />
           ))}
+          <rect className="screen" x={w * 0.06} y={h * 0.15} width={w * 0.7} height={h * 0.07} rx="0.5" />
+          {/* Terminal post and the strap to the bus. */}
           <rect className="kit" x={w - 2} y={h * 0.36} width="2" height={h * 0.28} />
+          <line className="kit-line" x1={w * 0.86} y1={h * 0.18} x2={w * 0.86} y2={h * 0.12} />
           <rect className="kit plinth" x="0" y={h * 0.92} width={w} height={h * 0.08} />
         </>
       )
 
     case 'console':
+      // The flight desk, raked toward whoever is strapped in front of it. The
+      // screen is the one thing in a dark compartment making its own light,
+      // which is also the fastest way to see the computers are off.
       return (
         <>
-          <path className="kit" d={`M${w * 0.08} ${h} L${w * 0.2} ${h * 0.1} H${w * 0.92} V${h} Z`} />
-          <line className="hair" x1={w * 0.3} y1={h * 0.34} x2={w * 0.84} y2={h * 0.34} />
-          <line className="hair" x1={w * 0.3} y1={h * 0.52} x2={w * 0.7} y2={h * 0.52} />
-          <line className="hair" x1={w * 0.3} y1={h * 0.7} x2={w * 0.78} y2={h * 0.7} />
+          <path className="kit" d={`M${w * 0.08} ${h} L${w * 0.2} ${h * 0.08} H${w * 0.94} V${h} Z`} />
+          <path className="screen" d={`M${w * 0.28} ${h * 0.58} L${w * 0.33} ${h * 0.15} H${w * 0.88} V${h * 0.58} Z`} />
+          {ticks(3, h * 0.24, h * 0.52).map((y) => (
+            <line key={y} className="screen-line" x1={w * 0.38} y1={y} x2={w * 0.82} y2={y} />
+          ))}
+          {/* Key bank on the shelf, and the grab rail along the front edge --
+              you hold onto something before you touch anything, in free fall. */}
+          <line className="kit-line" x1={w * 0.22} y1={h * 0.64} x2={w * 0.94} y2={h * 0.64} />
+          {ticks(6, w * 0.28, w * 0.88).map((x) => (
+            <line key={x} className="hair" x1={x} y1={h * 0.7} x2={x} y2={h * 0.78} />
+          ))}
+          <line className="kit-line" x1={w * 0.12} y1={h * 0.88} x2={w * 0.94} y2={h * 0.88} />
         </>
       )
 
     case 'dish':
+      // A steerable antenna on a yoke: ribbed reflector, feed horn standing at
+      // the focus, and the elevation drive it swings on.
       return (
         <>
-          <path className="kit" d={`M0 ${h * 0.66} A${w * 0.5} ${h * 0.6} 0 0 1 ${w} ${h * 0.66} Z`} />
-          <line className="hair" x1={w * 0.5} y1={h * 0.1} x2={w * 0.5} y2={h * 0.66} />
-          <circle className="hair" cx={w * 0.5} cy={h * 0.1} r="1.6" />
-          <line className="kit-line" x1={w * 0.5} y1={h * 0.66} x2={w * 0.5} y2={h} />
+          <path className="kit" d={`M${w * 0.04} ${h * 0.62} A${w * 0.48} ${h * 0.56} 0 0 1 ${w * 0.96} ${h * 0.62} Z`} />
+          {ticks(3, w * 0.22, w * 0.78).map((x) => (
+            <line key={x} className="hair" x1={x} y1={h * 0.62} x2={x} y2={h * 0.24} />
+          ))}
+          <line className="hair" x1={w * 0.1} y1={h * 0.44} x2={w * 0.9} y2={h * 0.44} />
+          {/* Feed horn at the focus, on its tripod. */}
+          <path className="kit" d={`M${w * 0.43} ${h * 0.08} H${w * 0.57} L${w * 0.53} ${h * 0.2} H${w * 0.47} Z`} />
+          <line className="hair" x1={w * 0.5} y1={h * 0.2} x2={w * 0.5} y2={h * 0.62} />
+          {/* Yoke and elevation drive. */}
+          <line className="kit-line" x1={w * 0.5} y1={h * 0.62} x2={w * 0.5} y2={h * 0.82} />
+          <circle className="kit" cx={w * 0.5} cy={h * 0.84} r={h * 0.1} />
+          <line className="kit-line" x1={w * 0.34} y1={h} x2={w * 0.66} y2={h} />
         </>
       )
 
     case 'couch':
-      // A reclined acceleration seat, back raked toward the nose.
+      // A reclined acceleration seat, back raked toward the nose, with the
+      // cushion and the five-point harness you are in for every burn.
       return (
         <>
           <path
             className="kit warm"
             d={`M${w * 0.04} ${h * 0.1} L${w * 0.42} ${h * 0.6} H${w * 0.96} V${h * 0.88} H${w * 0.28} Z`}
           />
-          <line className="hair" x1={w * 0.14} y1={h * 0.3} x2={w * 0.34} y2={h * 0.16} />
+          {/* Padding, inset from the shell. */}
+          <path
+            className="soft"
+            d={`M${w * 0.14} ${h * 0.24} L${w * 0.44} ${h * 0.66} H${w * 0.9} V${h * 0.82} H${w * 0.34} Z`}
+          />
+          {/* Headrest at the top of the rake. */}
+          <rect className="soft pillow" x={w * 0.03} y={h * 0.08} width={w * 0.16} height={h * 0.12} rx="1.5" />
+          {/* Harness: two over the shoulders, one across the lap. */}
+          <line className="strap" x1={w * 0.2} y1={h * 0.28} x2={w * 0.52} y2={h * 0.72} />
+          <line className="strap" x1={w * 0.3} y1={h * 0.24} x2={w * 0.58} y2={h * 0.72} />
+          <line className="strap" x1={w * 0.52} y1={h * 0.72} x2={w * 0.84} y2={h * 0.72} />
+          <rect className="hair" x={w * 0.5} y={h * 0.68} width={w * 0.09} height={h * 0.09} rx="0.8" />
+          {/* Legs, and the rail they slide on to trim for a taller pilot. */}
           <line className="kit-line" x1={w * 0.44} y1={h * 0.88} x2={w * 0.44} y2={h} />
           <line className="kit-line" x1={w * 0.88} y1={h * 0.88} x2={w * 0.88} y2={h} />
+          <line className="kit-line" x1={w * 0.36} y1={h} x2={w * 0.96} y2={h} />
         </>
       )
 

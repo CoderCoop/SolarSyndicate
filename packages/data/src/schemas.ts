@@ -635,10 +635,38 @@ export const SurveyTuning = z.object({
 })
 export type SurveyTuning = z.infer<typeof SurveyTuning>
 
+/**
+ * Upkeep. Design doc §3.3.
+ *
+ * These were constants in `workorders.ts`, which made the most consequential
+ * number in the maintenance loop invisible to balance: a service restores a
+ * *fixed* number of condition points, so servicing a part that is nearly new
+ * throws most of them away against the ceiling. That single figure decides when
+ * it is worth spending a spare, and it belongs here with the rest of them.
+ */
+export const UpkeepTuning = z.object({
+  /** Condition points a completed service puts back. */
+  serviceRestore: z.number().positive().max(100),
+  /** Condition a completed repair brings a failed part back to. */
+  repairRestoreTo: z.number().positive().max(100),
+  /**
+   * Condition at or below which a standing order will raise a service by
+   * itself, as a fraction of the point where nothing is wasted.
+   *
+   * 1.0 means "the moment a full service would not overflow the ceiling",
+   * which is 100 - serviceRestore. Lower waits longer and runs the part
+   * harder; there is no value in going above 1, because those points are
+   * thrown away.
+   */
+  autoServiceAt: z.number().min(0.1).max(1),
+})
+export type UpkeepTuning = z.infer<typeof UpkeepTuning>
+
 export const Tuning = z.object({
   survey: SurveyTuning,
   attendance: AttendanceTuning,
   tune: TuneTuning,
+  upkeep: UpkeepTuning,
 })
 export type Tuning = z.infer<typeof Tuning>
 

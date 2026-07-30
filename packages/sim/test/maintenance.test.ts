@@ -17,6 +17,7 @@ import {
   workOrderViews,
 } from '../src/engine.js'
 import { laborRate } from '../src/crew.js'
+import { AUTO_SERVICE_CONDITION, NO_WASTE_CONDITION, serviceWasteAt } from '../src/workorders.js'
 import { conditionOutput } from '../src/networks.js'
 import { resolveWear } from '../src/wear.js'
 import { DAY, HOUR } from '../src/time.js'
@@ -24,7 +25,20 @@ import { CONDITION_THRESHOLDS } from '../src/wear.js'
 import type { SimState, WorkOrderKind } from '../src/types.js'
 
 const START_UTC = Date.UTC(2026, 6, 25, 14, 30, 0)
-const world = (seed = 11) => createWorld(seed, START_UTC)
+
+/**
+ * A world with the standing order lifted.
+ *
+ * Everything in this file is about the *manual* path -- the player noticing,
+ * the player ordering, the crew working it -- and the ship raising its own
+ * services would put a second job in every queue under test. The standing order
+ * has its own describe block at the foot of the file.
+ */
+const world = (seed = 11) => {
+  const s = createWorld(seed, START_UTC)
+  s.ship.standingOrders.autoService = false
+  return s
+}
 
 function part(s: SimState, id: string) {
   return s.ship.parts.find((p) => p.id === id)!
@@ -259,5 +273,188 @@ describe('crew skill is legible in the numbers the player watches', () => {
     expect(views).toHaveLength(4)
     expect(views.some((c) => c.doing.startsWith('Servicing'))).toBe(true)
     expect(views.some((c) => c.doing === 'Asleep')).toBe(true)
+  })
+})
+
+/**
+ * The standing order. Design doc §7.3, §3.3.
+ *
+ * A service puts back a fixed number of condition points and the ceiling clips
+ * the rest, so there is a right moment to spend a spare and it is the same
+ * moment every time on every part. That is clerical work, not judgement, and
+ * §7.3's standing orders are exactly the place to put it.
+ */
+describe('the ship services itself when a service would not be wasted', () => {
+  /** A world with the order left on, which is the shipped default. */
+  const tended = (seed = 11) => createWorld(seed, START_UTC)
+
+  /**
+   * Every job the order ever raised, finished ones included.
+   *
+   * `workOrderViews` is the open queue, and a service is five hours of work
+   * against days of wear -- so by the time a test has advanced far enough for
+   * the crossing to happen, the job it is looking for has usually been done and
+   * left the view.
+   */
+  const raisedByShip = (s: SimState) => s.workOrders.filter((w) => w.auto)
+
+  it('knows the point where the ceiling stops eating the spare', () => {
+    // Derived from data, not a second copy of it: a service restores 32, so a
+    // part above 68 throws away whatever will not fit.
+    expect(NO_WASTE_CONDITION).toBe(68)
+    expect(serviceWasteAt(100)).toBe(32)
+    expect(serviceWasteAt(NO_WASTE_CONDITION)).toBe(0)
+    expect(serviceWasteAt(40)).toBe(0)
+  })
+
+  it('raises nothing while every part is still too good to touch', () => {
+    const s = tended()
+    for (const p of s.ship.parts) p.condition.value = 95
+    const later = advanceTo(s, 6 * HOUR)
+    expect(workOrderViews(later).filter((o) => o.auto)).toHaveLength(0)
+  })
+
+  it('raises one by itself once a part wears past the line', () => {
+    const s = tended()
+    for (const p of s.ship.parts) p.condition.value = 95
+    // Put one part just above the line and let it wear through.
+    part(s, 'life.scrubber.co2').condition.value = AUTO_SERVICE_CONDITION + 0.4
+
+    const later = advanceTo(s, 3 * DAY)
+    const raised = raisedByShip(later)
+    expect(raised).toHaveLength(1)
+    expect(raised[0]!.partId).toBe('life.scrubber.co2')
+
+    // And it waited for the line rather than firing on sight: 0.4 points at
+    // 0.598 a day is a little under sixteen hours.
+    expect(raised[0]!.createdAt).toBeGreaterThan(0.6 * DAY)
+    expect(raised[0]!.createdAt).toBeLessThan(0.75 * DAY)
+  })
+
+  it('does it while the app is closed, at the moment the line was crossed', () => {
+    // The whole point of scheduling it as an event rather than checking on
+    // open: catch-up must reach the same state as sitting and watching (§7.2).
+    const s = tended()
+    for (const p of s.ship.parts) p.condition.value = 95
+    part(s, 'life.scrubber.co2').condition.value = AUTO_SERVICE_CONDITION + 0.4
+
+    const watched = advanceTo(advanceTo(advanceTo(s, DAY), 2 * DAY), 4 * DAY)
+    const away = advanceTo(s, 4 * DAY)
+    expect(workOrderViews(away).map((o) => o.partName).sort()).toEqual(
+      workOrderViews(watched).map((o) => o.partName).sort(),
+    )
+  })
+
+  it('will not raise a job the locker cannot pay for', () => {
+    // A blocked job holds a hand that a workable one could have used, so the
+    // order declines rather than queueing something it knows will stall.
+    const s = tended()
+    for (const p of s.ship.parts) p.condition.value = 95
+    part(s, 'life.scrubber.co2').condition.value = AUTO_SERVICE_CONDITION + 0.4
+    // Under way, so the locker stays empty: alongside the Local it refills at
+    // two a day and would have paid for the job before the crossing arrived.
+    s.ship.docked = false
+    s.ship.resources.spares.value = 0
+    s.ship.resources.spares.rate = 0
+    s.ship.resources.spares.since = s.now
+
+    const later = advanceTo(s, 3 * DAY)
+    expect(raisedByShip(later)).toHaveLength(0)
+  })
+
+  it('leaves a part alone when the player has already ordered work on it', () => {
+    let s = tended()
+    for (const p of s.ship.parts) p.condition.value = 95
+    part(s, 'life.scrubber.co2').condition.value = AUTO_SERVICE_CONDITION + 0.4
+    s = order(s, 'life.scrubber.co2')
+
+    const later = advanceTo(s, 3 * DAY)
+    // Exactly one job on that part, and it is the one the player raised.
+    const onScrubber = later.workOrders.filter((w) => w.partId === 'life.scrubber.co2')
+    expect(onScrubber).toHaveLength(1)
+    expect(onScrubber[0]!.auto).toBe(false)
+  })
+
+  it('never orders a repair on its own -- a failure is the player\'s call', () => {
+    const s = tended()
+    for (const p of s.ship.parts) p.condition.value = 95
+    const scrubber = part(s, 'life.scrubber.co2')
+    scrubber.condition.value = 20
+    scrubber.broken = true
+    scrubber.enabled = false
+
+    const later = advanceTo(s, 3 * DAY)
+    expect(later.workOrders.filter((w) => w.kind === 'repair')).toHaveLength(0)
+  })
+
+  it('stops entirely when the order is lifted, and catches up when it is set', () => {
+    let s = tended()
+    for (const p of s.ship.parts) p.condition.value = 95
+    part(s, 'life.scrubber.co2').condition.value = 40
+
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'SET_STANDING_ORDER', order: 'autoService', on: false },
+    })
+    s = advanceTo(s, 2 * DAY)
+    expect(raisedByShip(s)).toHaveLength(0)
+
+    // Setting it does not wait for the next crossing: everything already past
+    // the line is picked up at once.
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'SET_STANDING_ORDER', order: 'autoService', on: true },
+    })
+    expect(raisedByShip(s).length).toBeGreaterThan(0)
+  })
+})
+
+describe('the queue is worked in the order the player sets', () => {
+  it('starts new work at the back', () => {
+    let s = world()
+    s = order(s, 'life.scrubber.co2')
+    s = order(s, 'thermal.loop.radiators')
+    expect(workOrderViews(s).map((o) => o.partName)).toEqual([
+      workOrderViews(s)[0]!.partName,
+      workOrderViews(s)[1]!.partName,
+    ])
+    // Two distinct jobs, in the order they were raised.
+    expect(new Set(workOrderViews(s).map((o) => o.partName)).size).toBe(2)
+  })
+
+  it('moves a job up, and gives it the hand', () => {
+    let s = world()
+    s = order(s, 'life.scrubber.co2')
+    s = order(s, 'thermal.loop.radiators')
+
+    const before = workOrderViews(s)
+    const second = before[1]!
+    // Before: the older job holds the only free hand.
+    expect(before[0]!.assignedName).toBeTruthy()
+
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'MOVE_WORK_ORDER', workOrderId: second.id, direction: 'up' },
+    })
+
+    const after = workOrderViews(s)
+    expect(after[0]!.id).toBe(second.id)
+    expect(after[0]!.assignedName).toBeTruthy()
+  })
+
+  it('will not move the top job up or the bottom one down', () => {
+    let s = world()
+    s = order(s, 'life.scrubber.co2')
+    s = order(s, 'thermal.loop.radiators')
+    const [first, last] = workOrderViews(s)
+
+    const unchanged = workOrderViews(s).map((o) => o.id)
+    for (const [id, direction] of [
+      [first!.id, 'up'],
+      [last!.id, 'down'],
+    ] as const) {
+      s = applyCommand(s, { at: s.now, command: { kind: 'MOVE_WORK_ORDER', workOrderId: id, direction } })
+      expect(workOrderViews(s).map((o) => o.id)).toEqual(unchanged)
+    }
   })
 })

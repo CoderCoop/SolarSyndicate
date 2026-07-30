@@ -15,6 +15,7 @@ import {
   chartView,
   createWorld,
   hohmannTransfer,
+  stretchedTransfer,
   transferOptions,
   transferPositionAu,
 } from '../src/index.js'
@@ -149,5 +150,107 @@ describe('a ship under way is on its actual trajectory', () => {
     expect(chart.ship.atPortId).toBe('port.tranquillity')
     expect(chart.ship.fromBodyId).toBeUndefined()
     expect(chart.track).toHaveLength(0)
+  })
+})
+
+/**
+ * The arc drawn is the arc that was bought.
+ *
+ * The chart used to rebuild the minimum-energy ellipse from the two orbit
+ * radii and nothing else, so all three profiles were drawn identically: a
+ * player who spent 5.3 km/s extra on Express watched the trajectory they had
+ * declined. §1 pillar 2 says the numbers are real, and a picture of a
+ * different trajectory is not more forgivable than a wrong number.
+ */
+describe('the arc drawn is the trajectory that was chosen', () => {
+  const MULTIPLIERS = { economy: 1, standard: 1.04, express: 1.12 } as const
+
+  it('draws a visibly different arc for each profile', () => {
+    // 140 days: still short of the Express arrival at 152, so all three are
+    // genuinely in flight and the difference is shape rather than one of them
+    // having stopped. Every pair is at least seven million kilometres apart --
+    // this was zero, to the last bit, when the profile was ignored.
+    const points = Object.values(MULTIPLIERS).map((m) =>
+      transferPositionAu('earth', 'mars', 0, 140 * DAY, m),
+    )
+    for (let i = 1; i < points.length; i++) {
+      const [a, b] = [points[i - 1]!, points[i]!]
+      expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(0.05)
+    }
+  })
+
+  it('leaves the departure orbit and reaches the target one, on every profile', () => {
+    for (const [from, to] of [
+      ['earth', 'mars'],
+      ['ceres', 'earth'],
+    ] as const) {
+      for (const m of Object.values(MULTIPLIERS)) {
+        const { durationS } = stretchedTransfer(from, to, m)
+        const start = transferPositionAu(from, to, 0, 0, m)
+        const end = transferPositionAu(from, to, 0, durationS, m)
+        expect(Math.hypot(start.x, start.y)).toBeCloseTo(
+          content.bodies.find((b) => b.id === from)!.orbitRadiusAu,
+          4,
+        )
+        expect(Math.hypot(end.x, end.y)).toBeCloseTo(
+          content.bodies.find((b) => b.id === to)!.orbitRadiusAu,
+          4,
+        )
+      }
+    }
+  })
+
+  it('dips inside the destination orbit on a stretched run home', () => {
+    // The whole point of paying for a fast inbound leg: perihelion goes below
+    // the target so the ship crosses the orbit early. Drawn on the Hohmann
+    // conic this was invisible, because the Hohmann conic bottoms out exactly
+    // at the destination.
+    const { durationS } = stretchedTransfer('ceres', 'earth', 1.12)
+    const radii = Array.from({ length: 41 }, (_, i) => {
+      const p = transferPositionAu('ceres', 'earth', 0, (durationS * i) / 40, 1.12)
+      return Math.hypot(p.x, p.y)
+    })
+    // Falls the whole way, never climbing back.
+    for (let i = 1; i < radii.length; i++) expect(radii[i]!).toBeLessThanOrEqual(radii[i - 1]! + 1e-9)
+    // And it is still going down when it crosses Earth's orbit -- the arrival
+    // burn catches it there rather than the ellipse levelling out.
+    expect(radii.at(-1)!).toBeCloseTo(1, 4)
+    expect(radii.at(-2)!).toBeGreaterThan(1)
+  })
+
+  it('carries the arc into the chart, and names it', () => {
+    // Built rather than flown: the starting ship cannot afford Mars, and the
+    // point under test is the drawing, not the tank (§5.2).
+    const s = world()
+    const departedAt = s.now
+    const { durationS } = stretchedTransfer('earth', 'mars', MULTIPLIERS.express)
+    s.voyage = {
+      optionId: 'express',
+      fromPortId: 'port.gateway',
+      toPortId: 'port.phobos',
+      departedAt,
+      arrivesAt: departedAt + durationS,
+      deltaVMs: 0,
+      propellantSpentKg: 0,
+    }
+    s.ship.docked = false
+
+    const chart = chartView(s)
+    expect(chart.ship.local).toBe(false)
+    expect(chart.ship.profileLabel).toBe('Express')
+    expect(chart.track.length).toBeGreaterThan(2)
+
+    // The drawn track is the Express ellipse, end to end.
+    const first = chart.track.at(0)!
+    const last = chart.track.at(-1)!
+    expect(Math.hypot(first.x, first.y)).toBeCloseTo(1, 4)
+    expect(Math.hypot(last.x, last.y)).toBeCloseTo(1.523679, 4)
+
+    // And it is not the minimum-energy one: at the same elapsed time the cheap
+    // ellipse puts the ship somewhere else entirely.
+    const half = durationS / 2
+    const flown = transferPositionAu('earth', 'mars', departedAt, half, MULTIPLIERS.express)
+    const declined = transferPositionAu('earth', 'mars', departedAt, half, MULTIPLIERS.economy)
+    expect(Math.hypot(flown.x - declined.x, flown.y - declined.y)).toBeGreaterThan(0.05)
   })
 })

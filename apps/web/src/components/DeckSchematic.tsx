@@ -12,6 +12,7 @@
  * machine opens that machine, rather than expanding a list of four and making
  * the player find the one they were already looking at.
  */
+import type { CSSProperties } from 'react'
 import type { Glyph } from '@solsyn/data'
 import type { CrewView, RoomView } from '@solsyn/sim'
 import {
@@ -110,7 +111,20 @@ export function DeckSchematic({
       : room.parts.some((p) => p.glyph === 'core' || p.glyph === 'nozzle')
         ? 'hot'
         : 'cool'
-  const lightId = `deck-light-${room.id.replace(/[^a-z0-9]/gi, '')}`
+
+  // Every id in here is per-deck. SVG ids are document-global and the ship is
+  // seven decks in one document, so a fixed id means six decks silently
+  // inheriting whichever one rendered last -- the trap the route strip's clip
+  // paths fell into, and the reason the light gradient was already per-deck.
+  const deckKey = room.id.replace(/[^a-z0-9]/gi, '')
+  const lightId = `deck-light-${deckKey}`
+  const blurId = `deck-blur-${deckKey}`
+  const spillId = `deck-spill-${deckKey}`
+  const sheenId = `deck-sheen-${deckKey}`
+  const softId = `deck-soft-${deckKey}`
+  const kitId = (t: string) => `deck-kit-${deckKey}-${t}`
+  /** Only the tones this deck actually contains: no unused gradients emitted. */
+  const tonesHere = [...new Set(blocks.map((b) => GLYPH_TONE[b.glyph]))]
 
   const humanH = HUMAN_H_M * U_PER_M
   const humanW = humanH * 0.42
@@ -216,36 +230,179 @@ export function DeckSchematic({
       preserveAspectRatio="xMidYMid meet"
       aria-label={deckDescription(room, crew)}
     >
-      {/* The light in the room. A gradient per deck rather than one shared
-          definition, because ids are document-global and seven decks would
-          otherwise all inherit whichever one rendered last. */}
       <defs>
+        {/* The air in the room: lit from the overhead tray, falling off toward
+            the deck, tinted by what the compartment is for. */}
         <linearGradient id={lightId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" className="light-top" />
           <stop offset="0.55" className="light-mid" />
           <stop offset="1" className="light-deck" />
         </linearGradient>
+
+        {/* Light falling out of the overhead strip, and the pool it makes on
+            the deck. Drawn rather than implied: the strip is the only light
+            source in the room, and everything below is shaded as though it
+            were, so it had better be visible. */}
+        <linearGradient id={spillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" className="spill-near" />
+          <stop offset="1" className="spill-far" />
+        </linearGradient>
+        <linearGradient id={sheenId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" className="spill-far" />
+          <stop offset="1" className="spill-near" />
+        </linearGradient>
+
+        {/* Volume. Every object is shaded from its own top edge down, so a
+            pressure vessel is a cylinder rather than an outline of one. Bound
+            to the element's own box, so one gradient per tone serves every
+            object of that tone at whatever size it is. */}
+        {tonesHere.map((t) => (
+          <linearGradient key={t} id={kitId(t)} className={`kitgrad kitgrad--${t}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="kit-lit" />
+            <stop offset="0.4" className="kit-body" />
+            <stop offset="1" className="kit-shade" />
+          </linearGradient>
+        ))}
+        {/* Soft goods take the light differently: matte, no hard top edge. */}
+        <linearGradient id={softId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" className="soft-lit" />
+          <stop offset="1" className="soft-shade" />
+        </linearGradient>
+
+        {/* One filter for the whole shadow pass rather than one per object. */}
+        <filter id={blurId} x="-25%" y="-25%" width="160%" height="170%">
+          <feGaussianBlur stdDeviation="3" />
+        </filter>
       </defs>
 
       <g className={`room room--${tone}`}>
         <rect className="room__air" fill={`url(#${lightId})`} x="0" y="0" width={W} height={height} />
 
-        {/* Structural ribs on the back wall. */}
+        {/* The back wall is a surface, not an absence: panel seams across it,
+            and structural frames drawn with a lit edge and a shadowed one so
+            they stand off the plating instead of ruling it. */}
+        {[0.34, 0.68].map((f) => (
+          <line
+            key={f}
+            className="room__seam"
+            x1="0"
+            y1={OVERHEAD_U + interiorH * f}
+            x2={W}
+            y2={OVERHEAD_U + interiorH * f}
+          />
+        ))}
         {[0.18, 0.42, 0.66].map((f) => (
-          <line key={f} className="room__rib" x1={W * f} y1={OVERHEAD_U} x2={W * f} y2={deckLine} />
+          <g key={f}>
+            <line className="room__rib" x1={W * f} y1={OVERHEAD_U} x2={W * f} y2={deckLine} />
+            <line className="room__rib-lit" x1={W * f + 1.1} y1={OVERHEAD_U} x2={W * f + 1.1} y2={deckLine} />
+          </g>
         ))}
 
-        {/* Conduit tray along the overhead. */}
-        <rect className="room__tray" x="0" y="0" width={W} height={OVERHEAD_U} />
-        <line className="room__conduit" x1="0" y1={OVERHEAD_U * 0.4} x2={W} y2={OVERHEAD_U * 0.4} />
-        <line className="room__conduit" x1="0" y1={OVERHEAD_U * 0.7} x2={W} y2={OVERHEAD_U * 0.7} />
+        <rect
+          className="room__spill"
+          fill={`url(#${spillId})`}
+          x="0"
+          y={OVERHEAD_U}
+          width={W}
+          height={Math.min(interiorH, 46)}
+        />
 
-        {/* Grated deck. */}
+        {/* What a real compartment has on its walls, and what a drawing of one
+            needs so the plating between the machines is not dead space: the
+            frame number stencilled on, a return-air grille, and the handrail
+            you pull yourself along in free fall. */}
+        <text className="room__stencil" x={INNER_LEFT + 1} y={OVERHEAD_U + 4.6}>
+          {room.short.toUpperCase()} · {String(room.deck).padStart(2, '0')}
+        </text>
+        <g className="room__grille">
+          <rect x={INNER_RIGHT - 17} y={OVERHEAD_U + 5} width="15" height="10" rx="1" />
+          {[0, 1, 2, 3].map((i) => (
+            <line
+              key={i}
+              x1={INNER_RIGHT - 15.5}
+              y1={OVERHEAD_U + 7 + i * 2.2}
+              x2={INNER_RIGHT - 3.5}
+              y2={OVERHEAD_U + 7 + i * 2.2}
+            />
+          ))}
+        </g>
+
+        {/* Conduit tray along the overhead, with the lamp run under it. */}
+        <rect className="room__tray" x="0" y="0" width={W} height={OVERHEAD_U} />
+        <line className="room__conduit" x1="0" y1={OVERHEAD_U * 0.32} x2={W} y2={OVERHEAD_U * 0.32} />
+        <line className="room__conduit room__conduit--fat" x1="0" y1={OVERHEAD_U * 0.62} x2={W} y2={OVERHEAD_U * 0.62} />
+        <rect
+          className="room__lamp"
+          x={INNER_LEFT}
+          y={OVERHEAD_U - 1.2}
+          width={INNER_RIGHT - INNER_LEFT}
+          height="1.2"
+        />
+
+        {/* Grated deck, catching a little of the light back. */}
+        <rect
+          className="room__sheen"
+          fill={`url(#${sheenId})`}
+          x="0"
+          y={deckLine - 10}
+          width={W}
+          height="10"
+        />
         <line className="room__deck" x1="0" y1={deckLine} x2={W} y2={deckLine} />
         {Array.from({ length: 14 }, (_, i) => ((i + 0.5) / 14) * W).map((x) => (
           <line key={x} className="room__grate" x1={x} y1={deckLine} x2={x} y2={height} />
         ))}
         <line className="room__grate" x1="0" y1={deckLine + DECK_U * 0.55} x2={W} y2={deckLine + DECK_U * 0.55} />
+
+        {/* Where the reactor and the engines are, the deck edge is painted.
+            Texture that is also a warning, which is the only kind worth the
+            ink on a drawing this small. */}
+        {tone === 'hot' && (
+          <g className="room__hazard">
+            {Array.from({ length: Math.floor((INNER_RIGHT - INNER_LEFT) / 5) }, (_, i) => INNER_LEFT + i * 5).map(
+              (x) => (
+                <line key={x} x1={x} y1={deckLine - 0.4} x2={x + 3} y2={deckLine - 3.4} />
+              ),
+            )}
+          </g>
+        )}
+      </g>
+
+      {/* Shadows, in one pass under everything. Kept outside the glyph groups
+          on purpose: the overlap check measures each glyph's drawn box, and a
+          shadow that grew that box would read as two objects sharing space. */}
+      <g className="shadows" filter={`url(#${blurId})`} aria-hidden="true">
+        {placed.map((pb) => (
+          <g
+            key={`${pb.block.glyph}-${pb.x}-${pb.y}`}
+            // Shed, failed and switched-off kit fades back, and its shadow has
+            // to fade with it. Left at full strength it read as a solid object
+            // behind a ghost of one.
+            className={
+              pb.block.items.every((i) => isPart(i) && partState(i) !== 'on') ? 'is-dim' : ''
+            }
+          >
+            {/* Thrown back onto the plating, down and to one side. */}
+            <rect
+              className="shadow__cast"
+              x={pb.x + 3}
+              y={pb.y + 3.5}
+              width={Math.max(0, pb.w - 2)}
+              height={Math.max(0, pb.h - 2)}
+              rx="1.5"
+            />
+            {/* And the dark line where it actually meets what it stands on. */}
+            {pb.block.fitting === 'floor' && (
+              <ellipse
+                className="shadow__contact"
+                cx={pb.x + pb.w / 2}
+                cy={pb.y + pb.h}
+                rx={pb.w * 0.52}
+                ry="2.6"
+              />
+            )}
+          </g>
+        ))}
       </g>
 
       {/* Ladder shaft, continuous through the stack. */}
@@ -264,7 +421,19 @@ export function DeckSchematic({
           const state = part ? partState(part) : 'fixture'
           const selected = part && part.id === selectedPartId
           return (
-            <g key={key} className={`glyph glyph--${GLYPH_TONE[pb.block.glyph]} is-${state}`}>
+            <g
+              key={key}
+              className={`glyph glyph--${GLYPH_TONE[pb.block.glyph]} is-${state}`}
+              // The shaded fills, handed to the glyph as the variables it
+              // already paints with -- so every shape in `glyphShape` gains
+              // volume without any of them knowing a gradient exists.
+              style={
+                {
+                  '--glyph-fill': `url(#${kitId(GLYPH_TONE[pb.block.glyph])})`,
+                  '--soft-fill': `url(#${softId})`,
+                } as CSSProperties
+              }
+            >
               <g transform={`translate(${x} ${y})`}>
                 {glyphShape(pb.block.glyph, w, h)}
                 {/* Broken reads without colour (RF-6): the machine is struck out. */}

@@ -16,6 +16,11 @@
     "ceilingUnskilled": 30,
     "ceilingSkilled": 100
   },
+  "upkeep": {
+    "serviceRestore": 32,
+    "repairRestoreTo": 65,
+    "autoServiceAt": 1.0
+  },
   "survey": {
     "scrapFloor": 0.35,
     "conditionWeight": 0.8,

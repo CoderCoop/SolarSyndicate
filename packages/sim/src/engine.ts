@@ -41,6 +41,7 @@ import { dismissCrew, hireCrew, payWages } from './hiring.js'
 import { OPENING_BALANCE_CR, post } from './ledger.js'
 import { pushLog } from './log.js'
 import {
+  applyCasualty,
   lifeBalance,
   powerBalance,
   partPowerKw,
@@ -50,15 +51,20 @@ import {
   resourceBoundMessage,
   restoreShedLoads,
 } from './networks.js'
+import { environmentAt, o2KPaAt, type Environment } from './physiology.js'
 import { peekDue, pop, schedule } from './queue.js'
 import { fillFraction, levelAt, makeReservoir, settle } from './resources.js'
 import { DAY, formatDuration, gameTimeFromUtc, type GameTime } from './time.js'
 import { resolveTune, tuneLabel, tuneOf } from './tune.js'
 import { applyThreshold, conditionLabel, resolveWear } from './wear.js'
 import {
+  autoQueueService,
   cancelWorkOrder,
   completeWorkOrder,
   createWorkOrder,
+  openOrders,
+  reprioritiseWorkOrder,
+  serviceWasteAt,
   resolveWorkOrders,
 } from './workorders.js'
 import {
@@ -116,7 +122,7 @@ export function createWorld(seed: number, utcMs: number): SimState {
     fatigue: makeReservoir(18, 0, 100, t0),
     // Health floors above zero in M1: the crew can be worn down but not lost.
     // Mortality arrives with the lifecycle system in M3 (§4.5).
-    health: makeReservoir(92, 10, 100, t0),
+    health: makeReservoir(92, 0, 100, t0),
   }))
 
   const state: SimState = {
@@ -156,6 +162,12 @@ export function createWorld(seed: number, utcMs: number): SimState {
       netHeatKw: 0,
       onBattery: false,
       brownout: false,
+      // On from the start. The policy it encodes -- do not spend a spare until
+      // the whole spare lands -- is the right answer every time, and making a
+      // new player discover it by wasting a locker's worth first is a tutorial
+      // nobody asked for. It is a toggle because §7.3 says standing orders are
+      // the player's to set, not because the default is in doubt.
+      standingOrders: { autoService: true },
       thermalTrip: false,
     },
     crew,
@@ -237,6 +249,21 @@ function applyEvent(state: SimState, event: SimEvent): void {
       applyThreshold(state, event.ref, event.at)
       // Re-resolve either way: a survived threshold still changed output.
       resolveAll(state, event.at)
+      break
+    }
+
+    case 'AUTO_SERVICE': {
+      if (!event.ref) break
+      // Only re-resolve if it actually raised something: the standing order
+      // declines far more often than it fires -- no spares, a job already open,
+      // the part repaired in the meantime.
+      if (autoQueueService(state, event.ref, event.at)) resolveAll(state, event.at)
+      break
+    }
+
+    case 'CREW_DOWN': {
+      if (!event.ref) break
+      if (applyCasualty(state, event.ref, event.at)) resolveAll(state, event.at)
       break
     }
 
@@ -402,6 +429,31 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
       break
     }
 
+    case 'MOVE_WORK_ORDER': {
+      if (reprioritiseWorkOrder(state, command.workOrderId, command.direction)) {
+        resolveAll(state, at)
+      }
+      break
+    }
+
+    case 'SET_STANDING_ORDER': {
+      state.ship.standingOrders[command.order] = command.on
+      pushLog(
+        state,
+        at,
+        'info',
+        'upkeep',
+        command.on
+          ? 'Standing order set: service parts as soon as a service will not be wasted.'
+          : 'Standing order lifted: services are raised by hand from now on.',
+      )
+      // Switching it on has to catch up on everything already past the line,
+      // not just what wears through it next.
+      if (command.on) for (const p of state.ship.parts) autoQueueService(state, p.id, at)
+      resolveAll(state, at)
+      break
+    }
+
     case 'CANCEL_WORK_ORDER': {
       if (cancelWorkOrder(state, command.workOrderId, at)) resolveAll(state, at)
       break
@@ -532,6 +584,16 @@ export interface LifeSupportView {
   spares: number
   propellantKg: number
   docked: boolean
+  /** Oxygen partial pressure, kPa -- what a body actually responds to. */
+  o2KPa: number
+  /**
+   * What the air is doing to the crew (physiology.ts): every hazard that is
+   * doing something, worst first, with the clinical stage named. This is the
+   * part the old readout could not say -- it had gauges and no diagnosis.
+   */
+  environment: Environment
+  /** Who is in trouble and how long they have, when anybody is (§7.4). */
+  casualties: { name: string; secondsLeft: number; dead: boolean }[]
 }
 
 /** Days until a store runs out at the current rate; Infinity if it is not falling. */
@@ -565,6 +627,14 @@ export function lifeSupportView(state: SimState): LifeSupportView {
     spares: levelAt(res.spares, t),
     propellantKg: levelAt(res.propellant, t),
     docked: state.ship.docked,
+    o2KPa: o2KPaAt(state, t),
+    environment: environmentAt(state, t),
+    casualties: state.crew.map((c) => ({
+      name: getCrewDef(c.defId).name,
+      secondsLeft:
+        c.health.rate < 0 ? (levelAt(c.health, t) - c.health.min) / -c.health.rate : Infinity,
+      dead: c.dead ?? false,
+    })),
   }
 }
 
@@ -653,18 +723,31 @@ export interface WorkOrderView {
   assignedName?: string
   /** Game seconds until done at the current rate; Infinity if stalled. */
   secondsRemaining: number
+  /** Raised by the standing order rather than by hand. */
+  auto: boolean
+  /** True when this is the top of the queue, so the UI can disable "up". */
+  first: boolean
+  /** True when this is the bottom of it. */
+  last: boolean
+  /** Condition of the part now, so the queue can say why the job exists. */
+  condition: number
+  /** Points a service would throw away against the ceiling, right now. */
+  wasted: number
 }
 
 export function workOrderViews(state: SimState): WorkOrderView[] {
   const t = state.now
-  return state.workOrders
-    .filter((w) => w.status !== 'done')
-    .map((order) => {
+  // In the order they will actually be worked, which is the order the queue is
+  // drawn in -- a list whose sequence does not match the sequence of work is a
+  // list that lies about the one thing it is for.
+  const open = openOrders(state)
+  return open.map((order, index) => {
       const part = state.ship.parts.find((p) => p.id === order.partId)
       const completed = levelAt(order.progress, t)
       const assigned = order.assignedCrewId
         ? state.crew.find((c) => c.id === order.assignedCrewId)
         : undefined
+      const condition = part ? levelAt(part.condition, t) : 0
       return {
         id: order.id,
         kind: order.kind,
@@ -678,6 +761,11 @@ export function workOrderViews(state: SimState): WorkOrderView[] {
         ...(assigned ? { assignedName: getCrewDef(assigned.defId).name } : {}),
         secondsRemaining:
           order.progress.rate > 0 ? (order.required - completed) / order.progress.rate : Infinity,
+        auto: order.auto ?? false,
+        first: index === 0,
+        last: index === open.length - 1,
+        condition,
+        wasted: order.kind === 'service' ? serviceWasteAt(condition) : 0,
       }
     })
 }

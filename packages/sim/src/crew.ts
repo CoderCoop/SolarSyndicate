@@ -8,6 +8,7 @@
  * while the desk is empty.
  */
 import { getCrewDef, getHull, type Watch } from '@solsyn/data'
+import { environmentAt } from './physiology.js'
 import { levelAt } from './resources.js'
 import { DAY, HOUR, type GameTime } from './time.js'
 import type { CrewActivity, CrewState, SimState } from './types.js'
@@ -95,7 +96,7 @@ export const NOMINAL_TEMP_C = 21
  * set of unrelated gauges.
  */
 export function crewEffectiveness(state: SimState, crew: CrewState, t: GameTime): number {
-  if (crew.activity !== 'watch') return 0
+  if (crew.dead || crew.activity !== 'watch') return 0
 
   const fatigue = levelAt(crew.fatigue, t)
   const health = levelAt(crew.health, t)
@@ -104,13 +105,16 @@ export function crewEffectiveness(state: SimState, crew: CrewState, t: GameTime)
   m *= 1 - (fatigue / 100) * 0.45
   m *= 0.55 + (health / 100) * 0.45
 
-  const ppm = co2Ppm(state, t)
-  if (ppm > 10000) m *= 0.6
-  else if (ppm > 5000) m *= 0.85
+  // What the air is doing to them, on the real ladder (physiology.ts). This
+  // used to be four `if`s inline: CO2 over 10,000 ppm cost 40% and heat over
+  // 35 C cost half, with nothing in between and no name for either.
+  const env = environmentAt(state, t)
+  m *= env.capacity
 
-  const temp = levelAt(state.ship.resources.heat, t)
-  if (temp > 35) m *= 0.5
-  else if (temp > 28) m *= 0.85
+  // Unconscious is not "very slow". Somebody at 4% CO2 is not doing a reduced
+  // amount of work, they are doing none, and the floor below must not quietly
+  // hand them back a twentieth of a shift.
+  if (env.incapacitating) return 0
 
   return Math.max(0.05, Math.min(1, m))
 }
@@ -177,6 +181,7 @@ export function crewRoomId(state: SimState, crew: CrewState): string {
 export function updateActivities(state: SimState, t: GameTime): boolean {
   let changed = false
   for (const crew of state.crew) {
+    if (crew.dead) continue
     const next = activityAt(crew.watch, t)
     if (next !== crew.activity) {
       crew.activity = next

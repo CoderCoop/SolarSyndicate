@@ -69,6 +69,18 @@ export interface Transfer {
   durationS: number
   /** Semi-major axis of the transfer ellipse, metres. */
   semiMajorAxisM: number
+  /** Eccentricity of the transfer ellipse. */
+  eccentricity: number
+  /**
+   * Mean anomaly at the moment of departure: 0 leaving from periapsis (any
+   * outbound leg), pi leaving from apoapsis (any inbound one).
+   *
+   * Carried on the transfer rather than re-derived by each caller because it
+   * is the one piece of the geometry that cannot be recovered from `a` and `e`
+   * alone, and getting it wrong is silent -- it puts the ship on the right
+   * ellipse at the wrong end of it.
+   */
+  departureAnomalyRad: number
 }
 
 /**
@@ -101,6 +113,10 @@ export function hohmannBetween(mu: number, r1: number, r2: number): Transfer {
     deltaVMs: Math.abs(burn1) + Math.abs(burn2),
     durationS: Math.PI * Math.sqrt(a ** 3 / mu),
     semiMajorAxisM: a,
+    eccentricity: Math.abs(r2 - r1) / (r1 + r2),
+    // The minimum-energy ellipse touches both orbits at its apsides, so an
+    // outbound ship leaves from periapsis and an inbound one from apoapsis.
+    departureAnomalyRad: r2 >= r1 ? 0 : Math.PI,
   }
 }
 
@@ -132,39 +148,67 @@ export function stretchedTransfer(
   )
 }
 
-/** `stretchedTransfer` in terms of two radii about any primary. */
+/**
+ * `stretchedTransfer` in terms of two radii about any primary.
+ *
+ * **The stretch pushes the far end of the ellipse past the target orbit**, in
+ * whichever direction shortens the fall. Outbound that raises apoapsis above
+ * `r2`; inbound it lowers periapsis *below* `r2`, so the ship crosses the
+ * target orbit on the way down instead of kissing it at the bottom. Both cases
+ * are one rule -- move the free apsis away from the target by the same
+ * `(multiplier - 1) x (r1 + r2)` -- and both reduce to Hohmann at 1.
+ *
+ * Scaling the semi-major axis up in *both* directions, which is what this did
+ * for two milestones, is only right outbound. Inbound it produced an ellipse
+ * whose periapsis sat above the destination: the express profile cost more
+ * delta-v, took *longer* than minimum energy, and described a trajectory that
+ * never reached the target orbit at all. That is exactly the fake choice TR-3b
+ * forbids, and it is unmissable now that the chart draws what was chosen.
+ */
 export function stretchedBetween(
   mu: number,
   r1: number,
   r2: number,
   semiMajorMultiplier: number,
 ): Transfer {
-  const hohmannA = (r1 + r2) / 2
-  const a = hohmannA * Math.max(1, semiMajorMultiplier)
+  const outbound = r2 >= r1
+  const reach = (Math.max(1, semiMajorMultiplier) - 1) * (r1 + r2)
+  // The apsis the ship does *not* depart from. Clamped off zero because a
+  // periapsis at the centre of the primary is not a trajectory; at the
+  // multipliers the astrogator offers it never comes close.
+  const farApsis = outbound ? r2 + reach : Math.max(r2 * 0.05, r2 - reach)
+  const a = (r1 + farApsis) / 2
 
-  // Departure is at periapsis, so the first burn is purely tangential.
-  const vPeri = Math.sqrt(mu * (2 / r1 - 1 / a))
-  const burn1 = Math.abs(vPeri - Math.sqrt(mu / r1))
+  // Departure is at an apsis either way, so the first burn is purely
+  // tangential: prograde to raise apoapsis, retrograde to drop periapsis.
+  const v1 = Math.sqrt(mu * (2 / r1 - 1 / a))
+  const burn1 = Math.abs(v1 - Math.sqrt(mu / r1))
 
   // Arrival: speed from vis-viva, split into tangential and radial by
   // conservation of angular momentum.
-  const h = r1 * vPeri
+  const h = r1 * v1
   const v2 = Math.sqrt(Math.max(0, mu * (2 / r2 - 1 / a)))
   const vTangential = h / r2
   const vRadial = Math.sqrt(Math.max(0, v2 * v2 - vTangential * vTangential))
   const vCirc2 = Math.sqrt(mu / r2)
   const burn2 = Math.hypot(vTangential - vCirc2, vRadial)
 
-  // Time of flight from periapsis to r2, through the eccentric anomaly.
-  const e = 1 - r1 / a
+  // Time of flight, through the eccentric anomaly at the crossing of r2.
+  const e = Math.abs(1 - r1 / a)
   const cosE = e === 0 ? 1 : (a - r2) / (a * e)
   const E = Math.acos(Math.max(-1, Math.min(1, cosE)))
-  const meanAnomaly = E - e * Math.sin(E)
+  const crossing = E - e * Math.sin(E)
+  // Outbound the ship climbs from periapsis to that crossing. Inbound it falls
+  // from apoapsis and meets the same radius on the descending branch, which is
+  // the mirror of the crossing about the apsidal line -- hence pi minus it.
+  const sweptMeanAnomaly = outbound ? crossing : Math.PI - crossing
 
   return {
     deltaVMs: burn1 + burn2,
-    durationS: meanAnomaly * Math.sqrt(a ** 3 / mu),
+    durationS: sweptMeanAnomaly * Math.sqrt(a ** 3 / mu),
     semiMajorAxisM: a,
+    eccentricity: e,
+    departureAnomalyRad: outbound ? 0 : Math.PI,
   }
 }
 
@@ -224,25 +268,63 @@ export function deltaVForPropellant(
 // ---------------------------------------------------------------------------
 
 /**
- * Radius on an ellipse, `sinceS` seconds after periapsis. Design §5.2.
+ * Solve Kepler's equation for the eccentric anomaly. Design §5.2.
  *
- * Kepler's equation, solved by Newton. Both transfer profiles depart at the
- * periapsis of their transfer ellipse, so departure time *is* periapsis time
- * and no extra state has to be stored to place the ship: position is a
- * closed-form function of time, which is the property §8.2 rests on.
+ * Newton on E - e·sin E = M, from a sensible guess. The ellipses here are
+ * mild, so this converges in a handful of steps; the loop is bounded either
+ * way, which keeps it deterministic (§7.2).
  */
-export function radiusAtTime(mu: number, a: number, e: number, sinceS: number): number {
-  const n = Math.sqrt(mu / (a * a * a))
-  const m = n * sinceS
-  // Newton on E - e·sin E = M. Converges in a handful of steps for e < 0.9,
-  // and a fixed iteration count keeps it deterministic (§7.2).
-  let ecc = m
-  for (let i = 0; i < 12; i++) {
-    const f = ecc - e * Math.sin(ecc) - m
-    const df = 1 - e * Math.cos(ecc)
-    ecc -= f / df
+export function eccentricAnomaly(meanAnomaly: number, e: number): number {
+  let E = e < 0.8 ? meanAnomaly : Math.PI
+  for (let i = 0; i < 24; i++) {
+    const delta = (E - e * Math.sin(E) - meanAnomaly) / (1 - e * Math.cos(E))
+    E -= delta
+    if (Math.abs(delta) < 1e-12) break
   }
-  return a * (1 - e * Math.cos(ecc))
+  return E
+}
+
+/** Where a ship is on a transfer, `sinceS` seconds after it departed. */
+export interface TransferState {
+  /** Distance from the primary, metres. */
+  radiusM: number
+  /** Angle swept since departure, radians. Zero at the moment of departure. */
+  sweptRad: number
+}
+
+/**
+ * Position on a transfer ellipse as a function of time since departure.
+ *
+ * The one place that turns a `Transfer` into where the ship actually is, so
+ * the telemetry readout and the star chart cannot disagree about it. It takes
+ * the departure anomaly from the transfer rather than assuming periapsis:
+ * an inbound ship leaves from the *high* end of its ellipse, and starting it
+ * at periapsis reports the fastest point of the orbit at the slowest moment
+ * of the crossing.
+ *
+ * Closed form in time, which is the property offline catch-up rests on (§8.2).
+ */
+export function transferStateAt(
+  transfer: Transfer,
+  mu: number,
+  sinceS: number,
+): TransferState {
+  const { semiMajorAxisM: a, eccentricity: e, departureAnomalyRad } = transfer
+  const meanAnomaly = departureAnomalyRad + Math.max(0, sinceS) * Math.sqrt(mu / a ** 3)
+  const E = eccentricAnomaly(meanAnomaly, e)
+
+  // True anomaly from eccentric anomaly, the usual half-angle form. It stays
+  // continuous through apoapsis, which is where an inbound leg starts.
+  const nu =
+    2 *
+    Math.atan2(
+      Math.sqrt(1 + e) * Math.sin(E / 2),
+      Math.sqrt(1 - e) * Math.cos(E / 2),
+    )
+
+  // Departure is at an apsis, where true and mean anomaly coincide -- so the
+  // sweep since departure is just the difference.
+  return { radiusM: a * (1 - e * Math.cos(E)), sweptRad: nu - departureAnomalyRad }
 }
 
 /** Speed at radius `r` on an ellipse of semi-major axis `a`. Vis-viva. */

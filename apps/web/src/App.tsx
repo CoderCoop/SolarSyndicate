@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  AUTO_SERVICE_CONDITION,
   activeContract,
   chartView,
   contractBoard,
@@ -21,6 +22,8 @@ import {
   voyageView,
   whereabouts,
   workOrderViews,
+  type PowerView,
+  type RoomView,
 } from '@solsyn/sim'
 import { AwayReport } from './components/AwayReport.js'
 import { CrewPanel } from './components/CrewPanel.js'
@@ -35,11 +38,11 @@ import { StarChart } from './components/StarChart.js'
 import { LifeSupport } from './components/LifeSupport.js'
 import { ShipViewport } from './components/ShipViewport.js'
 import { StatusBar } from './components/StatusBar.js'
-import { WorkOrders } from './components/WorkOrders.js'
+import { Assignments, WorkOrders } from './components/WorkOrders.js'
 import { discardWorld, reinstallApp } from './recover.js'
 import { installLifecycleHandlers, useGame } from './store.js'
 
-type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'log' | 'help'
+type Tab = 'ship' | 'mission' | 'chart' | 'flows' | 'life' | 'crew' | 'work' | 'log' | 'help'
 
 /**
  * How long the boot screen waits before offering a way out of itself.
@@ -58,6 +61,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'flows', label: 'Flows' },
   { id: 'life', label: 'Life' },
   { id: 'crew', label: 'Crew' },
+  { id: 'work', label: 'Work' },
   { id: 'log', label: 'Log' },
   { id: 'help', label: 'Help' },
 ]
@@ -192,7 +196,7 @@ export function App() {
             {t.label}
             {t.id === 'ship' && brokenCount > 0 && <span className="tabs__dot" />}
             {t.id === 'mission' && missionBadge && <span className="tabs__count">{missionBadge}</span>}
-            {t.id === 'crew' && orders.length > 0 && <span className="tabs__count">{orders.length}</span>}
+            {t.id === 'work' && orders.length > 0 && <span className="tabs__count">{orders.length}</span>}
           </button>
         ))}
       </nav>
@@ -217,19 +221,11 @@ export function App() {
             />
 
             {power.brownout && (
-              <div className="recover">
-                <p className="recover__text">
-                  Shed loads are still offline. Restoring them without fixing the balance will
-                  simply drain the bank again.
-                </p>
-                <button
-                  type="button"
-                  className="button button--primary"
-                  onClick={() => dispatch({ kind: 'RESET_BROWNOUT' })}
-                >
-                  Restore shed loads
-                </button>
-              </div>
+              <Brownout
+                rooms={rooms}
+                power={power}
+                onRestore={() => dispatch({ kind: 'RESET_BROWNOUT' })}
+              />
             )}
           </>
         )}
@@ -277,10 +273,6 @@ export function App() {
               nowHour={((state.now % 86400) + 86400) % 86400 / 3600}
               onSetWatch={(crewId, watch) => dispatch({ kind: 'SET_CREW_WATCH', crewId, watch })}
             />
-            <WorkOrders
-              orders={orders}
-              onCancel={(workOrderId) => dispatch({ kind: 'CANCEL_WORK_ORDER', workOrderId })}
-            />
             <HiringHall
               candidates={candidates}
               berths={crewBerths}
@@ -290,6 +282,24 @@ export function App() {
               onHire={(crewId) => dispatch({ kind: 'HIRE_CREW', crewId })}
             />
             <GuildPanel guilds={guilds} />
+          </>
+        )}
+
+        {tab === 'work' && (
+          <>
+            <WorkOrders
+              orders={orders}
+              autoService={state.ship.standingOrders.autoService}
+              autoServiceAt={AUTO_SERVICE_CONDITION}
+              onCancel={(workOrderId) => dispatch({ kind: 'CANCEL_WORK_ORDER', workOrderId })}
+              onMove={(workOrderId, direction) =>
+                dispatch({ kind: 'MOVE_WORK_ORDER', workOrderId, direction })
+              }
+              onSetAutoService={(on) =>
+                dispatch({ kind: 'SET_STANDING_ORDER', order: 'autoService', on })
+              }
+            />
+            <Assignments crew={crew} orders={orders} />
           </>
         )}
 
@@ -318,6 +328,94 @@ export function App() {
       </main>
 
       {awayReport && <AwayReport report={awayReport} onDismiss={dismissAwayReport} />}
+    </div>
+  )
+}
+
+/**
+ * After a brownout. Design doc §3.2, §7.4.
+ *
+ * The ship shed load on its own authority, and this is the panel that explains
+ * itself afterwards. It replaced one that said "Shed loads are still offline.
+ * Restoring them without fixing the balance will simply drain the bank again",
+ * which had three problems: it never said the ship had switched anything off,
+ * it never said *which* things, and "fixing the balance" named no number the
+ * player could act on. Worse, the only control it offered was the one its own
+ * text warned against pressing -- a panel whose single affordance is a mistake.
+ *
+ * So it states the three things a person actually needs: what happened, what
+ * the shed kit costs to run, and what pressing the button would leave them
+ * with. The button stays live either way. Restoring into a deficit is a
+ * recoverable mistake, not a hazard, and §7.4 says the game does not wall the
+ * player off from its own consequences -- it just stops them being a surprise.
+ */
+function Brownout({
+  rooms,
+  power,
+  onRestore,
+}: {
+  rooms: RoomView[]
+  power: PowerView
+  onRestore: () => void
+}) {
+  const shed = rooms.flatMap((r) => r.parts).filter((p) => p.shed)
+
+  // A shed part contributes nothing while it is off, so its current draw reads
+  // as zero. What it *would* cost is the rated figure -- and for a load that is
+  // the honest number whatever its condition, because a worn pump does not
+  // politely use less electricity (networks.ts, partPowerKw).
+  const costKw = shed.reduce((sum, p) => sum + -p.powerKw, 0)
+  const afterKw = power.netKw - costKw
+  const safe = afterKw >= 0
+
+  const names = shed.map((p) => p.name)
+  const listed =
+    names.length > 3
+      ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`
+      : names.length > 1
+        ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+        : (names[0] ?? 'several systems')
+
+  // One shed load is the common case on a small ship, and "they draw 14 kW
+  // between them" about a single preheater is the kind of wrongness that makes
+  // a player stop trusting the rest of the sentence.
+  const many = shed.length !== 1
+  const it = many ? 'them' : 'it'
+  const draws = many ? 'They draw' : 'It draws'
+  const between = many ? ' between them' : ''
+
+  return (
+    <div className={`recover ${safe ? 'is-safe' : ''}`}>
+      <p className="recover__what">
+        The power ran out, so the ship switched off <strong>{listed}</strong> by itself to keep
+        the critical bus alive.
+      </p>
+      <p className="recover__text">
+        {safe ? (
+          <>
+            {draws} <strong>{costKw.toFixed(1)} kW</strong>
+            {between} and you now have <strong>{power.netKw.toFixed(1)} kW</strong> spare.
+            Switching {it} back on leaves <strong>+{afterKw.toFixed(1)} kW</strong> — {it} will
+            stay on.
+          </>
+        ) : (
+          <>
+            {draws} <strong>{costKw.toFixed(1)} kW</strong>
+            {between} and you only have <strong>{power.netKw.toFixed(1)} kW</strong> spare.
+            Switching {it} back on now would leave you{' '}
+            <strong>{afterKw.toFixed(1)} kW</strong> short, and the ship would shed {it} again as
+            soon as the battery emptied. Find {(-afterKw).toFixed(1)} kW first — switch something
+            else off, or repair whatever is running down.
+          </>
+        )}
+      </p>
+      <button
+        type="button"
+        className={`button ${safe ? 'button--primary' : ''}`}
+        onClick={onRestore}
+      >
+        Switch {it} back on
+      </button>
     </div>
   )
 }

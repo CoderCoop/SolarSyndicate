@@ -9,6 +9,154 @@ means here.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-07-27
+
+A minor three times over: the ship now maintains itself to a policy you set,
+the work queue is a thing you can steer rather than a list you watch, and the
+atmosphere has a real physiology behind it. The last of those changes what the
+player can lose.
+
+### Added
+
+- **A standing order that services parts at the right moment.** A service puts
+  back a *fixed* 32 points of condition and the ceiling throws away the rest,
+  so servicing at 90% spends a whole spare to buy ten points. There is one
+  right moment on every part — at or below 68% — and finding it was pure
+  clerical work: watch seven parts, notice each crossing a line, tap the same
+  button. §7.3 calls standing orders "the policy toggles you set in advance",
+  and this is the first of them. It fires from its own scheduled crossing, so
+  it works to the minute while the app is closed; it declines when the locker
+  cannot pay, when the player has already ordered work, and always for a
+  repair — a failure is yours to answer. On by default, and a toggle because
+  the policy is the player's to set, not because the default is in doubt.
+- **A Work tab.** §4.3 promises that "you approve the watch bill and the
+  work-order priorities". The watch bill has had a panel since M1; the
+  priorities did not exist — the queue was strictly oldest-first, so the only
+  way to get a failed scrubber seen before a routine service raised an hour
+  earlier was to cancel the service and lose the hours already in it. Jobs now
+  move up and down, and the hours in a job survive being reordered. Beside the
+  queue, who has what: a job reading "waiting for a free hand" means nothing
+  until you can see that three of the four hands are asleep.
+- **Ordering a service too early now says what it costs** — "11 of the 32
+  points will hit the ceiling and be lost" — rather than quietly doing it.
+
+### Changed
+
+- **The atmosphere has a physiology.** The old model was four `if` statements:
+  CO2 over 5,000 ppm cost three health a day and over 10,000 cost nine, with
+  matching cuts to how well somebody worked. Two cliffs, nothing in between,
+  and no name for what was happening to anybody. It is now a graded model on
+  the published limits — OSHA's 5,000 ppm exposure limit, NASA's 7,000 ppm
+  180-day figure, NIOSH's 40,000 ppm "immediately dangerous to life", and the
+  Satish and Allen studies for the cognitive decline that starts around 1,000.
+  Oxygen is judged by **partial pressure** rather than by the tank reading,
+  because that is what a body responds to; there is a cold ladder as well as a
+  hot one, which there was not before. Hazards combine honestly: capacities
+  multiply, health costs add.
+- **Bad air stops the watch working before it makes them ill**, which is the
+  coupling that matters — a failed scrubber shows up in the numbers the player
+  is already watching. At NIOSH's IDLH figure nobody works at all, and the
+  queue stops rather than crawling.
+- **Crew can now die of it.** The health floor of 10 that made everything
+  survivable is gone. §4.5 is explicit that this is a permadeath game, and
+  §7.4's rule is not that death cannot happen — it is that it cannot happen
+  *without foreshadowing and a decision*. Health is a reservoir, so the moment
+  it runs out is a division: the game always knows who is in trouble and
+  exactly how long they have, and now it says so, by name, in the readout and
+  in a dispatch, long before it happens.
+
+### Fixed
+
+- **Nine sections did not fit across a phone.** Dividing the tab strip equally
+  gave every label about forty pixels, which wrapped "Mission" onto two lines
+  and clipped the last tab out of the bar entirely. The strip scrolls now.
+
+## [0.7.0] — 2026-07-27
+
+A minor by the stated rule: coming home fast is a real option now, and on
+several runs it is the difference between making a deadline and not. It started
+as a drawing bug and the drawing was the honest part — it was faithfully
+reporting a trajectory the sim had got wrong.
+
+Also carries a second pass over the ship interior, which picks up where the
+lit-interior work left off: that one said it had covered perhaps half the
+distance to filled and shaded forms, and this is most of the rest.
+
+### Fixed
+
+- **The star chart drew the same arc whatever you paid for.** It rebuilt the
+  minimum-energy ellipse from the two orbit radii and nothing else, so all three
+  profiles came out identical to the last bit. A player could spend 5.3 km/s
+  extra on Express and watch the trajectory they had declined sweep across the
+  plate. The geometry now comes from the same `Transfer` the astrogator priced,
+  so the picture and the invoice cannot come apart — §1 pillar 2 does not stop
+  at numbers. The caption names the profile too, so a fatter arc is explained
+  rather than mysterious.
+- **Stretching an ellipse only worked outbound.** Chasing the arc down found
+  the real fault underneath it: the stretch scaled the semi-major axis *up*
+  whichever way the ship was pointed. Outbound that raises apoapsis past the
+  target, which is the fast trajectory. Inbound the ship leaves from apoapsis,
+  so it raised *periapsis* — and Express to Earth cost more delta-v, took
+  **longer** than minimum energy, and described an ellipse whose lowest point
+  never reached Earth's orbit. Strictly worse in both currencies is precisely
+  the fake choice TR-3b forbids. One rule now covers both directions: move the
+  apsis the ship does not depart from away from the target orbit. Ceres→Earth
+  Express is 340 days against minimum energy's 472, at 28.3 km/s against 11.2 —
+  steep, because dropping perihelion to 0.55 AU means arriving with a lot of
+  speed to kill, and that is what a fast return actually costs.
+- **Inbound telemetry read the wrong end of the ellipse.** The speed readout
+  solved Kepler from periapsis regardless of direction, so a ship casting off
+  for home reported the fastest point of its orbit at the slowest moment of the
+  crossing. Departure anomaly is carried on the transfer now, and one function
+  turns a transfer into a position — the readout and the chart cannot disagree
+  about where she is because they no longer work it out separately.
+- **Every object on the ship was outlined by its own tap target.** `.hit` sits
+  inside `.glyph`, which sets a stroke, and stroke inherits — so each part and
+  each fixture carried a second rectangle two units proud of itself. Nothing in
+  the DOM was wrong, which is why nothing caught it: the drawing was simply
+  full of boxes nobody had drawn, and it is where the boxes-inside-boxes look
+  came from. The end-to-end pass now measures it.
+
+### Changed
+
+- **The ship interior is shaded rather than outlined.** The previous pass lit
+  the *room* and left the things in it flat: a mattress and a spares locker
+  took the light identically, and nothing in any compartment cast a shadow, so
+  every object floated a little way off the plating. Three cues fix that —
+  a gradient down each form, a shadow under it, and a different response to
+  light for steel, cloth and anything lit from within. The wall was lifted off
+  the floor of the palette to make room for it: it used to sit within a few
+  points of pure black top to bottom, which left a shadow nothing to fall on.
+- **The machines got the treatment the furniture got last time.** Bunks, the
+  mess table, cargo bays and lockers were reworked in the interior pass; the
+  parts were still their first sketches. The flight desk has a screen that
+  lights, the comms array has a feed horn and an elevation drive, the pump has
+  an impeller and a finned motor, the solar wing has cells and a hinge spine,
+  the engine bell has cooling tubes and a throat that glows, and the battery
+  says what is in it. A machine that is running now says so with light, and one
+  that is shed or failed goes dark along with its shadow.
+- **The brownout panel says what happened and what the button costs.** It read
+  "Shed loads are still offline. Restoring them without fixing the balance will
+  simply drain the bank again", which never said the ship had switched anything
+  off, never said *which* things, and named no number for "fixing the balance"
+  — while offering exactly one control, the one its own text warned against. It
+  now names the kit the ship shed, states what that kit draws, and states what
+  pressing the button would leave: "It draws 14.0 kW and you only have 6.9 kW
+  spare. Switching it back on now would leave you -7.1 kW short… Find 7.1 kW
+  first." The panel turns from a warning into a confirmation once the balance
+  is good. The button stays live either way — restoring into a deficit is a
+  recoverable mistake, not a hazard, and §7.4 does not wall the player off from
+  consequences, it just stops them being a surprise.
+- **Compartments have walls rather than backgrounds.** Panel seams, structural
+  frames drawn with a lit edge and a shadowed one, the compartment stencilled
+  on, a return-air grille, and a painted deck edge where the reactor and the
+  engines are. All of it behind the equipment, because it is what the equipment
+  is bolted to.
+- `Transfer` carries `eccentricity` and `departureAnomalyRad`; `radiusAtTime`
+  is replaced by `transferStateAt`, which takes the transfer rather than
+  re-deriving its shape at each call site. The old signature could not express
+  an inbound leg, which is how the bug lasted two milestones.
+
 ## [0.6.0] — 2026-07-27
 
 A minor by the stated rule: the ship view, the status bar and the log all
