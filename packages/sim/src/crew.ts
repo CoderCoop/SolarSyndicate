@@ -88,6 +88,20 @@ export function co2KgForPpm(state: SimState, ppm: number): number {
 export const NOMINAL_TEMP_C = 21
 
 /**
+ * Everybody still aboard and breathing.
+ *
+ * The dead stay on `state.crew` because §4.5 wants people to persist -- a name
+ * you lost is part of the campaign, not a row to delete. But that means every
+ * consumer has to remember to skip them, and four separately forgot: the dead
+ * held berths that blocked hiring, drew wages, kept reporting "On watch", and
+ * held work orders nobody was doing. One helper, so the next consumer does not
+ * have to remember.
+ */
+export function livingCrew(state: SimState): CrewState[] {
+  return state.crew.filter((c) => !c.dead)
+}
+
+/**
  * How well the crew can work, 0-1. Fatigue, health and the environment they
  * are being asked to work in.
  *

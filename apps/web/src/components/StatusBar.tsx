@@ -78,7 +78,11 @@ export function StatusBar({
           on screen while "berthed or under way?" -- the thing that decides
           whether any of it is your problem this minute -- was not stated
           anywhere at all. */}
-      <div className={`berth ${where.docked ? 'is-alongside' : 'is-underway'}`}>
+      <div
+        className={`berth ${where.docked ? 'is-alongside' : 'is-underway'} ${
+          where.salvage ? 'is-salvage' : ''
+        }`}
+      >
         <div className="berth__line">
           <span className="berth__place">{where.place}</span>
           <span className="berth__detail">{where.detail}</span>

@@ -116,6 +116,11 @@ export interface ShipState {
   /** Policy the ship follows without being asked (§7.3). */
   standingOrders: StandingOrders
   /**
+   * Under salvage: recovered and towed in after the last hand died (§7.4).
+   * Cleared when somebody signs on, so she can be crewed and flown again.
+   */
+  recovered?: boolean
+  /**
    * The emergency the log has already announced, so escalating air raises one
    * dispatch per stage instead of one per network resolve.
    */

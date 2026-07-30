@@ -21,6 +21,9 @@
     "repairRestoreTo": 65,
     "autoServiceAt": 1.0
   },
+  "recovery": {
+    "towFeeHullFraction": 0.18
+  },
   "survey": {
     "scrapFloor": 0.35,
     "conditionWeight": 0.8,

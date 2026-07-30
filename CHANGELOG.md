@@ -9,6 +9,42 @@ means here.
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-07-30
+
+A minor by the stated rule: losing your whole crew used to end the campaign, and
+now it does not. §7.4 has always said "the ship survives — crew are mortal, the
+campaign is not"; `0.8.0` made the first half reachable without building the
+second, so this closes it.
+
+### Fixed
+
+- **A ship whose crew had died could not be crewed again.** Four separate
+  consumers counted the dead as crew, and the worst of them was berths: the
+  people who had died on the ship occupied the bunks their replacements needed,
+  so on a full hull hiring was blocked by the casualties. They also drew wages,
+  reported "On watch" and "Asleep" on the roster, stood at their stations in
+  the ship view, and held work orders nobody was doing. One `livingCrew` helper
+  now, so the next consumer does not have to remember.
+- **The standing order kept raising services on a derelict.** A standing order
+  is a policy the crew execute; with nobody alive aboard there was no one to
+  execute it, and the ship quietly queued jobs against a locker nobody could
+  open.
+
+### Added
+
+- **A dead-crew ship is recovered and towed, at ruinous cost.** The last
+  casualty now ends the voyage rather than letting it count down to an arrival
+  nobody is alive to make, tows her to the port she was bound for, forfeits the
+  contract — the cargo did not arrive, and settling it as delivered would have
+  been a lie (TR-19) — and posts a salvage bill of 18% of the hull's book
+  value. That is 77,400 Cr on the Kestrel against a 240,000 Cr opening balance:
+  the worst thing that can happen to a desk, and still a debt rather than a
+  wall (TR-21).
+- **The state says so, everywhere it matters.** The status bar reads "Under
+  salvage · no crew aboard", and the Crew tab explains an empty roster instead
+  of rendering a blank list: she is intact, she is yours, and she cannot fly or
+  take a contract until somebody signs on. One hire releases her.
+
 ## [0.8.0] — 2026-07-27
 
 A minor three times over: the ship now maintains itself to a policy you set,

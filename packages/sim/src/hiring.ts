@@ -23,8 +23,10 @@
  * particular person is a reason to fly somewhere.
  */
 import { crewInHall, getCrewDef, getGuild, getHull } from '@solsyn/data'
+import { livingCrew } from './crew.js'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
+import { releaseIfCrewed } from './recovery.js'
 import { makeReservoir } from './resources.js'
 import { DAY, type GameTime } from './time.js'
 import type { CrewState, SimState } from './types.js'
@@ -37,12 +39,15 @@ export function wageFor(state: SimState, defId: string): number {
 
 /** The whole payroll, per day. */
 export function dailyWagesCr(state: SimState): number {
-  return state.crew.reduce((sum, c) => sum + wageFor(state, c.defId), 0)
+  return livingCrew(state).reduce((sum, c) => sum + wageFor(state, c.defId), 0)
 }
 
 export function berths(state: SimState): { used: number; total: number; free: number } {
   const total = getHull(state.ship.hullId).berths
-  const used = state.crew.length
+  // The dead do not occupy a bunk. Counting them did, and on a hull whose
+  // berths were all taken it made replacing a lost crew impossible -- the ship
+  // could not be crewed because of the people who had died on it.
+  const used = livingCrew(state).length
   return { used, total, free: Math.max(0, total - used) }
 }
 
@@ -116,7 +121,7 @@ export function hireCrew(state: SimState, crewId: string, at: GameTime): boolean
 
   // Onto the thinnest watch, so a hire fills a gap rather than crowding a shift.
   const counts = { A: 0, B: 0, C: 0 }
-  for (const c of state.crew) counts[c.watch] += 1
+  for (const c of livingCrew(state)) counts[c.watch] += 1
   const watch = (['A', 'B', 'C'] as const).reduce((a, b) => (counts[a] <= counts[b] ? a : b))
 
   const hired: CrewState = {
@@ -129,6 +134,8 @@ export function hireCrew(state: SimState, crewId: string, at: GameTime): boolean
     health: makeReservoir(95, 0, 100, at),
   }
   state.crew.push(hired)
+  // She may have been under salvage; one signature is enough to release her.
+  releaseIfCrewed(state, at)
 
   pushLog(
     state,
@@ -184,7 +191,7 @@ export function dismissCrew(state: SimState, crewId: string, at: GameTime): bool
 export function payWages(state: SimState, at: GameTime): void {
   const total = dailyWagesCr(state)
   if (total <= 0) return
-  post(state, at, -total, `Wages, ${state.crew.length} aboard`)
+  post(state, at, -total, `Wages, ${livingCrew(state).length} aboard`)
 }
 
 /** A day's payroll, for the UI to state before anyone is hired. */
