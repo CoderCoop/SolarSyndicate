@@ -698,6 +698,30 @@ const routeEnds = await page.$$eval('.offer:first-child .route__port', (els) =>
 )
 check('the route names both ends', routeEnds.length === 2, routeEnds.join(' → '))
 
+// A hop between two ports around one body is not a journey between two places.
+// Drawing it as one put *two Earths* side by side and said nothing about the
+// fifty-seven-fold difference in altitude between them.
+const sameBodyOffer = await page.$('.offer:has(.route__orbit)')
+check('a route inside one gravity well draws that body once, with its orbits', !!sameBodyOffer)
+if (sameBodyOffer) {
+  const orbits = await sameBodyOffer.$$eval('.route__orbit', (els) => els.length)
+  const bodies = await sameBodyOffer.$$eval('.route__body', (els) => els.length)
+  const named = await sameBodyOffer.$$eval('.route__body-name', (els) =>
+    els.map((e) => e.textContent?.trim()),
+  )
+  check(
+    'one primary and two orbits, not two planets',
+    orbits === 2 && bodies === 1,
+    `${bodies} body, ${orbits} orbits, named ${named.join('/')}`,
+  )
+  const alts = await sameBodyOffer.$$eval('.route__alt', (els) => els.map((e) => e.textContent?.trim()))
+  check(
+    'and each orbit says the altitude that puts it there',
+    alts.some((a) => /6,778 km/.test(a ?? '')) && alts.some((a) => /384,400 km/.test(a ?? '')),
+    alts.join(' | '),
+  )
+}
+
 const types = await page.$$eval('.mtype__name', (els) => els.map((e) => e.textContent))
 check('each offer says what kind of mission it is (§5.3)', types.length === offers.length, types.join(' · '))
 check('and the types are not all the same word', new Set(types).size > 1, [...new Set(types)].join(' · '))

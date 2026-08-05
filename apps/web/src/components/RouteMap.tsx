@@ -9,11 +9,25 @@
  * shape they have already read once.
  *
  * It is a schematic, not a chart. The star chart (§5.1) is the honest
- * top-down plate with real positions; this is a route diagram, and it says so
- * by drawing the crossing as a plain arc between two labelled ends. Two ports
- * around one body get a visibly shallower arc than an interplanetary crossing,
- * because that difference is the single most important thing about a route the
- * Kestrel can or cannot fly.
+ * top-down plate with real positions; this is a route diagram.
+ *
+ * ## Two shapes, because there are two kinds of route
+ *
+ * A crossing between two *bodies* is a journey between two places, and the
+ * plain arc between two labelled ends says that well.
+ *
+ * A hop between two ports around **one** body is not that, and drawing it that
+ * way was actively wrong: Gateway and Tranquillity both orbit Earth, so the
+ * strip put **two Earths** side by side and the player was left to infer that
+ * they were the same planet. Nothing on the drawing said that one is 407 km up
+ * and the other is 384,400 km out -- a factor of fifty-seven, and the entire
+ * reason the crossing takes five days and 3.91 km/s.
+ *
+ * So a same-body route is drawn as what it is: one planet, with the two orbits
+ * around it, obliquely. Radii use the same square-root compression the star
+ * chart states, which at these numbers puts Gateway's ring hard against the
+ * planet's limb and Luna's way out -- which is exactly the relationship, and
+ * exactly what was missing.
  */
 import { useId } from 'react'
 import { getBody, getPort, type MissionType } from '@solsyn/data'
@@ -176,6 +190,149 @@ function End({
   )
 }
 
+/**
+ * Vertical squash of the orbit ellipses: an oblique view.
+ *
+ * A true top-down circle of the radius Luna needs would be 130 units tall in a
+ * 108-unit strip. Tilting the plane is what orbital diagrams have always done,
+ * and it costs nothing a route strip was ever going to claim.
+ */
+const OBLIQUE = 0.3
+
+/**
+ * One planet, two orbits. Design doc §5.2.
+ *
+ * Square-root radial compression, the same convention the star chart states for
+ * the same reason: linear would draw Gateway's orbit at two pixels against
+ * Luna's hundred and thirty. The compression is stated under the drawing.
+ */
+function SameBodyRoute({
+  fromPortId,
+  toPortId,
+  progress,
+}: {
+  fromPortId: string
+  toPortId: string
+  progress?: number
+}) {
+  const from = getPort(fromPortId)
+  const to = getPort(toPortId)
+  const body = getBody(from.bodyId)
+  const mark = BODY_MARK[from.bodyId] ?? { r: 7, tone: 'ceres' }
+
+  const cx = W / 2
+  // Low enough to leave the top strip clear for the two port labels, which is
+  // the only place on a 320x108 frame they do not land on the drawing.
+  const cy = BASE + 10
+  const outerKm = Math.max(from.orbitRadiusKm, to.orbitRadiusKm)
+  // Narrow enough that the outer port's label fits inside the frame: at 128
+  // "Tranquillity Yards" ran off the right edge, which is the one word on the
+  // drawing a player most needs.
+  const OUTER_RX = 96
+
+  /** Kilometres to drawing units, square-root compressed. */
+  const rx = (km: number) => OUTER_RX * Math.sqrt(km / outerKm)
+
+  // The planet is drawn to the *same* scale as the orbits, which is the whole
+  // point: at these numbers Earth's limb comes up almost to Gateway's ring, and
+  // that is the honest picture of how low a low orbit is.
+  const bodyR = Math.max(6, rx(body.radiusKm))
+
+  const rings = [from, to].map((p) => ({ port: p, rx: rx(p.orbitRadiusKm) }))
+  const inner = rings[0]!.rx <= rings[1]!.rx ? rings[0]! : rings[1]!
+  const outer = inner === rings[0]! ? rings[1]! : rings[0]!
+
+  // Ports sit on their own rings, on opposite sides, so the gap between them
+  // reads as distance rather than as two dots that happen to be near.
+  const at = (r: number, side: -1 | 1) => ({ x: cx + side * r, y: cy })
+  const fromAt = at(rings[0]!.rx, -1)
+  const toAt = at(rings[1]!.rx, 1)
+
+  const underWay = progress !== undefined
+  const t = Math.max(0, Math.min(1, progress ?? 0))
+  // The transfer ellipse, near enough: a half-turn from one ring to the other,
+  // which is what a Hohmann between two coplanar orbits actually is (§5.2).
+  const transfer = `M${fromAt.x} ${fromAt.y} A ${(rings[0]!.rx + rings[1]!.rx) / 2} ${
+    ((rings[0]!.rx + rings[1]!.rx) / 2) * OBLIQUE
+  } 0 0 1 ${toAt.x} ${toAt.y}`
+  const shipX = fromAt.x + (toAt.x - fromAt.x) * t
+  const shipY = cy - Math.sin(Math.PI * t) * ((rings[0]!.rx + rings[1]!.rx) / 2) * OBLIQUE
+
+
+  return (
+    <>
+      {/* Planet first, then the orbits over it. In an oblique view the near
+          half of a ring really does pass in front of the body, and drawing it
+          that way is also the only way the inner ring is visible at all --
+          Gateway's orbit is barely wider than Earth itself, which is the
+          honest picture of how low a low orbit is. */}
+      <g className={`route__end route__end--${mark.tone}`}>
+        <circle className="route__body" cx={cx} cy={cy} r={bodyR} />
+      </g>
+
+      {[outer, inner].map((ring) => (
+        <ellipse
+          key={ring.port.id}
+          className="route__orbit"
+          cx={cx}
+          cy={cy}
+          rx={ring.rx}
+          ry={ring.rx * OBLIQUE}
+        />
+      ))}
+
+      <path className="route__path route__path--transfer" d={transfer} />
+
+      <text
+        className="route__body-name"
+        x={cx}
+        y={cy + Math.max(bodyR, inner.rx * OBLIQUE) + 11}
+        textAnchor="middle"
+      >
+        {body.name}
+      </text>
+
+      {/* The stations themselves, on their rings. */}
+      {[
+        { port: from, at: fromAt },
+        { port: to, at: toAt },
+      ].map(({ port, at: p }) => (
+        <g key={port.id} className="route__station">
+          {port.moon && <circle className="route__moon-body" cx={p.x} cy={p.y} r="4" />}
+          <circle className="route__station-dot" cx={p.x} cy={p.y} r="2.6" />
+        </g>
+      ))}
+
+      {/* Names along the top, with a leader down to the ring each sits on.
+          Anywhere else on a 320x108 frame they land on the drawing -- and the
+          altitude is the number that makes the picture mean something, so it
+          cannot be the thing that gets clipped. */}
+      {[
+        { port: from, at: fromAt, x: 6, anchor: 'start' as const },
+        { port: to, at: toAt, x: W - 6, anchor: 'end' as const },
+      ].map(({ port, at: p, x, anchor }) => (
+        <g key={`${port.id}-label`}>
+          <text className="route__port" x={x} y="13" textAnchor={anchor}>
+            {port.name}
+          </text>
+          <text className="route__alt" x={x} y="24" textAnchor={anchor}>
+            {port.moon ? `${port.moon} · ` : ''}
+            {formatDistance(port.orbitRadiusKm)}
+          </text>
+          <line className="route__leader" x1={x === 6 ? 10 : W - 10} y1="29" x2={p.x} y2={p.y - 5} />
+        </g>
+      ))}
+
+      {underWay && (
+        <g className="route__ship" transform={`translate(${shipX} ${shipY})`}>
+          <circle className="route__ship-halo" r="8" />
+          <path className="route__ship-mark" d="M0 -5 L4 4 L0 1.5 L-4 4 Z" />
+        </g>
+      )}
+    </>
+  )
+}
+
 export interface RouteMapProps {
   fromPortId: string
   toPortId: string
@@ -229,20 +386,28 @@ export function RouteMap({ fromPortId, toPortId, type, progress }: RouteMapProps
       role="img"
       aria-label={describe(fromPortId, toPortId, type, progress)}
     >
+      {/* One planet with its orbits when both ports share a primary; two ends
+          and an arc when they do not. Drawing the first case as the second put
+          two Earths side by side and said nothing about the fifty-seven-fold
+          difference in altitude between them. */}
+      {sameBody && (
+        <SameBodyRoute fromPortId={fromPortId} toPortId={toPortId} {...(progress !== undefined ? { progress } : {})} />
+      )}
+
       {/* The whole route, faint. */}
-      <path className="route__path" d={path} />
+      {!sameBody && <path className="route__path" d={path} />}
 
       {/* How far, stated. Two ports around one body are not neighbours, and
           without this the Luna hop reads as Earth-to-Earth in five days. */}
       <text className="route__span" x={W / 2} y={H - 4} textAnchor="middle">
         {formatDistance(spanKm)}
-        {sameBody ? '' : ' at closest approach'}
+        {sameBody ? ' between the two orbits' : ' at closest approach'}
       </text>
 
       {/* Flown so far, drawn over it. A dash array scaled to the path length
           would need a measured path; instead the ship mark carries position and
           the flown segment is a second arc clipped by a moving mask. */}
-      {underWay && (
+      {!sameBody && underWay && (
         <>
           <defs>
             <clipPath id={clipId}>
@@ -253,16 +418,24 @@ export function RouteMap({ fromPortId, toPortId, type, progress }: RouteMapProps
         </>
       )}
 
-      <End portId={fromPortId} x={LEFT} align="start" here={!underWay} />
-      <End portId={toPortId} x={RIGHT} align="end" />
+      {!sameBody && (
+        <>
+          <End portId={fromPortId} x={LEFT} align="start" here={!underWay} />
+          <End portId={toPortId} x={RIGHT} align="end" />
+        </>
+      )}
 
-      {/* The kind of errand, riding on the arc. */}
-      <g className={`route__badge route__badge--${type}`} transform={`translate(${badge.x} ${badge.y})`}>
+      {/* The kind of errand. On the arc where there is one; tucked into the
+          corner of the orbital view, which has no spare middle. */}
+      <g
+        className={`route__badge route__badge--${type}`}
+        transform={`translate(${sameBody ? 18 : badge.x} ${sameBody ? H - 20 : badge.y})`}
+      >
         <circle className="route__badge-disc" r="12" />
         <g className="route__badge-mark">{missionMark(type, 5)}</g>
       </g>
 
-      {underWay && (
+      {!sameBody && underWay && (
         <g className="route__ship" transform={`translate(${ship.x} ${ship.y})`}>
           <circle className="route__ship-halo" r="8" />
           <path className="route__ship-mark" d="M0 -5 L4 4 L0 1.5 L-4 4 Z" />
