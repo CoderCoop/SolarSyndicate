@@ -9,6 +9,33 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.1] — 2026-08-05
+
+### Fixed
+
+- **The mission board drew two Earths.** Gateway Station and Tranquillity Yards
+  both orbit Earth, and the route strip put them at opposite ends of an arc
+  with a planet under each — so the drawing said they were two different
+  worlds, and nothing on it said that one is 407 km up and the other is 384,400
+  km out. That factor of fifty-seven is the entire reason the crossing takes
+  five days and 3.91 km/s, and it was the one thing the picture left out.
+
+  A route inside one gravity well is now drawn as what it is: **one planet,
+  obliquely, with the two orbits around it**. Radii use the square-root
+  compression the star chart already states, which at these numbers puts
+  Gateway's ring hard against Earth's limb and Luna's way out — which is
+  exactly the relationship. The near half of each ring passes in front of the
+  planet, because in an oblique view it does.
+
+  Interplanetary routes keep the two-ended arc: between two bodies it is a
+  journey between two places, and that form says so correctly.
+
+### Added
+
+- Bodies carry their real mean radius (`radiusKm`), so a drawing can show an
+  orbit *around* a planet rather than beside it. 6,371 km is the number that
+  makes "407 km up" mean anything.
+
 ## [0.11.0] — 2026-07-30
 
 A minor: the chart stopped being a picture of the solar system and started

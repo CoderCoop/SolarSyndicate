@@ -496,6 +496,15 @@ export const BodyDef = z.object({
    * getting a hand-set duration and price of its own.
    */
   muM3S2: z.number().positive(),
+  /**
+   * Mean radius, km. Real values.
+   *
+   * Needed the moment a drawing has to show a port's orbit *around* the body
+   * rather than beside it: Gateway sits 407 km above the surface and
+   * Tranquillity is 384,400 km out, and neither of those figures means
+   * anything without the 6,371 km they are measured against.
+   */
+  radiusKm: z.number().positive(),
 })
 export type BodyDef = z.infer<typeof BodyDef>
 

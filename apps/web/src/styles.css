@@ -4726,3 +4726,47 @@ button {
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
+
+/* ------------------------------------------------ route: one body, two orbits */
+
+/*
+ * Gateway and Tranquillity both orbit Earth. Drawing them as two ends of an arc
+ * put *two Earths* side by side and said nothing about the fifty-seven-fold
+ * difference in altitude, which is the whole reason the crossing costs 3.91
+ * km/s. So a same-body route is drawn as what it is: one planet, obliquely,
+ * with the two orbits around it.
+ */
+.route__orbit {
+  fill: none;
+  stroke: var(--line-bright);
+  stroke-width: 0.7;
+  opacity: 0.55;
+}
+
+.route__path--transfer {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2.5;
+  opacity: 0.7;
+}
+
+.route__station-dot {
+  fill: var(--cyan);
+  stroke: var(--bg);
+  stroke-width: 0.8;
+}
+
+/* A port at a moon rides on the moon, not beside it. */
+.route__moon-body {
+  fill: var(--bg-raised);
+  stroke: var(--ink-faint);
+  stroke-width: 0.8;
+}
+
+/* Leader from a name in the margin to the ring it belongs to. */
+.route__leader {
+  stroke: var(--ink-faint);
+  stroke-width: 0.5;
+  opacity: 0.45;
+}
