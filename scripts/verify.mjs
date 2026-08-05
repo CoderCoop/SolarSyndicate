@@ -632,6 +632,31 @@ check(
 check('with the ship marked on the plate', await page.isVisible('.chart__ship-mark'))
 check('and its port highlighted', await page.isVisible('.chart__body.is-current'))
 
+// §5.1: "planets move, so launch windows are real gameplay". The maths for
+// this shipped in M2 and was referenced by nothing at all until now.
+const ranges = await page.$$eval('.chart__range', (els) => els.map((e) => e.textContent?.trim()))
+check(
+  'every world says how far away it is right now (§5.1)',
+  ranges.length === 3 && ranges.some((r) => /AU$/.test(r ?? '')) && ranges.includes('here'),
+  ranges.join(' | '),
+)
+
+const windows = await page.$$eval('.window', (els) =>
+  els.map((e) => e.textContent?.replace(/\s+/g, ' ').trim()),
+)
+check(
+  'and the chart says when a crossing is worth flying',
+  windows.length === 2 && windows.every((w) => /opens (now|in \d)/.test(w ?? '')),
+  windows.join(' || '),
+)
+
+const ticks = await page.$$eval('.chart__ruler text', (els) => els.map((e) => e.textContent))
+check(
+  'the square-root scale is drawn rather than asserted',
+  ticks.includes('AU') && ticks.length > 3,
+  ticks.join(' '),
+)
+
 await page.screenshot({ path: join(SHOTS, '11-chart.png'), fullPage: true })
 
 // --- the mission: board, allowance, astrogator (TR-3b, TR-16, TR-20) -------

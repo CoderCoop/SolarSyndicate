@@ -27,11 +27,13 @@ import {
   MU_SUN,
   bodyAngleAt,
   bodyPositionAt,
+  phaseAngleForTransfer,
   stretchedTransfer,
+  synodicPeriodDays,
   transferStateAt,
   type Vec2,
 } from './orbits.js'
-import { type GameTime } from './time.js'
+import { DAY, type GameTime } from './time.js'
 import type { SimState } from './types.js'
 import { transferProfile } from './voyage.js'
 
@@ -44,6 +46,45 @@ export interface ChartBody {
   orbitRadiusAu: number
   /** Ports berthed here, so the chart can label a place by what is at it. */
   ports: { id: string; name: string; moon?: string }[]
+  /**
+   * How far the ship is from it *right now*, in AU.
+   *
+   * The whole reason the bodies move (§5.1): "Mars is sometimes 0.5 AU away and
+   * sometimes 2.5". The chart drew that motion faithfully and never once said
+   * what it cost, which left the most consequential number on the plate as
+   * something the player had to eyeball off a square-root scale.
+   */
+  distanceAu: number
+  /** Where it will be in `leadDays`, so the arc has something to aim at. */
+  lead: Vec2
+}
+
+/**
+ * Whether a crossing is near its window. Design doc §5.1.
+ *
+ * "Planets *move* -- Mars is sometimes 0.5 AU away and sometimes 2.5, so
+ * **launch windows are real gameplay** and the astrogator's job."
+ *
+ * The maths for this has existed since M2 -- `phaseAngleForTransfer` and
+ * `synodicPeriodDays` are written, tested, and were referenced by nothing at
+ * all. A window nobody can see is not gameplay, it is a fact about the
+ * simulation, so this is what puts it on the plate.
+ */
+export interface ChartWindow {
+  toBodyId: string
+  toName: string
+  /** Angle from the ship's body to the target now, radians, signed. */
+  phaseNowRad: number
+  /** The angle a minimum-energy transfer wants at departure. */
+  phaseWantedRad: number
+  /** How far off it is, radians. Zero is the window. */
+  offByRad: number
+  /** Days until the geometry comes round, 0 when it is open now. */
+  daysToWindow: number
+  /** How often it comes round at all. */
+  synodicDays: number
+  /** Inside the tolerance where a transfer is worth flying. */
+  open: boolean
 }
 
 export interface ChartShip {
@@ -68,6 +109,71 @@ export interface ChartView {
   track: Vec2[]
   /** How far out the chart has to reach, in AU. */
   extentAu: number
+  /** Launch windows to everywhere with a port, nearest-open first. */
+  windows: ChartWindow[]
+  /** How far ahead `ChartBody.lead` looks, in days. */
+  leadDays: number
+}
+
+/**
+ * How close the phase has to be before a crossing is worth flying.
+ *
+ * Fifteen degrees. Wide enough that a window is a period rather than an
+ * instant -- the ship has to actually be loaded and fuelled inside it -- and
+ * narrow enough that "wait for it" is a real decision rather than a formality.
+ */
+const WINDOW_TOLERANCE_RAD = (15 * Math.PI) / 180
+
+/** Where the bodies will be a season from now, for the lead marks. */
+const LEAD_DAYS = 90
+
+/** Signed angle from a to b, wrapped to (-pi, pi]. */
+function wrapPi(radians: number): number {
+  let a = radians
+  while (a <= -Math.PI) a += 2 * Math.PI
+  while (a > Math.PI) a -= 2 * Math.PI
+  return a
+}
+
+/**
+ * When the geometry for a crossing next comes round.
+ *
+ * The phase error closes at the difference of the two angular rates, so this is
+ * a division rather than a search -- the same closed-form property the rest of
+ * the sim rests on (§7.2).
+ */
+function windowFor(fromBodyId: string, toBodyId: string, t: GameTime): ChartWindow {
+  const from = getBody(fromBodyId)
+  const to = getBody(toBodyId)
+
+  const phaseNowRad = wrapPi(bodyAngleAt(toBodyId, t) - bodyAngleAt(fromBodyId, t))
+  const phaseWantedRad = wrapPi(phaseAngleForTransfer(fromBodyId, toBodyId))
+  const offByRad = wrapPi(phaseNowRad - phaseWantedRad)
+
+  // Relative angular rate, radians per day. The target closes on the wanted
+  // angle at this rate, whichever way round it is.
+  const rate =
+    (2 * Math.PI) / (to.orbitPeriodDays) - (2 * Math.PI) / (from.orbitPeriodDays)
+
+  const open = Math.abs(offByRad) <= WINDOW_TOLERANCE_RAD
+  let daysToWindow = 0
+  if (!open && rate !== 0) {
+    // Distance still to travel, in the direction the phase is actually moving.
+    const remaining = rate > 0 ? wrapPi(-offByRad) : wrapPi(offByRad)
+    const togo = remaining >= 0 ? remaining : remaining + 2 * Math.PI
+    daysToWindow = togo / Math.abs(rate)
+  }
+
+  return {
+    toBodyId,
+    toName: to.name,
+    phaseNowRad,
+    phaseWantedRad,
+    offByRad,
+    daysToWindow,
+    synodicDays: synodicPeriodDays(fromBodyId, toBodyId),
+    open,
+  }
 }
 
 /**
@@ -101,9 +207,29 @@ export function transferPositionAu(
 export function chartView(state: SimState): ChartView {
   const t = state.now
 
-  const bodies: ChartBody[] = [];
+  // Where the ship is, in metres, so distances can be measured from it rather
+  // than from the sun. Berthed she is at her port's body; under way she is on
+  // the ellipse, which is the position that actually matters for "how far".
+  const shipAt = (() => {
+    const v = state.voyage
+    if (!v) return bodyPositionAt(getPort(state.ship.portId).bodyId, t)
+    const fromBody = getPort(v.fromPortId).bodyId
+    const toBody = getPort(v.toPortId).bodyId
+    if (fromBody === toBody) return bodyPositionAt(fromBody, t)
+    const p = transferPositionAu(
+      fromBody,
+      toBody,
+      v.departedAt,
+      t - v.departedAt,
+      transferProfile(v.optionId).multiplier,
+    )
+    return { x: p.x * AU, y: p.y * AU }
+  })()
+
+  const bodies: ChartBody[] = []
   for (const body of chartBodies()) {
     const p = bodyPositionAt(body.id, t)
+    const ahead = bodyPositionAt(body.id, t + LEAD_DAYS * DAY)
     bodies.push({
       id: body.id,
       name: body.name,
@@ -111,6 +237,8 @@ export function chartView(state: SimState): ChartView {
       y: p.y / AU,
       orbitRadiusAu: body.orbitRadiusAu,
       ports: portsOn(body.id),
+      distanceAu: Math.hypot(p.x - shipAt.x, p.y - shipAt.y) / AU,
+      lead: { x: ahead.x / AU, y: ahead.y / AU },
     })
   }
 
@@ -164,7 +292,15 @@ export function chartView(state: SimState): ChartView {
     Math.hypot(ship.x, ship.y),
   )
 
-  return { bodies, ship, track, extentAu: extentAu * 1.12 }
+  // Windows from wherever she is, to everywhere else with a port. Sorted so
+  // the one the player can act on soonest reads first.
+  const here = getPort(state.voyage ? state.voyage.fromPortId : state.ship.portId).bodyId
+  const windows = bodies
+    .filter((b) => b.id !== here)
+    .map((b) => windowFor(here, b.id, t))
+    .sort((a, b) => a.daysToWindow - b.daysToWindow)
+
+  return { bodies, ship, track, extentAu: extentAu * 1.12, windows, leadDays: LEAD_DAYS }
 }
 
 /** Every body with a port on it, innermost first. */
