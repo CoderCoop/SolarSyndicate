@@ -9,6 +9,43 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-07-30
+
+A minor: the chart stopped being a picture of the solar system and started
+being an instrument you plan with.
+
+### Added
+
+- **Launch windows, at last.** §5.1 has said since the beginning that "planets
+  *move* — Mars is sometimes 0.5 AU away and sometimes 2.5, so **launch windows
+  are real gameplay** and the astrogator's job". The maths for it —
+  `phaseAngleForTransfer`, `synodicPeriodDays` — was written and tested in M2
+  and then referenced by *nothing at all*, which made it a fact about the
+  simulation rather than something a player could act on. The chart now says
+  when each crossing is worth flying: "Mars — opens in 227 days · 105° out ·
+  comes round every 2.1 years". Waiting the stated time really does open it, to
+  within a fiftieth of a degree, and that is pinned as a test — a window that
+  says 227 days and is wrong is worse than no window, because the player will
+  plan around it.
+- **How far away everything is, right now.** The other half of that sentence.
+  The chart drew the motion faithfully and never once said what it cost, which
+  left the most consequential number on the plate as something to eyeball off a
+  square-root scale. Measured from the ship rather than from the sun, so
+  wherever she is, the ranges are hers.
+- **A scale ruler.** The square-root radial scale is the one thing on the
+  drawing a player has to take on trust. It is drawn now rather than asserted —
+  the ticks crowd toward the rim, and that crowding *is* the distortion.
+- **Where each world will be in ninety days**, as a faint arc along its own
+  orbit. A body is a moving target, and an arc has to be aimed at where it is
+  going.
+
+### Changed
+
+- **Worlds are drawn as worlds.** Three identical grey dots became Earth, Mars
+  and Ceres at distinct sizes and colours, each with its lit limb facing the
+  sun — the same visual vocabulary the route strip already used, so a player
+  who has learned which one is Ceres does not have to learn it twice.
+
 ## [0.10.0] — 2026-07-30
 
 A minor, and the one that finishes §7.4. "No death without foreshadowing **and a

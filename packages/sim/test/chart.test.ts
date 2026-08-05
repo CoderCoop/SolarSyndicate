@@ -254,3 +254,91 @@ describe('the arc drawn is the trajectory that was chosen', () => {
     expect(Math.hypot(flown.x - declined.x, flown.y - declined.y)).toBeGreaterThan(0.05)
   })
 })
+
+/**
+ * Launch windows. Design doc §5.1.
+ *
+ * "Planets *move* -- Mars is sometimes 0.5 AU away and sometimes 2.5, so
+ * **launch windows are real gameplay** and the astrogator's job."
+ *
+ * The maths for this was written and tested in M2 and then referenced by
+ * nothing at all, which made it a fact about the simulation rather than
+ * gameplay. These tests are about it being reachable and, more importantly,
+ * being *right* -- a window that says "227 days" and is wrong is worse than no
+ * window, because the player will plan around it.
+ */
+describe('the chart says when a crossing is worth flying', () => {
+  it('offers a window to everywhere but where the ship already is', () => {
+    const chart = chartView(world())
+    expect(chart.windows.map((w) => w.toBodyId).sort()).toEqual(['ceres', 'mars'])
+  })
+
+  it('puts the soonest one first, because that is the one to act on', () => {
+    const chart = chartView(world())
+    const days = chart.windows.map((w) => w.daysToWindow)
+    expect(days).toEqual([...days].sort((a, b) => a - b))
+  })
+
+  it('is right: waiting the stated time actually opens it', () => {
+    // The check that matters. A window that says 227 days and is wrong is
+    // worse than no window, because the player will plan around it.
+    const s = world()
+    for (const w of chartView(s).windows) {
+      const later = chartView(advanceTo(s, s.now + w.daysToWindow * DAY))
+      const then = later.windows.find((x) => x.toBodyId === w.toBodyId)!
+      expect(Math.abs(then.offByRad)).toBeLessThan(0.02)
+      expect(then.open).toBe(true)
+    }
+  })
+
+  it('comes round again on the synodic period', () => {
+    // Earth and Mars line up every 780 days, which is the textbook figure and
+    // the reason a missed window is expensive.
+    const mars = chartView(world()).windows.find((w) => w.toBodyId === 'mars')!
+    expect(mars.synodicDays).toBeGreaterThan(770)
+    expect(mars.synodicDays).toBeLessThan(790)
+    expect(mars.daysToWindow).toBeLessThanOrEqual(mars.synodicDays)
+  })
+
+  it('reports zero days left once it is open', () => {
+    const s = world()
+    const mars = chartView(s).windows.find((w) => w.toBodyId === 'mars')!
+    const atWindow = chartView(advanceTo(s, s.now + mars.daysToWindow * DAY))
+    const open = atWindow.windows.find((w) => w.toBodyId === 'mars')!
+    expect(open.open).toBe(true)
+    expect(open.daysToWindow).toBe(0)
+  })
+})
+
+describe('the chart says how far away things are', () => {
+  it('measures from the ship, not from the sun', () => {
+    // Berthed at Gateway, so Earth is zero away and the others are not.
+    const chart = chartView(world())
+    const earth = chart.bodies.find((b) => b.id === 'earth')!
+    expect(earth.distanceAu).toBeCloseTo(0, 9)
+    for (const b of chart.bodies.filter((x) => x.id !== 'earth')) {
+      expect(b.distanceAu).toBeGreaterThan(0.3)
+    }
+  })
+
+  it('moves as the bodies do, which is the whole point of them moving', () => {
+    // §5.1: "Mars is sometimes 0.5 AU away and sometimes 2.5". The chart drew
+    // that motion faithfully and never once said what it cost.
+    const now = chartView(world()).bodies.find((b) => b.id === 'mars')!.distanceAu
+    const later = chartView(advanceTo(world(), 400 * DAY)).bodies.find(
+      (b) => b.id === 'mars',
+    )!.distanceAu
+    expect(Math.abs(now - later)).toBeGreaterThan(0.5)
+  })
+
+  it('leads each body to where it will be, on its own orbit', () => {
+    const chart = chartView(world())
+    expect(chart.leadDays).toBeGreaterThan(0)
+    for (const b of chart.bodies) {
+      // The lead mark sits on the same circle: a body does not change orbit.
+      expect(Math.hypot(b.lead.x, b.lead.y)).toBeCloseTo(b.orbitRadiusAu, 6)
+      // And it has actually moved, or the mark says nothing.
+      expect(Math.hypot(b.lead.x - b.x, b.lead.y - b.y)).toBeGreaterThan(0.01)
+    }
+  })
+})
