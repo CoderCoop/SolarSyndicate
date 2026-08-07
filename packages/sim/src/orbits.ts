@@ -290,6 +290,27 @@ export interface TransferState {
   radiusM: number
   /** Angle swept since departure, radians. Zero at the moment of departure. */
   sweptRad: number
+  /** Angle from periapsis, radians. The orbital element, not the sweep. */
+  trueAnomalyRad: number
+  /** Speed relative to the primary, m/s. Vis-viva at this radius. */
+  speedMs: number
+  /**
+   * Velocity split about the local horizontal: `radialMs` is outward-positive,
+   * `transverseMs` is along the direction of travel.
+   *
+   * Kept as components rather than a bearing because that is what the chart
+   * needs to point an arrow, and what tells a player whether the ship is
+   * climbing or falling -- which is most of what a transfer *is*. Both come
+   * from the angular momentum, so they agree with the vis-viva speed exactly
+   * rather than approximately.
+   */
+  radialMs: number
+  transverseMs: number
+  /**
+   * Angle between velocity and local horizontal, radians. Positive climbing
+   * away from the primary, negative falling toward it, zero at either apsis.
+   */
+  flightPathAngleRad: number
 }
 
 /**
@@ -322,9 +343,39 @@ export function transferStateAt(
       Math.sqrt(1 - e) * Math.cos(E / 2),
     )
 
+  // Specific angular momentum. Constant along the orbit, which is what makes
+  // the two velocity components exact rather than differenced off vis-viva.
+  const h = Math.sqrt(Math.max(0, mu * a * (1 - e * e)))
+  const radialMs = h === 0 ? 0 : ((mu / h) * e * Math.sin(nu))
+  const transverseMs = h === 0 ? 0 : (mu / h) * (1 + e * Math.cos(nu))
+
   // Departure is at an apsis, where true and mean anomaly coincide -- so the
   // sweep since departure is just the difference.
-  return { radiusM: a * (1 - e * Math.cos(E)), sweptRad: nu - departureAnomalyRad }
+  return {
+    radiusM: a * (1 - e * Math.cos(E)),
+    sweptRad: nu - departureAnomalyRad,
+    trueAnomalyRad: nu,
+    speedMs: Math.hypot(radialMs, transverseMs),
+    radialMs,
+    transverseMs,
+    flightPathAngleRad: Math.atan2(radialMs, transverseMs),
+  }
+}
+
+/**
+ * Speed and heading of a body on its circular orbit, m/s.
+ *
+ * The berthed case. A ship alongside is not stationary -- she is doing 29.8
+ * km/s round the sun with Earth, and a chart that reports 0 while the dot
+ * visibly moves is telling the player something false about the frame it is
+ * drawn in.
+ */
+export function bodyVelocityAt(bodyId: string, t: GameTime): Vec2 {
+  const r = getBody(bodyId).orbitRadiusAu * AU
+  const speed = Math.sqrt(MU_SUN / r)
+  const angle = bodyAngleAt(bodyId, t)
+  // Prograde: the tangent, a quarter turn ahead of the radius.
+  return { x: -speed * Math.sin(angle), y: speed * Math.cos(angle) }
 }
 
 /** Speed at radius `r` on an ellipse of semi-major axis `a`. Vis-viva. */

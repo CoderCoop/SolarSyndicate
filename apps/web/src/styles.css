@@ -1395,12 +1395,77 @@ button {
   filter: drop-shadow(0 0 6px rgba(232, 163, 61, 0.6));
 }
 
+/*
+ * The arc, cut at the ship. What is behind her happened; what is ahead is a
+ * commitment she cannot cheaply change. Drawing both the same made "how much
+ * of this is left" a thing to estimate by eye off a square-root scale.
+ */
 .chart__track {
   fill: none;
   stroke: var(--cyan);
   stroke-width: 1.2;
+}
+
+.chart__track--flown {
+  opacity: 0.4;
+}
+
+.chart__track--ahead {
   stroke-dasharray: 3 2.5;
+  opacity: 0.85;
+}
+
+/* Where the arrival burn happens. The one point of the course the player can
+   plan against, so it is marked rather than left as the end of a line. */
+.chart__intercept circle {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 0.8;
+  opacity: 0.8;
+}
+
+.chart__intercept line {
+  stroke: var(--cyan);
+  stroke-width: 0.6;
+  opacity: 0.5;
+}
+
+.chart__intercept text {
+  font-size: 6.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--cyan);
   opacity: 0.75;
+}
+
+/* --- longitude --- */
+
+/*
+ * A chart you cannot take a bearing off is a picture. The graticule is what
+ * turns "out past Earth somewhere" into a number, without the player having to
+ * trust the readout underneath -- it is the same figure, drawn.
+ */
+.chart__graticule line {
+  stroke: var(--line);
+  stroke-width: 0.4;
+  opacity: 0.28;
+}
+
+.chart__graticule .is-cardinal line {
+  opacity: 0.5;
+}
+
+.chart__graticule text {
+  font-size: 6.5px;
+  fill: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart__rim {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 0.5;
+  opacity: 0.45;
 }
 
 /* --- worlds --- */
@@ -1521,6 +1586,66 @@ button {
 
 .chart__ship.is-under-way .chart__ship-halo {
   stroke-dasharray: 2 2;
+}
+
+/*
+ * The heading needle, drawn longer the faster she is going. A ship crawling
+ * through aphelion and one whipping through perihelion are the same dot on a
+ * static chart, and the difference between them is most of what a transfer is.
+ */
+.chart__velocity line {
+  stroke: var(--cyan);
+  stroke-width: 1.1;
+}
+
+.chart__arrowhead {
+  fill: var(--cyan);
+}
+
+/* ---------------------------------------------------------------- telemetry */
+
+/*
+ * The figures behind the arrow (§1 pillar 2). Grouped the way a navigator asks
+ * for them -- where, how fast, where to -- rather than as a flat list, and read
+ * off the same view the plate is drawn from so the two cannot drift apart.
+ */
+.telemetry {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.telemetry__row {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.telemetry__label {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.telemetry__value {
+  margin: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.telemetry__detail {
+  display: block;
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+  font-variant-numeric: normal;
 }
 
 .chart__caption {

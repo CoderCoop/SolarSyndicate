@@ -9,6 +9,54 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.2] — 2026-08-07
+
+### Added
+
+- **The chart says how fast the ship is going, and which way.** It has always
+  put her in the right place and said nothing else about her. Every number
+  needed was already in the sim — vis-viva has priced each crossing since M2 —
+  and none of it had ever reached the plate, so "where am I, how fast, and
+  which way" were three questions a star chart could not answer.
+
+  The plate now carries a **heading needle drawn longer the faster she is
+  going**, so a ship crawling through aphelion and one whipping through
+  perihelion stop being the same dot; a **graticule** every 30° with the
+  cardinal bearings labelled, so a longitude can be read off the drawing rather
+  than taken on trust; the **arc cut at the ship**, solid behind and dashed
+  ahead, because how much of this is left was a thing to estimate by eye off a
+  square-root scale; and a **marked intercept** where the arrival burn happens.
+  The ship glyph is turned to her heading, which it never was.
+
+  Underneath, the figures: radius and heliocentric longitude, speed with
+  whether she is climbing or falling and by how much, the berth she is booked
+  into with the arrival burn counted down, arc still to run, and the perihelion
+  and aphelion of the ellipse she is on — so an Express leg visibly throws its
+  far apsis past the destination.
+
+  A **berthed ship reads 29.78 km/s**, not zero. She is alongside, and
+  alongside is going round the sun; the chart is drawn in the heliocentric
+  frame and reporting nought would be quoting a different one.
+
+  The needle's *bearing on the plate* is taken through the projection, so it
+  lies along the arc it belongs to — the square-root radial scale bends
+  direction as well as distance. The true flight path angle is stated as a
+  number in the readout, where it cannot be distorted.
+
+### Fixed
+
+- **An express ellipse could be clipped off the edge of the chart.** The plate
+  was sized to the orbits and the ship, so the overshoot past the destination —
+  the exact thing the extra delta-v buys — was the part that ran off the rim.
+
+### Changed
+
+- `TransferState` carries true anomaly, speed, the radial and transverse
+  velocity components and the flight path angle, all from the conserved angular
+  momentum so they agree with vis-viva exactly rather than approximately. New
+  `bodyVelocityAt` gives a body's circular orbital velocity, which is what a
+  berthed ship is doing.
+
 ## [0.11.1] — 2026-08-05
 
 ### Fixed
