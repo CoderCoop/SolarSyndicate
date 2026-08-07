@@ -10,6 +10,8 @@
 import { describe, expect, it } from 'vitest'
 import { content } from '@solsyn/data'
 import {
+  AU,
+  MU_SUN,
   advanceTo,
   applyCommand,
   chartView,
@@ -307,6 +309,159 @@ describe('the chart says when a crossing is worth flying', () => {
     const open = atWindow.windows.find((w) => w.toBodyId === 'mars')!
     expect(open.open).toBe(true)
     expect(open.daysToWindow).toBe(0)
+  })
+})
+
+/**
+ * Ship telemetry. Design doc §5.1, §1 pillar 2.
+ *
+ * The chart knew where the ship was and nothing else about her -- not how
+ * fast, not which way, not where the arc ended. Every one of those numbers
+ * already existed in the transfer maths; none of them had ever been read.
+ *
+ * The test that matters here is the finite-difference one. A velocity that is
+ * not the derivative of the drawn position is a decoration, and it is the
+ * easiest possible thing to get subtly wrong -- a sign, a frame, a quarter
+ * turn -- while still looking plausible on the plate.
+ */
+describe('the chart reports where the ship is, how fast, and which way', () => {
+  const MARS_EXPRESS_S = stretchedTransfer('earth', 'mars', 1.12).durationS
+
+  /**
+   * Mars on Express, `elapsed` seconds into the crossing.
+   *
+   * Built rather than flown, as elsewhere in this file -- the starting ship
+   * cannot afford Mars, and running the clock five months forward would kill
+   * the crew and have the ship recovered out from under the test (§7.4). The
+   * departure is backdated instead, which is the same geometry with none of
+   * the consequences.
+   */
+  function toMars(elapsed = 0): SimState {
+    const s = world()
+    const departedAt = s.now - elapsed
+    s.voyage = {
+      optionId: 'express',
+      fromPortId: 'port.gateway',
+      toPortId: 'port.phobos',
+      departedAt,
+      arrivesAt: departedAt + MARS_EXPRESS_S,
+      deltaVMs: 0,
+      propellantSpentKg: 0,
+    }
+    s.ship.docked = false
+    return s
+  }
+
+  /** The same crossing, `step` further on. For finite differences. */
+  function stepped(s: SimState, step: number): SimState {
+    return { ...s, now: s.now + step }
+  }
+
+  it('reports position as radius and longitude, agreeing with the dot', () => {
+    for (const ship of [chartView(world()).ship, chartView(toMars(40 * DAY)).ship]) {
+      expect(ship.radiusAu).toBeCloseTo(Math.hypot(ship.x, ship.y), 9)
+      const drawn = ((Math.atan2(ship.y, ship.x) * 180) / Math.PI + 360) % 360
+      expect(ship.longitudeDeg).toBeCloseTo(drawn, 9)
+      expect(ship.longitudeDeg).toBeGreaterThanOrEqual(0)
+      expect(ship.longitudeDeg).toBeLessThan(360)
+    }
+  })
+
+  it('gives a berthed ship her port\'s orbital velocity, not zero', () => {
+    // She is alongside, and alongside is doing 29.8 km/s. Reporting zero would
+    // be quoting a frame the chart is not drawn in.
+    const ship = chartView(world()).ship
+    expect(ship.speedMs / 1000).toBeCloseTo(29.78, 1)
+    // Circular orbit: all of it across the radius, none along it.
+    expect(ship.flightPathAngleRad).toBe(0)
+    expect(ship.heading.x * ship.x + ship.heading.y * ship.y).toBeCloseTo(0, 6)
+    expect(Math.hypot(ship.heading.x, ship.heading.y)).toBeCloseTo(1, 9)
+  })
+
+  it('points the heading along the way the dot actually moves', () => {
+    // The check the whole readout rests on: the arrow has to be the derivative
+    // of the drawing. A wrong sign or a quarter turn looks fine on the plate.
+    for (const elapsed of [10 * DAY, 60 * DAY, 130 * DAY]) {
+      const s = toMars(elapsed)
+      const chart = chartView(s)
+      const ahead = chartView(stepped(s, 0.5 * DAY)).ship
+      const moved = { x: ahead.x - chart.ship.x, y: ahead.y - chart.ship.y }
+      const length = Math.hypot(moved.x, moved.y)
+      const dot = (moved.x * chart.ship.heading.x + moved.y * chart.ship.heading.y) / length
+      expect(dot).toBeGreaterThan(0.999)
+    }
+  })
+
+  it('gives a speed that is vis-viva on the ellipse she is on', () => {
+    const s = toMars(60 * DAY)
+    const { ship } = chartView(s)
+    const a = (ship.apoapsisAu! + ship.periapsisAu!) / 2
+    // v^2 = mu (2/r - 1/a), in AU-scaled metres.
+    const expected = Math.sqrt(MU_SUN * (2 / (ship.radiusAu * AU) - 1 / (a * AU)))
+    expect(ship.speedMs).toBeCloseTo(expected, 3)
+    // And the finite difference agrees, so the number and the picture match.
+    const step = 0.25 * DAY
+    const ahead = chartView(stepped(s, step)).ship
+    const measured = (Math.hypot(ahead.x - ship.x, ahead.y - ship.y) * AU) / step
+    expect(measured / ship.speedMs).toBeCloseTo(1, 2)
+  })
+
+  it('slows as she climbs and says so with the flight path angle', () => {
+    const early = chartView(toMars(10 * DAY)).ship
+    const late = chartView(toMars(130 * DAY)).ship
+    expect(late.radiusAu).toBeGreaterThan(early.radiusAu)
+    expect(late.speedMs).toBeLessThan(early.speedMs)
+    // Outbound is climbing, so the velocity has an outward component.
+    expect(early.flightPathAngleRad).toBeGreaterThan(0)
+    expect(late.flightPathAngleRad).toBeGreaterThan(0)
+    // Departure is at an apsis, where the climb rate is zero.
+    expect(chartView(toMars()).ship.flightPathAngleRad).toBeCloseTo(0, 6)
+  })
+
+  it('describes the shape of the course by its apsides', () => {
+    const ship = chartView(toMars(60 * DAY)).ship
+    // Express throws apoapsis past Mars, which is what the extra delta-v buys.
+    expect(ship.periapsisAu).toBeCloseTo(1, 3)
+    expect(ship.apoapsisAu!).toBeGreaterThan(1.523679)
+    expect(ship.radiusAu).toBeGreaterThanOrEqual(ship.periapsisAu! - 1e-9)
+    expect(ship.radiusAu).toBeLessThanOrEqual(ship.apoapsisAu! + 1e-9)
+  })
+
+  it('says where the arc ends, and how much of it is left to fly', () => {
+    const s = toMars(60 * DAY)
+    const ship = chartView(s).ship
+    // The intercept is on the destination orbit, because that is where the
+    // arrival burn happens.
+    expect(Math.hypot(ship.intercept!.x, ship.intercept!.y)).toBeCloseTo(1.523679, 3)
+
+    // Along the arc, so it is longer than the chord across it.
+    const chord = Math.hypot(ship.intercept!.x - ship.x, ship.intercept!.y - ship.y)
+    expect(ship.toGoAu!).toBeGreaterThan(chord)
+
+    // And it runs down to nothing.
+    const later = chartView(toMars(MARS_EXPRESS_S - DAY)).ship
+    expect(later.toGoAu!).toBeLessThan(ship.toGoAu!)
+    expect(later.toGoAu!).toBeLessThan(0.2)
+  })
+
+  it('keeps the plate big enough for an ellipse that overshoots', () => {
+    // Express bulges past Mars by design (§5.2). Sizing the chart to the
+    // orbits alone clipped off exactly the thing the player paid for.
+    const chart = chartView(toMars(60 * DAY))
+    for (const p of chart.track) {
+      expect(chart.extentAu).toBeGreaterThanOrEqual(Math.hypot(p.x, p.y))
+    }
+    expect(chart.extentAu).toBeGreaterThan(chart.ship.apoapsisAu!)
+  })
+
+  it('reports the body\'s own motion on a hop inside one well', () => {
+    // Gateway to Tranquillity does not move at solar-system scale, so the
+    // heliocentric telemetry is Earth's -- which is the truth of it, not a
+    // placeholder.
+    const ship = chartView(underWay()).ship
+    expect(ship.local).toBe(true)
+    expect(ship.speedMs / 1000).toBeCloseTo(29.78, 1)
+    expect(ship.toGoAu).toBeUndefined()
   })
 })
 

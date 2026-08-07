@@ -657,6 +657,37 @@ check(
   ticks.join(' '),
 )
 
+// The ship's own state (§5.1). The dot was always in the right place and said
+// nothing else about her -- not how fast, not which way.
+const bearings = await page.$$eval('.chart__graticule text', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  'longitude can be read off the plate, not just off the readout',
+  bearings.length === 4 && bearings.includes('0°') && bearings.includes('180°'),
+  bearings.join(' '),
+)
+
+const telem = await page.$$eval('.telemetry__row', (els) =>
+  els.map((e) => e.textContent?.replace(/\s+/g, ' ').trim()),
+)
+check(
+  'the chart reports the ship as position, velocity and course',
+  telem.length >= 3 &&
+    /^Position\d+\.\d+ AU/.test(telem[0] ?? '') &&
+    /^Velocity\d+\.\d+ km\/s/.test(telem[1] ?? '') &&
+    /^Course/.test(telem[2] ?? ''),
+  telem.join(' | '),
+)
+check(
+  'a berthed ship is moving with her berth, not standing still (§5.1)',
+  // 29.8 km/s round the sun. Reporting nought would be quoting a frame the
+  // plate is not drawn in.
+  /^Velocity29\.[0-9]+ km\/s/.test(telem[1] ?? ''),
+  telem[1] ?? '',
+)
+check('and the heading needle is drawn from her', await page.isVisible('.chart__velocity line'))
+
 await page.screenshot({ path: join(SHOTS, '11-chart.png'), fullPage: true })
 
 // --- the mission: board, allowance, astrogator (TR-3b, TR-16, TR-20) -------
@@ -1408,6 +1439,26 @@ check(
   Number.parseFloat(speed ?? '') > 0.05,
   speed?.trim() ?? '',
 )
+
+// The chart, with a ship on it. Berthed it reads her berth's orbital motion;
+// under way it has to name where she is going and when she gets there (§5.1).
+await tap(v1, '.tabs__btn:has-text("Chart")')
+await v1.waitForSelector('.telemetry')
+const underWayTelem = await v1.$$eval('.telemetry__row', (els) =>
+  els.map((e) => e.textContent?.replace(/\s+/g, ' ').trim()),
+)
+check(
+  'the chart names the berth being flown to, and when she gets there',
+  /^Course\S.*arrival burn in \d+ [hd]/.test(underWayTelem[2] ?? ''),
+  underWayTelem[2] ?? '',
+)
+check(
+  'and the ship glyph is turned to her heading rather than pointing up',
+  /rotate\(-?\d/.test((await v1.getAttribute('.chart__ship-mark', 'transform')) ?? ''),
+  (await v1.getAttribute('.chart__ship-mark', 'transform')) ?? '',
+)
+await tap(v1, '.tabs__btn:has-text("Mission")')
+await v1.waitForSelector('.telem__burns')
 
 const burnRows = await v1.$$eval('.telem__burns li strong', (els) =>
   els.map((e) => e.textContent?.trim()),

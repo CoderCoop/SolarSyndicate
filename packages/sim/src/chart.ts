@@ -20,6 +20,16 @@
  * they had declined. The geometry now comes from the same `Transfer` the
  * astrogator priced -- §1 pillar 2 is that the numbers are real, and a picture
  * of a different trajectory is no more true than a fake number.
+ *
+ * **The ship carries her telemetry with her**: radius, longitude, speed,
+ * heading, flight path angle, the apsides of the ellipse she is on and how far
+ * along the arc is left. All of it was already in the sim -- vis-viva has
+ * priced every crossing since M2 -- and none of it had ever reached the plate,
+ * which left "where am I, how fast, and which way" as three questions a chart
+ * could not answer. Everything is in the **heliocentric frame**, the frame the
+ * chart is drawn in, including alongside: a ship berthed at Gateway is doing
+ * 29.8 km/s, and reporting zero would be quoting a different frame from the
+ * picture.
  */
 import { content, getBody, getPort } from '@solsyn/data'
 import {
@@ -27,6 +37,7 @@ import {
   MU_SUN,
   bodyAngleAt,
   bodyPositionAt,
+  bodyVelocityAt,
   phaseAngleForTransfer,
   stretchedTransfer,
   synodicPeriodDays,
@@ -87,6 +98,21 @@ export interface ChartWindow {
   open: boolean
 }
 
+/**
+ * Where the ship is and where she is going, as an instrument reads it.
+ *
+ * A dot on a plate says *there*. It does not say how fast, which way, whether
+ * she is climbing or falling, or where the arc actually ends -- and those are
+ * the four things a navigator looks at. All of them already existed in the
+ * sim: vis-viva has priced every crossing since M2, and the arrival point is
+ * just the target body evaluated at `arrivesAt`. None of it had ever reached
+ * the plate.
+ *
+ * Everything here is in the **heliocentric frame**, which is the frame the
+ * chart is drawn in. That matters for the berthed case: a ship alongside
+ * Gateway is doing 29.8 km/s, and saying "0" would be reporting a different
+ * frame from the one the picture is in.
+ */
 export interface ChartShip {
   x: number
   y: number
@@ -95,11 +121,45 @@ export interface ChartShip {
   /** Under way between these, if under way. */
   fromBodyId?: string
   toBodyId?: string
+  /**
+   * The berth she is actually booked into.
+   *
+   * The body is not the destination: "Mars" and "Phobos Anchorage" are the
+   * same dot at this scale but only one of them is a place the ship can tie up
+   * at, and the readout is answering "where am I going".
+   */
+  toPortName?: string
   fractionComplete?: number
   /** The trajectory being flown -- "Express" -- so the arc can be named. */
   profileLabel?: string
   /** True when the crossing never leaves one body's neighbourhood. */
   local: boolean
+
+  /** Distance from the sun, AU. */
+  radiusAu: number
+  /** Heliocentric longitude, degrees in [0, 360), measured the way the chart draws it. */
+  longitudeDeg: number
+  /** Speed in the heliocentric frame, m/s. */
+  speedMs: number
+  /** Unit vector along the velocity, in chart coordinates. Where she is pointed. */
+  heading: Vec2
+  /**
+   * Positive climbing away from the sun, negative falling toward it, radians.
+   *
+   * Zero berthed (a circular orbit is all transverse) and zero at either apsis
+   * of a transfer, which is exactly where the burns happen.
+   */
+  flightPathAngleRad: number
+
+  /** Where she meets the target, AU. Only under way between bodies. */
+  intercept?: Vec2
+  /** The apsides of the ellipse she is on, AU -- the shape of the course. */
+  apoapsisAu?: number
+  periapsisAu?: number
+  /** Distance still to fly along the arc, AU. */
+  toGoAu?: number
+  /** Days until the arrival burn. Under way, either kind of crossing. */
+  daysToArrival?: number
 }
 
 export interface ChartView {
@@ -193,15 +253,49 @@ export function transferPositionAu(
   elapsed: number,
   semiMajorMultiplier = 1,
 ): Vec2 {
+  return arcAt(fromBodyId, toBodyId, departedAt, elapsed, semiMajorMultiplier).position
+}
+
+/** Position *and* velocity on the arc, both in the chart's heliocentric frame. */
+function arcAt(
+  fromBodyId: string,
+  toBodyId: string,
+  departedAt: GameTime,
+  elapsed: number,
+  semiMajorMultiplier: number,
+) {
   // The same call the astrogator priced the option with, so the drawing and
   // the invoice cannot come apart (§1 pillar 2).
   const leg = stretchedTransfer(fromBodyId, toBodyId, semiMajorMultiplier)
-  const { radiusM, sweptRad } = transferStateAt(leg, MU_SUN, elapsed)
+  const state = transferStateAt(leg, MU_SUN, elapsed)
 
   // Anchor the arc to where the ship actually left.
-  const angle = bodyAngleAt(fromBodyId, departedAt) + sweptRad
+  const angle = bodyAngleAt(fromBodyId, departedAt) + state.sweptRad
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
 
-  return { x: (radiusM * Math.cos(angle)) / AU, y: (radiusM * Math.sin(angle)) / AU }
+  return {
+    leg,
+    state,
+    position: { x: (state.radiusM * cos) / AU, y: (state.radiusM * sin) / AU },
+    // Radial component along the outward unit vector, transverse along the
+    // tangent a quarter turn ahead of it.
+    velocity: {
+      x: state.radialMs * cos - state.transverseMs * sin,
+      y: state.radialMs * sin + state.transverseMs * cos,
+    },
+  }
+}
+
+/** Heliocentric longitude of a chart position, degrees in [0, 360). */
+function longitudeOf(p: Vec2): number {
+  const deg = (Math.atan2(p.y, p.x) * 180) / Math.PI
+  return (deg + 360) % 360
+}
+
+function unit(v: Vec2): Vec2 {
+  const m = Math.hypot(v.x, v.y)
+  return m < 1e-9 ? { x: 0, y: 0 } : { x: v.x / m, y: v.y / m }
 }
 
 export function chartView(state: SimState): ChartView {
@@ -249,7 +343,20 @@ export function chartView(state: SimState): ChartView {
   if (!voyage) {
     const home = getPort(state.ship.portId)
     const at = bodyPositionAt(home.bodyId, t)
-    ship = { x: at.x / AU, y: at.y / AU, atPortId: home.id, local: false }
+    const v = bodyVelocityAt(home.bodyId, t)
+    ship = {
+      x: at.x / AU,
+      y: at.y / AU,
+      atPortId: home.id,
+      local: false,
+      radiusAu: Math.hypot(at.x, at.y) / AU,
+      longitudeDeg: longitudeOf(at),
+      // She is alongside, and alongside is doing 29.8 km/s. The frame the
+      // chart is drawn in is the frame it has to report.
+      speedMs: Math.hypot(v.x, v.y),
+      heading: unit(v),
+      flightPathAngleRad: 0,
+    }
   } else {
     const fromBody = getPort(voyage.fromPortId).bodyId
     const toBody = getPort(voyage.toPortId).bodyId
@@ -259,8 +366,10 @@ export function chartView(state: SimState): ChartView {
 
     if (fromBody === toBody) {
       // A hop inside one gravity well. At this scale the ship has not moved,
-      // and pretending otherwise would put it somewhere it is not.
+      // and pretending otherwise would put it somewhere it is not -- so the
+      // heliocentric telemetry is the body's, which is the truth of it.
       const at = bodyPositionAt(fromBody, t)
+      const bv = bodyVelocityAt(fromBody, t)
       ship = {
         x: at.x / AU,
         y: at.y / AU,
@@ -269,27 +378,64 @@ export function chartView(state: SimState): ChartView {
         fractionComplete: fraction,
         profileLabel: profile.label,
         local: true,
+        radiusAu: Math.hypot(at.x, at.y) / AU,
+        longitudeDeg: longitudeOf(at),
+        speedMs: Math.hypot(bv.x, bv.y),
+        heading: unit(bv),
+        flightPathAngleRad: 0,
+        toPortName: getPort(voyage.toPortId).name,
+        daysToArrival: Math.max(0, voyage.arrivesAt - t) / DAY,
       }
     } else {
-      const arcAt = (elapsed: number) =>
-        transferPositionAu(fromBody, toBody, voyage.departedAt, elapsed, profile.multiplier)
+      const at = (elapsed: number) =>
+        arcAt(fromBody, toBody, voyage.departedAt, elapsed, profile.multiplier)
+
+      const now = at(t - voyage.departedAt)
+      const steps = 48
+      track = Array.from({ length: steps + 1 }, (_, i) => at((total * i) / steps).position)
+
+      // What is left to fly, along the arc rather than across the chord. The
+      // polyline is the same one being drawn, so the number and the picture
+      // are measurements of one object.
+      const remaining = track.filter((_, i) => (i / steps) >= fraction)
+      const path = [now.position, ...remaining]
+      let toGoAu = 0
+      for (let i = 1; i < path.length; i++) {
+        toGoAu += Math.hypot(path[i]!.x - path[i - 1]!.x, path[i]!.y - path[i - 1]!.y)
+      }
+
+      const a = now.leg.semiMajorAxisM / AU
+      const e = now.leg.eccentricity
 
       ship = {
-        ...arcAt(t - voyage.departedAt),
+        ...now.position,
         fromBodyId: fromBody,
         toBodyId: toBody,
         fractionComplete: fraction,
         profileLabel: profile.label,
         local: false,
+        radiusAu: now.state.radiusM / AU,
+        longitudeDeg: longitudeOf(now.position),
+        speedMs: now.state.speedMs,
+        heading: unit(now.velocity),
+        flightPathAngleRad: now.state.flightPathAngleRad,
+        intercept: track[steps]!,
+        apoapsisAu: a * (1 + e),
+        periapsisAu: a * (1 - e),
+        toGoAu,
+        toPortName: getPort(voyage.toPortId).name,
+        daysToArrival: Math.max(0, voyage.arrivesAt - t) / DAY,
       }
-      const steps = 48
-      track = Array.from({ length: steps + 1 }, (_, i) => arcAt((total * i) / steps))
     }
   }
 
   const extentAu = Math.max(
     ...bodies.map((b) => b.orbitRadiusAu),
     Math.hypot(ship.x, ship.y),
+    // An express ellipse throws its apoapsis past the destination orbit by
+    // design (§5.2). Sizing the plate to the orbits alone clipped the very
+    // bulge that distinguishes the profile the player paid for.
+    ...track.map((p) => Math.hypot(p.x, p.y)),
   )
 
   // Windows from wherever she is, to everywhere else with a port. Sorted so
