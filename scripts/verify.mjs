@@ -1515,6 +1515,81 @@ check('no errors flying the run', voyageErrors.length === 0, voyageErrors.slice(
 
 await v2.screenshot({ path: join(SHOTS, '15-settled.png'), fullPage: true })
 
+// ---------------------------------------------------------------------------
+// --- the ship screen scrolls smoothly (§8.1) -------------------------------
+//
+// The cross-section is the screen the player spends most of their time on and
+// it is the most expensive thing the game draws: seven deck schematics, sixty
+// filtered elements, a real gaussian shadow pass under each deck. A filter that
+// shares a layer with the page is re-rasterised whenever that layer repaints,
+// and scrolling repaints continuously -- so the drawing was being paid for
+// again on every scrolled pixel.
+//
+// Measured rather than asserted, because this is exactly the kind of cost that
+// comes back silently the next time a glow is added. The control run on a plain
+// text screen calibrates the machine, so the check means "the ship screen is no
+// harder to scroll than the log", not "this runner is fast".
+console.log('\n  -- scrolling the ship screen --')
+
+const perfCtx = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+})
+const perf = await perfCtx.newPage()
+const cdp = await perfCtx.newCDPSession(perf)
+// A mid-range phone against a developer machine, near enough. High enough that
+// a real regression is unmissable, low enough that a slow runner still passes.
+await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 })
+await perf.goto(base, { waitUntil: 'networkidle' })
+await perf.waitForSelector('.ship')
+await perf.waitForTimeout(600)
+
+/** Drag a screen a page and a half and count the frames that took too long. */
+/* The body of page.evaluate runs in the browser, not in Node -- so its globals
+   are the page's, which is why eslint cannot see them here. */
+/* eslint-disable no-undef */
+async function dropped(page) {
+  return page.evaluate(async () => {
+    const gaps = []
+    let last = performance.now()
+    let going = true
+    const loop = () => {
+      const now = performance.now()
+      gaps.push(now - last)
+      last = now
+      if (going) requestAnimationFrame(loop)
+    }
+    requestAnimationFrame(loop)
+    for (let i = 0; i < 60; i++) {
+      window.scrollBy(0, 22)
+      await new Promise((r) => requestAnimationFrame(r))
+    }
+    going = false
+    gaps.shift() // the first gap spans the setup, not a scroll
+    // 25 ms is a frame and a half at 60 Hz: long enough to be a visible hitch.
+    return gaps.filter((g) => g > 25).length
+  })
+}
+/* eslint-enable no-undef */
+
+const shipDrops = await dropped(perf)
+await perf.click('.tabs__btn:has-text("Log")')
+await perf.waitForSelector('.log')
+await perf.evaluate(() => globalThis.scrollTo(0, 0))
+await perf.waitForTimeout(400)
+const controlDrops = await dropped(perf)
+
+check(
+  'the ship screen scrolls without dropping frames (§8.1)',
+  // Before the deck drawings were given their own compositing layer this was
+  // 8 against a control of 1 at this throttle, and 24 against 1 at ten times.
+  shipDrops <= Math.max(5, controlDrops + 4),
+  `${shipDrops} dropped in 60 frames, against ${controlDrops} on a plain text screen`,
+)
+
+await perfCtx.close()
+
 await browser.close()
 server.close()
 

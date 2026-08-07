@@ -9,6 +9,37 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.3] — 2026-08-07
+
+### Fixed
+
+- **The ship screen stuttered when scrolled.** The cross-section is the screen
+  the player spends most of their time on and it is the most expensive thing
+  the game draws: seven deck schematics, sixty filtered elements, a real
+  `feGaussianBlur` shadow pass under each deck. A filter that shares a
+  compositing layer with the page has to be re-rasterised whenever that layer
+  repaints, and scrolling repaints continuously — so the whole drawing was
+  being **paid for again on every scrolled pixel**.
+
+  Each deck drawing now gets its own layer, so it is rasterised once and
+  afterwards the scroll only moves it. Dragging the ship screen a page and a
+  half at six times CPU throttling: **8 dropped frames in 60 before, 1 after**;
+  at ten times, 24 before and 2 after. The artwork is unchanged — a pixel
+  comparison of the two shows differences of one or two least-significant bits
+  in the gradients, and nothing else.
+
+  `scripts/verify.mjs` now measures this on every run and compares it against
+  the same scroll on a plain text screen, so the check reads "the ship screen
+  is no harder to scroll than the log" rather than "this runner is fast". With
+  the layer removed again it fails at 20 dropped frames against a control of 0.
+
+  What this does *not* fix is the once-a-second cosmetic tick, which costs one
+  slightly long frame on the ship screen — 33 ms against 20 elsewhere at four
+  times throttling, no dropped frames. Cutting it would mean memoising the deck
+  drawings against a hand-written signature of what they read, and a signature
+  that misses a field shows the player a stale ship. Not worth it for a frame
+  that is not being dropped.
+
 ## [0.11.2] — 2026-08-07
 
 ### Added

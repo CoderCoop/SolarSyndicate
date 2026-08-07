@@ -377,6 +377,25 @@ button {
   width: 100%;
   height: auto;
   overflow: visible;
+
+  /*
+   * Give each deck drawing its own compositing layer.
+   *
+   * The drawing is worth what it costs to look at, but it was being *paid for
+   * again on every scrolled pixel*. Sixty elements on this screen carry a
+   * filter -- the shadow pass under each deck is a real `feGaussianBlur`, and
+   * every lamp, screen, glow and figure is a `drop-shadow` -- and a filter that
+   * shares a layer with the page has to be re-rasterised whenever that layer
+   * repaints. Scrolling repaints continuously.
+   *
+   * On its own layer the schematic is rasterised once and afterwards the
+   * scroll only moves it. Measured on the ship screen at ten times CPU
+   * throttling, dragging it a full page: 24 dropped frames in 60 before, 2
+   * after, with the artwork identical to the pixel. `scripts/verify.mjs` holds
+   * that, because it is the kind of thing that silently comes back the next
+   * time a glow is added.
+   */
+  will-change: transform;
 }
 
 .room__air {
