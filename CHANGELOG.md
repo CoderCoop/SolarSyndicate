@@ -9,6 +9,23 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.12] — 2026-08-08
+
+### Changed
+
+- **A locate crosshair, and a control that says what it does.** The chart can
+  be dragged off its own edge, so it needs the one button every maps
+  application on a phone has taught: a crosshair meaning *put me back in the
+  middle*. It is always there rather than appearing once the ship is already
+  lost — a control you have to notice mid-problem is a poor one — and it
+  brightens when it is the one you want. From the whole-system plate it is also
+  the fastest way in to her, keeping whatever scale is already in force.
+
+- **"Map" is now "System".** The old label named the projection rather than
+  what pressing it does, and what a player wants from that button is not a
+  square-root scale, it is the whole solar system on one plate. The scale
+  readout says `system · 6.20 AU` to match.
+
 ## [0.11.11] — 2026-08-08
 
 ### Added
