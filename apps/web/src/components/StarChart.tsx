@@ -617,14 +617,20 @@ export function StarChart({ chart }: { chart: ChartView }) {
               return (
                 <g key={deg} className={cardinal ? 'is-cardinal' : ''}>
                   <line x1={CENTRE} y1={CENTRE} x2={x} y2={y} />
-                  {cardinal && (
-                    <text x={lx} y={ly + 2.5} textAnchor="middle">
-                      {deg}°
-                    </text>
-                  )}
+                  {/* Every thirty degrees, the way an orrery's tick ring is
+                      marked -- twelve is the count that makes a bearing
+                      readable off the plate instead of estimated between two
+                      quadrant marks. */}
+                  <text x={lx} y={ly + 2.5} textAnchor="middle">
+                    {deg}°
+                  </text>
                 </g>
               )
             })}
+          {/* The zero point, named. Ecliptic longitude is measured from the
+              First Point of Aries, and a chart that says "0°" without saying
+              zero *of what* is quoting a coordinate it has not defined. */}
+          {!close && <Equinox />}
         </g>
 
         {/* Close up, a square grid instead: evenly spaced because the scale
@@ -824,14 +830,16 @@ export function StarChart({ chart }: { chart: ChartView }) {
 
       <p className="chart__caption">{describe(chart)}</p>
 
-      {/* Exactly where everything is, in figures. The plate answers "roughly
-          where, relative to what"; nobody can read three decimal places off a
+      {/* The ship first: where she is, then how fast and where to. Both are
+          about her, so they sit together rather than with a table of
+          everything else between them. */}
+      <Coordinates chart={chart} />
+      <Telemetry chart={chart} />
+
+      {/* Then everything else, in figures. The plate answers "roughly where,
+          relative to what"; nobody can read three decimal places off a
           drawing, and a crossing is planned in decimals. */}
       <Positions chart={chart} />
-
-      {/* The figures behind the arrow. §1 pillar 2: the numbers are real, so
-          they may as well be legible. */}
-      <Telemetry chart={chart} />
 
       {/* When it is worth going. §5.1 calls launch windows real gameplay; the
           maths for them shipped in M2 and nothing had ever shown it. */}
@@ -857,10 +865,12 @@ export function StarChart({ chart }: { chart: ChartView }) {
           </>
         ) : (
           <>
-            Top-down, sun at the centre, longitude measured anticlockwise from the right-hand
-            spoke. Radius is drawn on a square-root scale so the inner system and the Belt are
-            legible on one plate — angles and relative order are true, absolute distances are
-            compressed, and the ruler is drawn to the same scale so you can see by how much.
+            Top-down from ecliptic north, sun at the centre, <strong>ecliptic longitude
+            measured anticlockwise from ♈</strong> — the First Point of Aries — which is the
+            frame real solar-system work is quoted in. Radius is drawn on a square-root scale
+            so the inner system and the Belt are legible on one plate: angles and relative
+            order are true, absolute distances are compressed, and the ruler is drawn to the
+            same scale so you can see by how much.
           </>
         )}{' '}
         The faint arc off each world is where it will be in {chart.leadDays} days; the needle
@@ -1040,6 +1050,37 @@ function LocalFrame({ local, view }: { local: ChartLocal; view: View }) {
   )
 }
 
+/**
+ * The First Point of Aries, marked on the rim. Design doc §5.1.
+ *
+ * Real heliocentric ecliptic coordinates are measured from the vernal equinox
+ * — the direction from the Earth to the Sun at the March equinox — with
+ * longitude running anticlockwise seen from ecliptic north, which is exactly
+ * how this plate was already drawn. So the convention costs nothing to adopt
+ * and buys the difference between an angle and a **coordinate**: 149° now
+ * means the same thing here as it does in an ephemeris, rather than meaning
+ * "anticlockwise from whichever spoke we happened to draw first".
+ *
+ * ♈ is a direction marker, which is where astronomical symbols are still
+ * standard practice. They are deliberately *not* used for the worlds: the IAU
+ * discourages planetary symbols in modern work and proposes letter
+ * abbreviations for tables, and "Mars" is in any case a better label than ♂
+ * for anybody who has not memorised the set.
+ */
+function Equinox() {
+  const [x, y] = onPlate(0, PLATE)
+  const [tx, ty] = onPlate(0, PLATE + 9)
+  return (
+    <g className="chart__equinox">
+      <line x1={x - 9} y1={y} x2={x + 5} y2={y} />
+      <path d={`M${x + 5} ${y} l-4 -2.6 v5.2 Z`} />
+      <text x={tx} y={ty - 7} textAnchor="middle">
+        ♈
+      </text>
+    </g>
+  )
+}
+
 /** A square grid at a round spacing, for the close views. */
 function Grid({ view }: { view: View }) {
   const step = stepFor(view.reachAu)
@@ -1127,6 +1168,96 @@ function Offplate({ body, x, y }: { body: ChartBody; x: number; y: number }) {
 }
 
 /**
+ * An angle the way an ephemeris prints one: degrees, arcminutes, arcseconds.
+ *
+ * The sexagesimal form is what the Astronomical Almanac and every ephemeris
+ * after it quote, and it is why "18 arcminutes" is a phrase at all. Kept
+ * beside the decimal rather than instead of it — the decimal is what a player
+ * compares against another number on the same screen.
+ */
+function sexagesimal(deg: number): string {
+  const total = ((deg % 360) + 360) % 360
+  const d = Math.floor(total)
+  const minutes = (total - d) * 60
+  const m = Math.floor(minutes)
+  const arcsec = Math.round((minutes - m) * 60)
+  // Rounding 59.6" up has to carry, or the chart prints 60".
+  const [dd, mm, ss] = arcsec === 60 ? [d, m + 1, 0] : [d, m, arcsec]
+  return mm === 60 ? `${dd + 1}° 00′ 00″` : `${dd}° ${String(mm).padStart(2, '0')}′ ${String(ss).padStart(2, '0')}″`
+}
+
+/**
+ * The ship's position as a set of coordinates. Design doc §5.1, §1 pillar 2.
+ *
+ * Real solar-system work quotes a heliocentric ecliptic triple — longitude λ,
+ * latitude β, radius vector r — measured from the First Point of Aries, and
+ * JPL's vector tables give the same position as Cartesian x, y, z in AU. Both
+ * are here because they answer different questions: λ and r are what you plan
+ * a transfer with, x and y are what the plate is literally drawn from.
+ *
+ * **β is always zero, and saying so is the point.** The sim is coplanar by
+ * design (§5.1: "what this does not model: inclination"), so a latitude row
+ * that always reads 0.000° is not padding — it is the model stating its own
+ * simplification in the one place a player would otherwise assume it had been
+ * handled.
+ */
+function Coordinates({ chart }: { chart: ChartView }) {
+  const { ship } = chart
+  const rows = [
+    {
+      symbol: 'λ',
+      name: 'Ecliptic longitude',
+      value: `${ship.longitudeDeg.toFixed(3)}°`,
+      detail: `${sexagesimal(ship.longitudeDeg)} from ♈`,
+    },
+    {
+      symbol: 'β',
+      name: 'Ecliptic latitude',
+      value: '0.000°',
+      detail: 'coplanar model — nothing in this system leaves the ecliptic',
+    },
+    {
+      symbol: 'r',
+      name: 'Radius vector',
+      value: `${ship.radiusAu.toFixed(5)} AU`,
+      detail: `${(ship.radiusAu * 149.598).toFixed(2)} million km from the sun`,
+    },
+    {
+      symbol: 'x',
+      name: 'Toward the equinox',
+      value: `${ship.x >= 0 ? '+' : '−'}${Math.abs(ship.x).toFixed(5)} AU`,
+    },
+    {
+      symbol: 'y',
+      name: 'A quarter turn ahead of it',
+      value: `${ship.y >= 0 ? '+' : '−'}${Math.abs(ship.y).toFixed(5)} AU`,
+    },
+  ]
+
+  return (
+    <div className="coords">
+      <h3 className="coords__title">
+        Ship — heliocentric ecliptic <span className="coords__epoch">of date</span>
+      </h3>
+      <dl className="coords__list">
+        {rows.map((r) => (
+          <div key={r.symbol} className="coords__row">
+            <dt className="coords__symbol" title={r.name}>
+              {r.symbol}
+            </dt>
+            <dd className="coords__value">
+              {r.value}
+              <span className="coords__name">{r.name}</span>
+              {r.detail && <span className="coords__detail">{r.detail}</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
+/**
  * Where everything is, to three decimals. Design doc §5.1, §1 pillar 2.
  *
  * The plate answers "roughly where, relative to what". It cannot answer "how
@@ -1160,7 +1291,8 @@ function Positions({ chart }: { chart: ChartView }) {
   return (
     <table className="positions">
       <caption className="positions__caption">
-        Heliocentric, this instant — radius from the sun, longitude, and range from the ship.
+        Heliocentric ecliptic, this instant — radius vector, longitude measured from ♈, and
+        range from the ship.
       </caption>
       <thead>
         <tr>
@@ -1200,12 +1332,10 @@ function Telemetry({ chart }: { chart: ChartView }) {
   const to = chart.bodies.find((b) => b.id === ship.toBodyId)
   const climb = (ship.flightPathAngleRad * 180) / Math.PI
 
+  // Position lives in the coordinates block above, stated properly. Repeating
+  // it here to three decimals while five sit an inch higher is the kind of
+  // duplication a reader has to stop and reconcile.
   const rows: { label: string; value: string; detail?: string }[] = [
-    {
-      label: 'Position',
-      value: `${ship.radiusAu.toFixed(3)} AU`,
-      detail: `${ship.longitudeDeg.toFixed(1)}° heliocentric longitude`,
-    },
     {
       label: 'Velocity',
       value: `${(ship.speedMs / 1000).toFixed(2)} km/s`,
