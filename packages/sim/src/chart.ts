@@ -39,6 +39,7 @@ import {
   bodyPositionAt,
   bodyVelocityAt,
   phaseAngleForTransfer,
+  stretchedBetween,
   stretchedTransfer,
   synodicPeriodDays,
   transferStateAt,
@@ -162,6 +163,51 @@ export interface ChartShip {
   daysToArrival?: number
 }
 
+/**
+ * The neighbourhood of one world, for when the heliocentric frame gives up.
+ *
+ * Gateway to Tranquillity is 384,400 km, which is 0.0026 AU: at every scale
+ * the solar-system plate can usefully draw, the two berths and the ship are
+ * one dot, and the chart said so honestly by pinning her at Earth and letting
+ * her sit there for five days. Honest, and useless -- the mission board's
+ * route strip showed her moving the whole time, so the instrument that is
+ * supposed to be the truthful one was the one that looked broken.
+ *
+ * Everything here is in **AU about the body**, not kilometres, so the plate's
+ * existing projection, gestures and ruler carry over unchanged. Zooming past
+ * the point where the sun's frame resolves anything simply lands here.
+ */
+export interface ChartLocal {
+  bodyId: string
+  bodyName: string
+  /** The world itself, drawn to the same scale as the orbits around it. */
+  bodyRadiusAu: number
+  /** Where the ship is, relative to the body. */
+  ship: Vec2
+  /** Her arc around it, sampled. Empty unless she is crossing between berths. */
+  track: Vec2[]
+  ports: {
+    id: string
+    name: string
+    moon?: string
+    orbitRadiusAu: number
+    /** Where it sits on its ring, in this drawing's own reference. */
+    at: Vec2
+  }[]
+  /** How far out this frame has to reach, AU. */
+  extentAu: number
+  /**
+   * Longitudes here are the *transfer's* own reference, not a modelled one.
+   *
+   * The sim does not track where Luna is in its month, and inventing a phase
+   * would be a number the player could check and find made up. Departure is
+   * drawn at zero and everything else follows from the ellipse, so the angles
+   * between the things on this plate are true even though their bearing
+   * against the stars is not claimed.
+   */
+  phaseIsRelative: true
+}
+
 export interface ChartView {
   bodies: ChartBody[]
   ship: ChartShip
@@ -173,6 +219,8 @@ export interface ChartView {
   windows: ChartWindow[]
   /** How far ahead `ChartBody.lead` looks, in days. */
   leadDays: number
+  /** The world the ship is at, close up, for when the sun's frame is too big. */
+  local?: ChartLocal
 }
 
 /**
@@ -446,7 +494,99 @@ export function chartView(state: SimState): ChartView {
     .map((b) => windowFor(here, b.id, t))
     .sort((a, b) => a.daysToWindow - b.daysToWindow)
 
-  return { bodies, ship, track, extentAu: extentAu * 1.12, windows, leadDays: LEAD_DAYS }
+  const local = localView(state)
+
+  return {
+    bodies,
+    ship,
+    track,
+    extentAu: extentAu * 1.12,
+    windows,
+    leadDays: LEAD_DAYS,
+    ...(local ? { local } : {}),
+  }
+}
+
+/** Kilometres to AU. */
+const KM = 1000 / AU
+
+/**
+ * The neighbourhood of whichever world the ship is at. Design doc §5.1, §5.2.
+ *
+ * The same maths the astrogator priced the hop with -- `stretchedBetween`
+ * about the body's own gravitational parameter -- read at `now`. Not the route
+ * strip's half-ellipse-shaped flourish: this is the plate that claims its
+ * numbers are real, so the ship goes where Kepler puts her.
+ *
+ * Angles are the transfer's own reference, with departure at zero. The sim
+ * does not model where Luna is in its month and inventing a phase would be a
+ * number the player could check and find made up -- so the angles *between*
+ * the things drawn here are true while their bearing against the stars is not
+ * claimed.
+ */
+function localView(state: SimState): ChartLocal | undefined {
+  const t = state.now
+  const voyage = state.voyage
+  const here = getPort(voyage ? voyage.fromPortId : state.ship.portId)
+  const body = getBody(here.bodyId)
+  const ports = portsOn(here.bodyId)
+  if (ports.length === 0) return undefined
+
+  const inSystem = voyage ? getPort(voyage.toPortId).bodyId === here.bodyId : false
+  const r1 = here.orbitRadiusKm * KM
+
+  // Where each berth sits. Departure at zero; a destination reached by a
+  // half-turn sits opposite, which is what a Hohmann between two coplanar
+  // orbits actually does.
+  const angleOf = (portId: string) => (portId === here.id ? 0 : Math.PI)
+  const placed = ports.map((p) => {
+    const radius = getPort(p.id).orbitRadiusKm * KM
+    const a = angleOf(p.id)
+    return {
+      ...p,
+      orbitRadiusAu: radius,
+      at: { x: radius * Math.cos(a), y: radius * Math.sin(a) },
+    }
+  })
+
+  let shipAt: Vec2 = placed.find((p) => p.id === here.id)?.at ?? { x: r1, y: 0 }
+  let track: Vec2[] = []
+
+  if (inSystem && voyage) {
+    const to = getPort(voyage.toPortId)
+    const leg = stretchedBetween(
+      body.muM3S2,
+      here.orbitRadiusKm * 1000,
+      to.orbitRadiusKm * 1000,
+      transferProfile(voyage.optionId).multiplier,
+    )
+    const total = voyage.arrivesAt - voyage.departedAt
+    const at = (elapsed: number): Vec2 => {
+      const st = transferStateAt(leg, body.muM3S2, elapsed)
+      const angle = st.sweptRad
+      return { x: ((st.radiusM / 1000) * KM) * Math.cos(angle), y: ((st.radiusM / 1000) * KM) * Math.sin(angle) }
+    }
+    shipAt = at(t - voyage.departedAt)
+    const steps = 48
+    track = Array.from({ length: steps + 1 }, (_, i) => at((total * i) / steps))
+  }
+
+  const extentAu = Math.max(
+    ...placed.map((p) => p.orbitRadiusAu),
+    ...track.map((p) => Math.hypot(p.x, p.y)),
+    Math.hypot(shipAt.x, shipAt.y),
+  )
+
+  return {
+    bodyId: body.id,
+    bodyName: body.name,
+    bodyRadiusAu: body.radiusKm * KM,
+    ship: shipAt,
+    track,
+    ports: placed,
+    extentAu: extentAu * 1.25,
+    phaseIsRelative: true,
+  }
 }
 
 /** Every body with a port on it, innermost first. */

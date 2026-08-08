@@ -40,7 +40,7 @@
  * burn wants a number.
  */
 import { useRef, useState } from 'react'
-import type { ChartBody, ChartView, ChartWindow } from '@solsyn/sim'
+import type { ChartBody, ChartLocal, ChartView, ChartWindow } from '@solsyn/sim'
 
 const SIZE = 300
 const CENTRE = SIZE / 2
@@ -85,9 +85,20 @@ const REFERENCE_SPEED_MS = 29784
  * stop, because it is a different projection and not a different
  * magnification.
  */
+/**
+ * Where the sun's frame gives up and the world's own takes over.
+ *
+ * Below about a million kilometres across, every heliocentric plate shows one
+ * dot: Gateway, Tranquillity and the ship between them are 0.0026 AU apart and
+ * the sun is a hundred thousand plate-widths away. Keep pinching and the chart
+ * lands in the body's own frame instead, which is where a cislunar crossing
+ * has been happening all along.
+ */
+const LOCAL_BELOW_AU = 0.004
+
 const REACH = {
-  /** Closest in: about three million kilometres across. */
-  min: 0.01,
+  /** Closest in: Earth's own limb filling the plate. */
+  min: 0.0002,
   /** Furthest out: Ceres' orbit with room around it. */
   max: 4,
   /** Where a fresh close view starts — half an AU across. */
@@ -110,6 +121,17 @@ interface Camera {
   /** Half the plate's width, AU. Close view only. */
   reachAu: number
   centre: { x: number; y: number } | null
+  /**
+   * Which origin `centre` is measured from.
+   *
+   * Zooming past `LOCAL_BELOW_AU` changes the frame under the camera: the same
+   * pair of numbers means "1.0 AU from the sun" in one and "1.0 AU from Earth"
+   * in the other. Without this the first pinch across the boundary threw the
+   * ship six hundred thousand plate-widths off the edge, which is the whole
+   * heliocentric distance to Earth expressed in a frame that had just stopped
+   * meaning that.
+   */
+  centreFrame: 'sun' | 'body'
 }
 
 /** Candidate grid and ruler steps, in AU. The largest that fits at least three. */
@@ -123,7 +145,7 @@ const STEPS = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]
  * second view did not mean a second copy of the chart.
  */
 interface View {
-  kind: 'system' | 'close'
+  kind: 'system' | 'close' | 'local'
   /** Heliocentric AU to plate coordinates. */
   to: (x: number, y: number) => [number, number]
   /** And back again, which is what a pinch needs to hold a point still. */
@@ -175,6 +197,22 @@ function project(x: number, y: number, extentAu: number): [number, number] {
 function distance(au: number): string {
   if (au < 0.001) return 'here'
   if (au < 0.06) return `${(au * 149.6).toFixed(1)}M km`
+  return `${au.toFixed(2)} AU`
+}
+
+/**
+ * A *scale*, as opposed to a range.
+ *
+ * `distance` answers "how far is that" and is right to say "here" for anything
+ * under a thousandth of an AU — at solar-system scale that really is here. A
+ * scale bar cannot: once the plate is measuring the gap between Gateway and
+ * Luna, "here across" is not a legend, and the number the player wants is in
+ * kilometres.
+ */
+function span(au: number): string {
+  const km = au * 149597871
+  if (km < 100000) return `${Math.round(km).toLocaleString()} km`
+  if (au < 0.06) return `${(au * 149.6).toFixed(2)}M km`
   return `${au.toFixed(2)} AU`
 }
 
@@ -241,9 +279,43 @@ function viewFor(camera: Camera, chart: ChartView): View {
       perAu: PLATE / extentAu,
     }
   }
+  // Close enough that the sun's frame shows nothing: switch to the world's
+  // own, where the ship is somewhere between two berths rather than pinned to
+  // a planet for five days.
+  const local = chart.local
+  // Where the body itself is, heliocentrically: the origin this frame swaps to.
+  const origin = { x: ship.x, y: ship.y }
+  if (local && camera.reachAu < LOCAL_BELOW_AU) {
+    const at = camera.centre
+      ? camera.centreFrame === 'sun'
+        ? { x: camera.centre.x - origin.x, y: camera.centre.y - origin.y }
+        : camera.centre
+      : { x: 0, y: 0 }
+    const reachAu = camera.reachAu
+    const perAu = PLATE / reachAu
+    const to = (x: number, y: number): [number, number] => [
+      CENTRE + (x - at.x) * perAu,
+      CENTRE - (y - at.y) * perAu,
+    ]
+    return {
+      kind: 'local',
+      to,
+      from: (px, py) => ({ x: at.x + (px - CENTRE) / perAu, y: at.y - (py - CENTRE) / perAu }),
+      // The body is the centre of this frame, so it is where the light is.
+      sun: to(0, 0),
+      orbitR: (au) => au * perAu,
+      reachAu,
+      perAu,
+    }
+  }
+
   // Linear: the view that answers "exactly where". Centred on the ship until
   // somebody drags it somewhere else.
-  const at = camera.centre ?? { x: ship.x, y: ship.y }
+  const at = camera.centre
+    ? camera.centreFrame === 'body'
+      ? { x: camera.centre.x + origin.x, y: camera.centre.y + origin.y }
+      : camera.centre
+    : origin
   const reachAu = camera.reachAu
   const perAu = PLATE / reachAu
   const to = (x: number, y: number): [number, number] => [
@@ -284,9 +356,7 @@ function onPlateAt(x: number, y: number, inset = 0): boolean {
  * instead — the chart would simply appear not to respond.
  */
 function useGestures(
-  view: View,
-  camera: Camera,
-  setCamera: (next: Camera) => void,
+  setCamera: (next: (prev: Camera) => Camera) => void,
   chart: ChartView,
 ) {
   const svg = useRef<SVGSVGElement | null>(null)
@@ -301,20 +371,34 @@ function useGestures(
     return { x: (clientX - box.left) * scale, y: (clientY - box.top) * scale }
   }
 
-  /** Rescale about a plate point, keeping whatever is under it still. */
-  const zoomAbout = (plateX: number, plateY: number, nextReach: number) => {
-    const reachAu = Math.min(REACH.max, Math.max(REACH.min, nextReach))
-    // Where the gesture is pointing, in AU, before anything moves.
-    const anchor = view.from(plateX, plateY)
-    const perAu = PLATE / reachAu
-    // Choose the centre that puts that same AU point back under the gesture.
-    setCamera({
-      mode: 'close',
-      reachAu,
-      centre: {
-        x: anchor.x - (plateX - CENTRE) / perAu,
-        y: anchor.y + (plateY - CENTRE) / perAu,
-      },
+  /**
+   * Rescale about a plate point, keeping whatever is under it still.
+   *
+   * Every gesture is applied against the **latest** camera rather than the one
+   * this render closed over. Wheel notches and pinch moves arrive faster than
+   * React re-renders, and reading `view` from the closure quietly threw all
+   * but the first of them away: thirty notches moved the scale about as far as
+   * two, which reads as a chart that is ignoring you.
+   */
+  const zoomAbout = (plateX: number, plateY: number, next: (fromReach: number) => number) => {
+    setCamera((prev) => {
+      const was = viewFor(prev, chart)
+      // Coming off the map there is no linear scale yet to step from.
+      const base = was.kind === 'system' ? REACH.start : was.reachAu
+      const reachAu = Math.min(REACH.max, Math.max(REACH.min, next(base)))
+      // Where the gesture is pointing, in AU, before anything moves.
+      const anchor = was.from(plateX, plateY)
+      const perAu = PLATE / reachAu
+      // Choose the centre that puts that same AU point back under the gesture.
+      return {
+        mode: 'close',
+        reachAu,
+        centreFrame: was.kind === 'local' ? 'body' : 'sun',
+        centre: {
+          x: anchor.x - (plateX - CENTRE) / perAu,
+          y: anchor.y + (plateY - CENTRE) / perAu,
+        },
+      }
     })
   }
 
@@ -338,7 +422,7 @@ function useGestures(
       /* the drag still works, it just stops at the edge of the plate */
     }
     pointers.current.set(e.pointerId, toPlate(e.clientX, e.clientY))
-    if (pointers.current.size === 2) pinch.current = { span: spanOf(), reachAu: view.reachAu }
+    if (pointers.current.size === 2) pinch.current = { span: spanOf(), reachAu: 0 }
   }
 
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -349,9 +433,13 @@ function useGestures(
 
     if (pointers.current.size >= 2 && pinch.current) {
       const span = spanOf()
-      if (span > 4 && pinch.current.span > 4) {
+      const from = pinch.current.span
+      if (span > 4 && from > 4) {
         const mid = midOf()
-        zoomAbout(mid.x, mid.y, (pinch.current.reachAu * pinch.current.span) / span)
+        // Relative to the span since the last move, so the gesture keeps
+        // compounding the way a maps app does.
+        pinch.current = { span, reachAu: 0 }
+        zoomAbout(mid.x, mid.y, (r) => (r * from) / span)
       }
       return
     }
@@ -359,12 +447,18 @@ function useGestures(
     // One finger: drag. A map view is dragged into the close one, because
     // grabbing a chart and having it refuse to move is the wrong answer to a
     // gesture that plainly means "move".
-    const perAu = view.kind === 'close' ? view.perAu : PLATE / REACH.start
-    const at = camera.centre ?? { x: chart.ship.x, y: chart.ship.y }
-    setCamera({
-      mode: 'close',
-      reachAu: view.kind === 'close' ? view.reachAu : REACH.start,
-      centre: { x: at.x - (now.x - was.x) / perAu, y: at.y + (now.y - was.y) / perAu },
+    const by = { x: now.x - was.x, y: now.y - was.y }
+    setCamera((prev) => {
+      const had = viewFor(prev, chart)
+      const reachAu = had.kind === 'system' ? REACH.start : had.reachAu
+      const perAu = PLATE / reachAu
+      const at = had.kind === 'system' ? { x: chart.ship.x, y: chart.ship.y } : had.from(CENTRE, CENTRE)
+      return {
+        mode: 'close',
+        reachAu,
+        centreFrame: had.kind === 'local' ? 'body' : 'sun',
+        centre: { x: at.x - by.x / perAu, y: at.y + by.y / perAu },
+      }
     })
   }
 
@@ -375,13 +469,12 @@ function useGestures(
 
   const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     const at = toPlate(e.clientX, e.clientY)
-    const base = view.kind === 'close' ? view.reachAu : REACH.start
-    zoomAbout(at.x, at.y, e.deltaY > 0 ? base * ZOOM_STEP : base / ZOOM_STEP)
+    zoomAbout(at.x, at.y, (r) => (e.deltaY > 0 ? r * ZOOM_STEP : r / ZOOM_STEP))
   }
 
   const onDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
     const at = toPlate(e.clientX, e.clientY)
-    zoomAbout(at.x, at.y, (view.kind === 'close' ? view.reachAu : REACH.start) / 2)
+    zoomAbout(at.x, at.y, (r) => r / 2)
   }
 
   return {
@@ -406,11 +499,17 @@ export function StarChart({ chart }: { chart: ChartView }) {
     mode: 'map',
     reachAu: REACH.start,
     centre: null,
+    centreFrame: 'sun',
   })
   const view = viewFor(camera, chart)
-  const close = view.kind === 'close'
-  const { ref: svgRef, handlers, zoomAbout } = useGestures(view, camera, setCamera, chart)
-  const [shipX, shipY] = view.to(ship.x, ship.y)
+  const isLocal = view.kind === 'local'
+  const local = isLocal ? chart.local : undefined
+  const close = view.kind !== 'system'
+  const { ref: svgRef, handlers, zoomAbout } = useGestures(setCamera, chart)
+  const [shipX, shipY] = local ? view.to(local.ship.x, local.ship.y) : view.to(ship.x, ship.y)
+
+  // Below a hundredth of an AU the ruler is better read in kilometres.
+  const inKm = close && view.reachAu < 0.01
 
   // Far enough off the ship that "centre on her" is worth offering.
   const adrift =
@@ -421,9 +520,10 @@ export function StarChart({ chart }: { chart: ChartView }) {
   // The arc split at the ship. What is behind her is history and what is ahead
   // is a commitment, and drawing them the same made the most useful thing on
   // the plate -- how much of this is left -- something to estimate by eye.
-  const cut = Math.round((ship.fractionComplete ?? 0) * (chart.track.length - 1))
-  const flownPath = pathFor(chart.track.slice(0, cut + 1), view)
-  const aheadPath = pathFor(chart.track.slice(Math.max(0, cut)), view)
+  const arc = local ? local.track : chart.track
+  const cut = Math.round((ship.fractionComplete ?? 0) * (arc.length - 1))
+  const flownPath = pathFor(arc.slice(0, cut + 1), view)
+  const aheadPath = pathFor(arc.slice(Math.max(0, cut)), view)
 
   // The needle's bearing is taken *through the projection*, by stepping a short
   // way along the true velocity and projecting both ends. The square-root
@@ -452,7 +552,7 @@ export function StarChart({ chart }: { chart: ChartView }) {
         view={view}
         adrift={adrift}
         extentAu={extentAu}
-        onStep={(factor) => zoomAbout(CENTRE, CENTRE, view.reachAu * factor)}
+        onStep={(factor) => zoomAbout(CENTRE, CENTRE, (r) => r * factor)}
         onMap={() => setCamera({ ...camera, mode: 'map' })}
         onFollow={() => setCamera({ ...camera, mode: 'close', centre: null })}
       />
@@ -521,23 +621,31 @@ export function StarChart({ chart }: { chart: ChartView }) {
             *is* even, which is the whole difference between the two views. */}
         {close && <Grid view={view} />}
 
+        {/* The world's own frame: the planet to scale, and a ring for each
+            berth around it. Everything heliocentric is off in here -- the sun
+            is a hundred thousand plate-widths away and its orbits are
+            straight lines. */}
+        {local && <LocalFrame local={local} view={view} />}
+
         {/* Orbits, innermost first, with the direction everything travels. */}
         <g clipPath="url(#chart-plate)">
-          {chart.bodies.map((b) => (
-            <circle
-              key={b.id}
-              className="chart__orbit"
-              cx={view.sun[0]}
-              cy={view.sun[1]}
-              r={view.orbitR(b.orbitRadiusAu)}
-            />
-          ))}
+          {!isLocal &&
+            chart.bodies.map((b) => (
+              <circle
+                key={b.id}
+                className="chart__orbit"
+                cx={view.sun[0]}
+                cy={view.sun[1]}
+                r={view.orbitR(b.orbitRadiusAu)}
+              />
+            ))}
         </g>
 
         {/* Where each world will be in a season. A body is a moving target and
             the arc has to be aimed at where it is going, not where it is. */}
         <g clipPath="url(#chart-plate)">
-          {placed.map(({ body: b, on }) => {
+          {!isLocal &&
+            placed.map(({ body: b, on }) => {
             const [x, y] = view.to(b.x, b.y)
             const [lx, ly] = view.to(b.lead.x, b.lead.y)
             // Both ends have to land on the plate. An arc with one end twelve
@@ -549,19 +657,22 @@ export function StarChart({ chart }: { chart: ChartView }) {
             const r = view.orbitR(b.orbitRadiusAu)
             // Along the orbit rather than a chord, so it reads as travel.
             const sweep = b.lead.x * b.y - b.lead.y * b.x > 0 ? 0 : 1
-            return (
-              <g key={b.id} className={`chart__lead chart__lead--${WORLD[b.id]?.tone ?? 'ceres'}`}>
-                <path d={`M${x} ${y} A ${r} ${r} 0 0 ${sweep} ${lx} ${ly}`} />
-                <circle cx={lx} cy={ly} r="1.6" />
-              </g>
-            )
-          })}
+              return (
+                <g
+                  key={b.id}
+                  className={`chart__lead chart__lead--${WORLD[b.id]?.tone ?? 'ceres'}`}
+                >
+                  <path d={`M${x} ${y} A ${r} ${r} 0 0 ${sweep} ${lx} ${ly}`} />
+                  <circle cx={lx} cy={ly} r="1.6" />
+                </g>
+              )
+            })}
         </g>
 
         {/* The star, where it actually falls. Close up it is usually off the
             plate, and a sunward arrow says which way rather than drawing a
             sun in the wrong place. */}
-        {onPlateAt(view.sun[0], view.sun[1]) ? (
+        {isLocal ? null : onPlateAt(view.sun[0], view.sun[1]) ? (
           <>
             <circle
               className="chart__glare"
@@ -579,7 +690,7 @@ export function StarChart({ chart }: { chart: ChartView }) {
         {/* The transfer arc, cut at the ship: flown behind, committed ahead.
             Clipped, because a Mars ellipse seen from a tenth of an AU runs off
             the plate and straight across the ruler underneath it. */}
-        {chart.track.length > 0 && (
+        {arc.length > 0 && (
           <g className="chart__arc" clipPath="url(#chart-plate)">
             <path className="chart__track chart__track--flown" d={flownPath} />
             <path className="chart__track chart__track--ahead" d={aheadPath} />
@@ -608,7 +719,7 @@ export function StarChart({ chart }: { chart: ChartView }) {
         )}
 
         {placed.map(({ body: b, x, y, on }) => {
-          if (!on) return null
+          if (!on || isLocal) return null
           const mark = WORLD[b.id] ?? { r: 3.5, tone: 'ceres' }
           const here = chart.ship.atPortId
             ? b.ports.some((p) => p.id === chart.ship.atPortId)
@@ -653,7 +764,7 @@ export function StarChart({ chart }: { chart: ChartView }) {
             worse than the wide one it replaced, so what will not fit is
             pointed at, named, and given its range. */}
         {placed
-          .filter((p) => !p.on)
+          .filter((p) => !p.on && !isLocal)
           .map((p) => (
             <Offplate key={p.body.id} body={p.body} x={p.x} y={p.y} />
           ))}
@@ -687,13 +798,16 @@ export function StarChart({ chart }: { chart: ChartView }) {
               <g key={au}>
                 <line x1={x} y1="-2.5" x2={x} y2="2.5" />
                 <text x={x} y="9" textAnchor="middle">
-                  {au}
+                  {inKm ? Math.round(au * 149597.871).toLocaleString() : au}
                 </text>
               </g>
             )
           })}
+          {/* Once the plate is measuring the gap between two berths, "0.002 AU"
+              is a number nobody can hold. Kilometres are what that distance is
+              quoted in everywhere else in the game. */}
           <text className="chart__ruler-unit" x={CENTRE - 4} y="9" textAnchor="end">
-            AU
+            {inKm ? '1000 km' : 'AU'}
           </text>
         </g>
       </svg>
@@ -714,11 +828,20 @@ export function StarChart({ chart }: { chart: ChartView }) {
       {chart.windows.length > 0 && <Windows windows={chart.windows} />}
 
       <p className="panel__note">
-        {close ? (
+        {isLocal && local ? (
+          <>
+            Close in on <strong>{local.bodyName}</strong>, drawn to a true, even scale — the
+            planet is the same size as the orbits around it, which is why Gateway's ring sits
+            almost against its limb and Tranquillity's is fifty-seven times further out. The
+            angles between things here are the transfer's own: the sim does not track where
+            Luna is in its month, and inventing a bearing would be a number you could check
+            and find made up.
+          </>
+        ) : close ? (
           <>
             Drawn to a <strong>true, even scale</strong> — a millimetre is a millimetre
             wherever it falls, and the ruler's evenly spaced ticks say so. The grid is{' '}
-            {distance(stepFor(view.reachAu))} square. Pinch or scroll to change the scale,
+            {span(stepFor(view.reachAu))} square. Pinch or scroll to change the scale,
             drag to move about; anything that will not fit is pointed at from the rim with
             its range.
           </>
@@ -772,7 +895,8 @@ function Controls({
   onMap: () => void
   onFollow: () => void
 }) {
-  const close = view.kind === 'close'
+  // Anything that is not the square-root map is a scale you can state.
+  const close = view.kind !== 'system'
   const across = view.reachAu * 2
 
   return (
@@ -788,7 +912,7 @@ function Controls({
       </button>
 
       <span className="zoomer__scale" aria-live="polite">
-        {close ? `${distance(across)} across` : `map · ${distance(extentAu * 2)}`}
+        {close ? `${span(across)} across` : `map · ${span(extentAu * 2)}`}
       </span>
 
       <button
@@ -823,6 +947,65 @@ function Controls({
         </button>
       )}
     </div>
+  )
+}
+
+/**
+ * The world's own neighbourhood. Design doc §5.1, §5.2.
+ *
+ * Gateway to Tranquillity is 0.0026 AU, so on every heliocentric plate the two
+ * berths and the ship are one dot — the chart pinned her at Earth and let her
+ * sit there for five days while the mission board's route strip showed her
+ * crossing the whole time. The instrument meant to be the truthful one was the
+ * one that looked broken.
+ *
+ * The planet is drawn to the *same scale* as the rings around it, which is the
+ * whole point: Earth's limb comes up almost to Gateway's orbit, and that is
+ * the honest picture of how low a low orbit is. Luna's ring is fifty-seven
+ * times further out, which is the entire reason the hop costs five days and
+ * 3.91 km/s.
+ */
+function LocalFrame({ local, view }: { local: ChartLocal; view: View }) {
+  const [cx, cy] = view.to(0, 0)
+  const bodyR = view.orbitR(local.bodyRadiusAu)
+
+  return (
+    <g className="chart__local" clipPath="url(#chart-plate)">
+      <circle
+        className={`chart__local-body chart__local-body--${WORLD[local.bodyId]?.tone ?? 'ceres'}`}
+        cx={cx}
+        cy={cy}
+        r={bodyR}
+      />
+      {local.ports.map((p) => {
+        const [px, py] = view.to(p.at.x, p.at.y)
+        return (
+          <g key={p.id} className="chart__local-port">
+            <circle
+              className="chart__orbit"
+              cx={cx}
+              cy={cy}
+              r={view.orbitR(p.orbitRadiusAu)}
+            />
+            <circle className="chart__local-berth" cx={px} cy={py} r="2.6" />
+            {/* Set outward from the body, along the berth's own side. Two
+                rings that share a centre put their labels on top of each other
+                if both are pulled toward the middle -- and outward is where the
+                empty space is. */}
+            <text
+              x={px + (px < cx ? -5 : 5)}
+              y={py - 6}
+              textAnchor={px < cx ? 'end' : 'start'}
+            >
+              {p.moon ? `${p.name.split(' ')[0]} (${p.moon})` : p.name.split(' ')[0]}
+            </text>
+          </g>
+        )
+      })}
+      <text className="chart__local-name" x={cx} y={cy + bodyR + 11} textAnchor="middle">
+        {local.bodyName}
+      </text>
+    </g>
   )
 }
 
@@ -1099,7 +1282,10 @@ function describe(chart: ChartView): string {
   const to = chart.bodies.find((b) => b.id === ship.toBodyId)
   const pct = Math.round((ship.fractionComplete ?? 0) * 100)
   if (ship.local) {
-    return `Under way to ${to?.name ?? 'port'} — ${pct}% of a crossing that stays inside this system.`
+    // The berth, not the body. "Under way to Earth" is what the chart said for
+    // five days of a Gateway-to-Luna hop, which is true of the dot and useless
+    // about the errand.
+    return `Under way to ${ship.toPortName ?? to?.name ?? 'port'} — ${pct}% of a crossing that stays inside ${to?.name ?? 'this'}'s neighbourhood.`
   }
   // The arc is the chosen profile's ellipse, not the minimum-energy one, so it
   // says which trajectory it is drawing rather than leaving the player to

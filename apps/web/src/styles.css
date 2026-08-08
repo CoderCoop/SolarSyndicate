@@ -1681,6 +1681,41 @@ button {
 .chart__offplate--mars { --world: #c47a52; }
 .chart__offplate--ceres { --world: #8d94a0; }
 
+/* --- one world, close up --- */
+
+/*
+ * Design §5.1. The planet is drawn to the same scale as the rings around it,
+ * which is the whole point: Earth's limb comes up almost to Gateway's orbit,
+ * and that is the honest picture of how low a low orbit is.
+ */
+.chart__local-body {
+  fill: color-mix(in srgb, var(--world, #5b8cc4) 26%, var(--bg-sunken));
+  stroke: color-mix(in srgb, var(--world, #5b8cc4) 70%, transparent);
+  stroke-width: 0.8;
+}
+
+.chart__local-body--earth { --world: #5b8cc4; }
+.chart__local-body--mars { --world: #c47a52; }
+.chart__local-body--ceres { --world: #8d94a0; }
+
+.chart__local-berth {
+  fill: var(--cyan);
+  opacity: 0.85;
+}
+
+.chart__local-port text {
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  fill: var(--ink-dim);
+}
+
+.chart__local-name {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+}
+
 /* --- the ruler --- */
 
 /*
