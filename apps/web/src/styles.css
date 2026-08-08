@@ -2433,8 +2433,8 @@ button {
 
 .gauge-row__bar {
   position: relative;
-  height: 7px;
-  margin: 8px 0 7px;
+  height: 10px;
+  margin: 9px 0 8px;
   background: var(--bg-sunken);
   border-radius: 999px;
   overflow: hidden;
@@ -2452,43 +2452,65 @@ button {
   position: absolute;
   top: 0;
   bottom: 0;
-  opacity: 0.3;
 }
 
+/*
+ * Mixed toward the ground rather than dropped to a low opacity.
+ *
+ * At 0.3 alpha on a near-black panel all three bands came out muddy variants
+ * of the same dark, and green against amber was a guess in daylight. Mixing
+ * each hue with the sunken background keeps them recognisably green, amber and
+ * red while staying a scale rather than a reading -- and unlike opacity it
+ * cannot be dulled further by whatever happens to be drawn on top.
+ *
+ * The warning pair gets its own two tones rather than the interface amber and
+ * red, which are 43 apart once both are mixed with the same dark ground --
+ * measurably too close for the two colours it matters most to tell apart.
+ * Pushed away from each other in hue *and* in lightness, so the difference
+ * survives a colour-blind eye and a phone in sunlight: the warning is the
+ * brighter and yellower, the danger the darker and redder. `verify.mjs`
+ * measures the distances, because this is exactly the kind of thing that
+ * closes up again the next time a palette is tuned.
+ */
 .gauge-row__zone--nominal {
-  background: var(--green, #6fcf8f);
+  background: color-mix(in srgb, var(--green, #6fcf8f) 55%, var(--bg-sunken));
 }
 .gauge-row__zone--watch {
-  background: var(--amber);
+  background: color-mix(in srgb, #f2b71e 66%, var(--bg-sunken));
 }
 .gauge-row__zone--critical {
-  background: var(--red);
+  background: color-mix(in srgb, #d94a3d 72%, var(--bg-sunken));
 }
 
+/* How much is in the tank, shaded over the bands. Light enough to leave the
+   colour underneath legible: it is the second thing the bar says, not the
+   first. */
 .gauge-row__fill {
   position: relative;
   height: 100%;
-  background: color-mix(in srgb, var(--ink) 20%, transparent);
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
   transition: width 800ms linear;
 }
 
-/* Where the reading actually is. The fill shades everything below it, which
-   answers "how full"; only the mark can be read against a boundary. */
+/*
+ * Where the reading actually is.
+ *
+ * The only part that can be read against a boundary, so it has to stay visible
+ * over green, amber and red alike -- hence a light mark with a dark edge
+ * either side of it rather than a coloured one that vanishes into its own
+ * band. It is also the one element on the bar that is deliberately *not*
+ * status-coloured: the bands say what the colours mean, and a needle that
+ * changed colour with them said it twice and located it less well.
+ */
 .gauge-row__needle {
   position: absolute;
   top: -1px;
   bottom: -1px;
-  width: 2px;
-  margin-left: -1px;
+  width: 3px;
+  margin-left: -1.5px;
   background: var(--ink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 80%, transparent);
   transition: left 800ms linear;
-}
-
-.gauge-row--watch .gauge-row__needle {
-  background: var(--amber);
-}
-.gauge-row--critical .gauge-row__needle {
-  background: var(--red);
 }
 
 .gauge-row__detail,

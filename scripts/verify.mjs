@@ -1156,6 +1156,51 @@ check(
   alongsideFlat.join(', ') || 'none',
 )
 
+// "Green, amber and red" is only worth anything if they can be told apart. At
+// 0.3 alpha on a near-black panel all three came out muddy variants of the same
+// dark, which is the kind of thing that creeps back the next time a band is
+// tuned -- so the colours themselves are measured, not just their class names.
+/* The body of page.evaluate runs in the browser, not in Node -- so its globals
+   are the page's, which is why eslint cannot see them here. */
+/* eslint-disable no-undef */
+const bandColours = await page.evaluate(() => {
+  // Painted onto a canvas and read back rather than parsed out of the computed
+  // string: `color-mix` resolves to `color(srgb 0.43 0.78 0.55)`, whose numbers
+  // are 0-1, and a regex that assumes 0-255 quietly reports every colour as
+  // near-black and every distance as zero.
+  const ctx = document.createElement('canvas').getContext('2d')
+  const rgb = (sel) => {
+    const el = document.querySelector(sel)
+    if (!el) return null
+    ctx.clearRect(0, 0, 1, 1)
+    ctx.fillStyle = getComputedStyle(el).backgroundColor
+    ctx.fillRect(0, 0, 1, 1)
+    return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3)
+  }
+  return {
+    nominal: rgb('.gauge-row__zone--nominal'),
+    watch: rgb('.gauge-row__zone--watch'),
+    critical: rgb('.gauge-row__zone--critical'),
+    ground: rgb('.gauge-row__bar'),
+  }
+})
+/* eslint-enable no-undef */
+
+const apart = (a, b) => (a && b ? Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) : 0)
+const gaps = {
+  'green/amber': Math.round(apart(bandColours.nominal, bandColours.watch)),
+  'amber/red': Math.round(apart(bandColours.watch, bandColours.critical)),
+  'green/red': Math.round(apart(bandColours.nominal, bandColours.critical)),
+  'green/ground': Math.round(apart(bandColours.nominal, bandColours.ground)),
+}
+check(
+  'the three bands are actually distinguishable from each other and the panel',
+  Object.values(gaps).every((d) => d > 60),
+  Object.entries(gaps)
+    .map(([k, d]) => `${k} ${d}`)
+    .join(' · '),
+)
+
 // The cabin has two ways to go wrong and every gauge on this panel has only
 // ever warned in one direction. The cold table has been in physiology.ts since
 // it was written and nothing had ever drawn it.
