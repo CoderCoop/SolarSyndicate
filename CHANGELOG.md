@@ -9,6 +9,62 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.7] — 2026-08-08
+
+### Added
+
+- **Green, amber and red on every Life gauge, with the ranges drawn on the
+  bar.** The panel could say what a level was, and since `0.11.5` what was
+  pushing it about. It could not say whether the number was *all right* — which
+  is the first thing anybody wants from a gauge. Two of the seven carried a
+  status; the other five carried none, so 11 kg of oxygen and 900 kg of water
+  were the same colour.
+
+  For anything the crew breathe or sit in, the colours are a **reading of
+  `physiology.ts`** rather than a second set of numbers free to drift from it:
+  green while nobody is losing health, amber at `impaired` where health starts
+  costing, red at `dangerous` and worse. That lands the carbon dioxide marks on
+  OSHA's 5,000 ppm and NIOSH's 10,000 — where a reader who knows the real
+  figures would put them. For a store the colours come from **time**: amber
+  inside thirty days, red inside seven, which are shorter than the runs on the
+  board.
+
+  Each bar now carries its **ranges**, not just its current colour, so the
+  player can see how much room is left before the next boundary. A store's
+  bands move as consumption does — the same tank is comfortable with four
+  aboard and thin with eight, and a fixed mark would say the same in both.
+
+  **The cabin is banded at both ends.** The cold table has been in
+  `physiology.ts` since it was written and no gauge had ever drawn it; the
+  temperature bar now runs red-amber-green-amber-red across 5 to 45 °C.
+
+  Hazard bars show a needle and no fill: a tank can be drawn part-full and mean
+  something, but shading everything below 1,567 ppm would say the cabin is 3%
+  full of a problem, which is not a thought anybody has.
+
+### Fixed
+
+- **Oxygen could be painted red with its needle in the green.** It is dangerous
+  for two unrelated reasons — the tank emptying on a clock, and the cabin
+  thinning below what a body can use — and neither implies the other: a tank
+  that is not draining lasts for ever and can still hold too little to breathe.
+  Colouring the row from one calculation and drawing the bar from the other put
+  the needle in the wrong band. Both rules are now read along the same track,
+  with each pressure threshold solved back through the ideal-gas relation to
+  the exact mass that produces it. Caught by the test written for it.
+
+- The hand-written CO2 and temperature thresholds in `engine.ts` are gone. They
+  duplicated the physiology tables and had already drifted: 28 °C was amber
+  there while the model called it `noticeable`, costing eight per cent of a
+  work rate and no health at all.
+
+### Changed
+
+- New `stores` block in `packages/data/tuning.json` — watch and critical days,
+  the spares reserve, and the propellant watch multiple. Balance numbers belong
+  in data (§9); the bar denominators they replace were magic numbers in a
+  component.
+
 ## [0.11.6] — 2026-08-08
 
 ### Added

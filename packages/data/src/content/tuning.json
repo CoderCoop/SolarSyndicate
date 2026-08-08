@@ -28,5 +28,11 @@
     "scrapFloor": 0.35,
     "conditionWeight": 0.8,
     "brokenDeduction": 0.06
+  },
+  "stores": {
+    "watchDays": 30,
+    "criticalDays": 7,
+    "sparesReserve": 8,
+    "propellantWatchMultiple": 3
   }
 }

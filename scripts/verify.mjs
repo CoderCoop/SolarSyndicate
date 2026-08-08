@@ -1125,6 +1125,57 @@ check(
 const closure = await page.textContent('.gauge-row:has-text("Water") .gauge-row__detail')
 check('water reports loop closure', /loop closure/.test(closure ?? ''), closure?.trim() ?? '')
 
+// Green, amber and red, with the ranges drawn on the track (§3.2). Two of the
+// seven gauges used to carry a status from thresholds hand-written in
+// engine.ts; the other five carried none, so 11 kg of oxygen and 900 kg of
+// water were the same colour.
+const zoned = await page.$$eval('.gauge-row', (rows) =>
+  rows.map((r) => ({
+    label: r.querySelector('.gauge-row__label')?.textContent,
+    zones: [...r.querySelectorAll('.gauge-row__zone')].map((z) =>
+      (z.className.match(/zone--(\w+)/) ?? [])[1],
+    ),
+    needle: r.querySelector('.gauge-row__needle') !== null,
+  })),
+)
+check(
+  'every gauge is banded green, amber and red (§3.2)',
+  zoned.length === 7 && zoned.every((g) => g.zones.length >= 1 && g.needle),
+  zoned.map((g) => `${g.label}: ${g.zones.join('/')}`).join(' | '),
+)
+
+// Water and food are the exception, and it is the right one: alongside, the
+// station is topping them up, so they are not draining and there is no
+// horizon to band. A store that is filling has no red -- the panel says as
+// much in the note under it, and the bands appear the moment she casts off,
+// which the voyage run below checks.
+const alongsideFlat = zoned.filter((g) => g.zones.length === 1).map((g) => g.label)
+check(
+  'except while the berth is filling them, when there is no horizon to band',
+  JSON.stringify(alongsideFlat) === JSON.stringify(['Water', 'Food']),
+  alongsideFlat.join(', ') || 'none',
+)
+
+// The cabin has two ways to go wrong and every gauge on this panel has only
+// ever warned in one direction. The cold table has been in physiology.ts since
+// it was written and nothing had ever drawn it.
+const tempZones = zoned.find((g) => g.label === 'Cabin temperature')?.zones
+check(
+  'and the cabin is banded at both ends, cold as well as hot',
+  JSON.stringify(tempZones) ===
+    JSON.stringify(['critical', 'watch', 'nominal', 'watch', 'critical']),
+  (tempZones ?? []).join(' → '),
+)
+
+// A working cabin sits around 1,500 ppm. A gauge that reads amber through
+// every ordinary watch teaches the player to ignore amber.
+const co2Row = await page.$eval('.gauge-row:has-text("Cabin CO2")', (r) => r.className)
+check(
+  'a cabin the scrubbers are keeping up with reads green',
+  /gauge-row--nominal/.test(co2Row),
+  co2Row,
+)
+
 // §1 pillar 1: a level and a horizon say what and when. Only "why" is
 // actionable, and it used to live one tab away on the flow diagram.
 const withSupply = await page.$$eval('.gauge-row', (rows) =>
@@ -1606,6 +1657,21 @@ check(
   'and a real speed, not a placeholder',
   Number.parseFloat(speed ?? '') > 0.05,
   speed?.trim() ?? '',
+)
+
+// The clocks start when she casts off, and so do the bands: alongside there is
+// no horizon on water or food to colour, because the station is filling them.
+await tap(v1, '.tabs__btn:has-text("Life")')
+await v1.waitForSelector('.gauges')
+const underWayZones = await v1.$$eval('.gauge-row', (rows) =>
+  rows
+    .filter((r) => ['Water', 'Food'].includes(r.querySelector('.gauge-row__label')?.textContent))
+    .map((r) => r.querySelectorAll('.gauge-row__zone').length),
+)
+check(
+  'casting off gives the stores a horizon, and the bands to show it',
+  underWayZones.length === 2 && underWayZones.every((n) => n > 1),
+  underWayZones.join(', '),
 )
 
 // The chart, with a ship on it. Berthed it reads her berth's orbital motion;

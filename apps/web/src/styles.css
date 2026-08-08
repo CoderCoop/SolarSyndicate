@@ -2432,24 +2432,62 @@ button {
 }
 
 .gauge-row__bar {
-  height: 5px;
+  position: relative;
+  height: 7px;
   margin: 8px 0 7px;
   background: var(--bg-sunken);
   border-radius: 999px;
   overflow: hidden;
 }
 
+/*
+ * The ranges, drawn on the track. Design §3.2.
+ *
+ * A coloured bar says whether the reading is all right now. The ranges say how
+ * much room is left before it stops being, which is the difference between a
+ * warning light and an instrument. Laid under the fill and kept faint: they
+ * are the scale, not the reading.
+ */
+.gauge-row__zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  opacity: 0.3;
+}
+
+.gauge-row__zone--nominal {
+  background: var(--green, #6fcf8f);
+}
+.gauge-row__zone--watch {
+  background: var(--amber);
+}
+.gauge-row__zone--critical {
+  background: var(--red);
+}
+
 .gauge-row__fill {
+  position: relative;
   height: 100%;
-  background: var(--cyan);
-  opacity: 0.7;
+  background: color-mix(in srgb, var(--ink) 20%, transparent);
   transition: width 800ms linear;
 }
 
-.gauge-row--watch .gauge-row__fill {
+/* Where the reading actually is. The fill shades everything below it, which
+   answers "how full"; only the mark can be read against a boundary. */
+.gauge-row__needle {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  transition: left 800ms linear;
+}
+
+.gauge-row--watch .gauge-row__needle {
   background: var(--amber);
 }
-.gauge-row--critical .gauge-row__fill {
+.gauge-row--critical .gauge-row__needle {
   background: var(--red);
 }
 
