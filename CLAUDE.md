@@ -8,12 +8,19 @@ Standard GitHub flow, no special cases:
 - **Name it `feature/<name>` or `bug/<name>`** — the prefix says which of the
   two it is, and the name says what it is: `feature/work-orders-tab`,
   `bug/star-chart-ignores-profile`.
-- **Branch, commit, push, open a PR.** Always a PR, however small the change.
-- **Merge once CI is green** — squash by default. No need to ask first; this is
-  a standing instruction. If CI fails, fix it and push again rather than
-  merging around it.
+- **Always a PR.** However small the change, however obvious the fix, however
+  green it already is locally. Nothing lands on `main` by direct push.
+- **Always merge as soon as the checks pass.** Squash by default. This is a
+  standing instruction: do not ask, do not wait for a review, do not leave a
+  green PR sitting open at the end of a session. If CI fails, fix it and push
+  again rather than merging around it.
 - After a merge, start the next change from a freshly updated `main`:
   `git checkout -B feature/<name> origin/main`.
+- If a change genuinely has to sit on top of an unmerged one — it needs the
+  parent's code to be correct — branch from the parent, then **rebase onto
+  `main` as soon as the parent merges** and re-derive the version bump:
+  `git rebase --onto origin/main <parent> <branch>`. Two open PRs claiming the
+  same version number is the usual way this goes wrong.
 - CI is `.github/workflows/ci.yml`: `pnpm check` (typecheck, lint, tests) plus
   the Chromium end-to-end pass. Both must pass.
 
