@@ -9,6 +9,28 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.8] — 2026-08-08
+
+### Fixed
+
+- **The gauge bands were hard to see.** Drawn at 0.3 alpha on a near-black
+  panel, all three came out muddy variants of the same dark and telling green
+  from amber was a guess. They are now mixed toward the ground instead, which
+  keeps them recognisably coloured and — unlike opacity — cannot be dulled
+  further by whatever is drawn over them. The bar is taller, the tank fill is
+  lighter so the colour beneath stays legible, and the needle is a bright mark
+  with a dark edge so it reads against any band rather than vanishing into its
+  own.
+
+- **Amber and red were 43 apart.** Measured, once `verify.mjs` started reading
+  the colours rather than the class names: the interface amber and red are both
+  warm, and mixing both with the same dark ground closed the gap on the two
+  colours it matters most to tell apart. The bands now use their own pair,
+  pushed away from each other in hue *and* lightness — the warning brighter and
+  yellower, the danger darker and redder — so the difference survives a
+  colour-blind eye and a phone in sunlight. 115 / 72 / 119 apart now, and the
+  check holds them there.
+
 ## [0.11.7] — 2026-08-08
 
 ### Added
