@@ -9,6 +9,36 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.9] — 2026-08-08
+
+### Changed
+
+- **The Life tab only raises an alarm when something is actually hurting
+  somebody.** It used to put up a coloured panel for every reading that was not
+  perfectly nominal, which meant a healthy ship carried a standing warning:
+  1,567 ppm is "stuffy", costs four per cent of a work rate and no health at
+  all, and it is where a working cabin *sits*. An alarm that is always on is
+  not an alarm — and this is the one place the game promises to foreshadow a
+  death (§7.4), so it is the worst possible thing to teach a player to look
+  past.
+
+  The threshold is the same `statusFor` the gauge bands use, so the strip and
+  the bars cannot disagree about whether something is wrong. A red panel over
+  seven green gauges would have been the worse version of this.
+
+- **Everything shown is quantified twice: what it costs the schedule, and what
+  it costs the people.** Capacity is stated as how much longer work takes,
+  which is the form a decision gets made in — "the crew work at 64%" is a fact
+  about people, "jobs take 56% longer" is a fact about the plan. Each hazard
+  says its own cost and its own health rate, and a combined line gives the
+  total the sim is actually applying, since capacities multiply and health
+  costs add.
+
+  Nothing below the threshold is hidden, only demoted: the quiet line still
+  says what the crew are working at when it is not 100%, so a player who
+  notices jobs running slow gets the reason without an alarm being faked to
+  give it to them.
+
 ## [0.11.8] — 2026-08-08
 
 ### Fixed

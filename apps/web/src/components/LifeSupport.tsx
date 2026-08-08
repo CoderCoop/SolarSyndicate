@@ -10,6 +10,7 @@ import { STORES } from '@solsyn/data'
 import {
   channelSides,
   formatDuration,
+  statusFor,
   type FlowChannel,
   type FlowNode,
   type Gauge,
@@ -189,6 +190,20 @@ function Row({
 }
 
 /**
+ * How much longer work takes, at a given capacity.
+ *
+ * The inverse is the actionable form. "Working at 64%" is a number about
+ * people; "every job takes half as long again" is a number about the schedule,
+ * and the schedule is what the player is deciding about.
+ */
+function slowdown(capacity: number): string {
+  if (capacity <= 0) return 'no work at all'
+  const longer = Math.round((1 / capacity - 1) * 100)
+  if (longer <= 0) return 'no effect on work'
+  return `jobs take ${longer}% longer`
+}
+
+/**
  * What the air is doing to the people in it. Design doc §3.2, §7.4.
  *
  * The gauges below say what the numbers are. This says what they *mean* for
@@ -196,19 +211,52 @@ function Row({
  * "8,400 ppm" is only actionable if you happen to know that OSHA's ceiling is
  * 5,000 and NIOSH calls 40,000 immediately dangerous to life.
  *
- * It also carries §7.4's foreshadowing: when the air is bad enough to hurt
- * somebody, this is where it says who and how long, before it happens.
+ * ## What counts as worth saying
+ *
+ * Only what is actually hurting somebody. This used to raise a coloured panel
+ * for every non-nominal reading, which meant a working ship carried a standing
+ * warning: 1,567 ppm is "stuffy", costs four per cent of a work rate and no
+ * health at all, and it is where a healthy cabin *sits*. An alarm that is
+ * always on is not an alarm, and it was teaching the player to look past the
+ * one place the game promises to foreshadow a death (§7.4).
+ *
+ * The threshold is the same `statusFor` the gauge bands use, so the strip and
+ * the bar cannot disagree about whether something is wrong -- a red panel over
+ * seven green gauges would be the worse version of this bug.
+ *
+ * What is below it is not hidden, only demoted: the quiet line still says what
+ * the crew are working at when it is not 100%, because a player who notices
+ * jobs running slow deserves the reason without an alarm being faked to give
+ * it to them.
+ *
+ * ## Saying how much
+ *
+ * Every effect shown is quantified twice over: what it costs the schedule, and
+ * what it costs the people. Capacity is stated as how much longer work takes,
+ * which is the form a decision gets made in.
  */
 function Crew({ life }: { life: LifeSupportView }) {
   const env = life.environment
   const failing = life.casualties.filter((c) => !c.dead && Number.isFinite(c.secondsLeft))
   const lost = life.casualties.filter((c) => c.dead)
 
-  if (env.exposures.length === 0 && lost.length === 0) {
+  // Anything past the green band -- the same line the gauges are drawn at.
+  const harming = env.exposures.filter((e) => statusFor(e.severity) !== 'nominal')
+  const drag = Math.round((1 - env.capacity) * 100)
+
+  if (harming.length === 0 && lost.length === 0) {
     return (
       <p className="panel__note vitals vitals--nominal">
-        The air is clean, the cabin is comfortable, and nothing aboard is working against the
-        crew.
+        Nothing aboard is harming the crew.{' '}
+        {drag > 0 ? (
+          <>
+            The air is a little close, so they are working at{' '}
+            {Math.round(env.capacity * 100)}% and jobs take about {drag}% longer — but nobody
+            is losing health for it.
+          </>
+        ) : (
+          <>The air is clean and the cabin is comfortable.</>
+        )}
       </p>
     )
   }
@@ -216,19 +264,28 @@ function Crew({ life }: { life: LifeSupportView }) {
   return (
     <div className={`vitals vitals--${env.severity}`}>
       <ul className="vitals__list">
-        {env.exposures.map((e) => (
+        {harming.map((e) => (
           <li key={e.hazard} className={`vital vital--${e.severity}`}>
             <span className="vital__reading">{e.reading}</span>
             <span className="vital__label">{e.label}</span>
             <span className="vital__effect">
-              {e.capacity <= 0
-                ? 'cannot work'
-                : `working at ${Math.round(e.capacity * 100)}%`}
-              {e.healthPerDay < 0 && ` · ${e.healthPerDay.toFixed(0)} health/day`}
+              {slowdown(e.capacity)}
+              {e.healthPerDay < 0 && ` · ${e.healthPerDay.toFixed(0)} health a day`}
             </span>
           </li>
         ))}
       </ul>
+
+      {/* What it comes to together. Capacities multiply and health costs add,
+          so two hazards are worse than the worse of them — and the total is
+          what the sim is actually applying, minor effects included. */}
+      {(harming.length > 1 || drag > 0) && (
+        <p className="vitals__total">
+          Altogether the crew work at {Math.round(env.capacity * 100)}% —{' '}
+          {slowdown(env.capacity)}
+          {env.healthPerDay < 0 && `, and lose ${(-env.healthPerDay).toFixed(0)} health a day`}.
+        </p>
+      )}
 
       {env.incapacitating && (
         <p className="vitals__stop">
