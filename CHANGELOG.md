@@ -9,6 +9,29 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.4] — 2026-08-08
+
+### Fixed
+
+- **The crew were drawn absorbing heat.** On the flow diagram's heat channel,
+  four people appeared on the consumer side for 0.47 kW — as though bodies took
+  warmth *out* of a cabin. They put it in: about 110 W each, more when working,
+  which between four of them is a radiator panel's worth and not a rounding
+  error.
+
+  The balance was right the whole time — `networks.ts` has counted `crewHeatKw`
+  into `heatInKw` since M1 — so only the picture lied, which is why nothing
+  caught it. The cause was a default: `crewNode` assumed `consumer`, the CO2
+  channel remembered to override it and the heat channel did not. The role is
+  now a required argument, because people are a source on two of these five
+  channels and a consumer on the other three, and a default that is right
+  three times in five is exactly how this happens.
+
+  Pinned by three tests: that a removal channel — one where `return` means
+  *taking the stuff away* — has nothing filed under `consumer` at all, that the
+  crew are a source of both heat and CO2, and that those channels' nodes sum to
+  their own net the mirrored way round. All three fail against the old code.
+
 ## [0.11.3] — 2026-08-07
 
 ### Fixed

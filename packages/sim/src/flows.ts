@@ -160,11 +160,24 @@ export function flowChannels(state: SimState): FlowChannel[] {
   const load = crewLoadOf(state)
   const headcount = state.crew.length
 
-  const crewNode = (magnitude: number, note: string): FlowNode => ({
+  /**
+   * The crew as a node on some channel.
+   *
+   * The role is a required argument rather than a default, because people are
+   * a *source* on two of these five channels and a consumer on the other
+   * three: they breathe out carbon dioxide and they radiate about 110 W each.
+   * This used to default to `consumer`; the CO2 channel remembered to override
+   * it and the heat channel did not, so four crew were drawn on the diagram as
+   * though they absorbed half a kilowatt between them. The balance was right
+   * all along -- `networks.ts` has counted `crewHeatKw` into `heatInKw` since
+   * M1 -- which is exactly why nothing else caught it. Making the caller say
+   * which side they are on removes the whole class of it.
+   */
+  const crewNode = (role: FlowRole, magnitude: number, note: string): FlowNode => ({
     id: 'crew',
     name: `Crew ×${headcount}`,
     where: 'aboard',
-    role: 'consumer',
+    role,
     magnitude,
     note,
   })
@@ -231,7 +244,9 @@ export function flowChannels(state: SimState): FlowChannel[] {
         })
         .filter((n) => n.magnitude > 0 || n.idle),
     ),
-    crewNode(METABOLIC.heatKw * load, 'about 110 W each, more when working'),
+    // A warm body is a heat source. Four of them are 470 W, which is a
+    // radiator panel's worth and not a rounding error.
+    crewNode('source', METABOLIC.heatKw * load, 'about 110 W each, more when working'),
   ]
   const heatNodes: FlowNode[] = [
     ...heatSources,
@@ -254,7 +269,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
   // --- CO2 -----------------------------------------------------------------
   const co2Out = ranked(partNodes(state, t, (d) => d.provides.co2ScrubKgPerDay, 'return'))
   const co2Nodes: FlowNode[] = [
-    { ...crewNode(METABOLIC.co2KgPerDay * load, 'about 1 kg each per day'), role: 'source' },
+    crewNode('source', METABOLIC.co2KgPerDay * load, 'about 1 kg each per day'),
     ...co2Out,
     {
       id: 'cabin',
@@ -270,7 +285,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
   const o2Nodes: FlowNode[] = [
     ...ranked(partNodes(state, t, (d) => d.provides.o2KgPerDay, 'source')),
     ...alongsideNode(state, 'o2'),
-    crewNode(METABOLIC.o2KgPerDay * load, 'about 0.84 kg each per day'),
+    crewNode('consumer', METABOLIC.o2KgPerDay * load, 'about 0.84 kg each per day'),
     {
       id: 'o2tank',
       name: 'O₂ stores',
@@ -307,7 +322,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
   const recycler = state.ship.parts.find((p) => getPart(p.defId).provides.waterRecycleFraction)
   const waterNodes: FlowNode[] = [
     ...alongsideNode(state, 'water'),
-    crewNode(waterCrew, 'drinking, hygiene'),
+    crewNode('consumer', waterCrew, 'drinking, hygiene'),
     ...waterEquipment,
     {
       id: recycler?.id ?? 'recycler',
@@ -333,7 +348,7 @@ export function flowChannels(state: SimState): FlowChannel[] {
   const foodNodes: FlowNode[] = [
     ...ranked(partNodes(state, t, (d) => d.provides.foodKgPerDay, 'source')),
     ...alongsideNode(state, 'food'),
-    crewNode(METABOLIC.foodKgPerDay * load, 'about 1.8 kg each per day'),
+    crewNode('consumer', METABOLIC.foodKgPerDay * load, 'about 1.8 kg each per day'),
     {
       id: 'foodstore',
       name: 'Food stores',

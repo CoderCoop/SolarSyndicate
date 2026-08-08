@@ -845,6 +845,27 @@ check(
   JSON.stringify(grammar),
 )
 
+// A warm body is a heat source. `crewNode` used to default to `consumer`, the
+// CO2 channel remembered to override it and the heat channel did not -- so four
+// people were drawn on the diagram as though they absorbed 0.47 kW between
+// them, while the balance underneath counted them correctly the whole time.
+await page.click('.chans__btn:text-is("Heat")')
+await page.waitForSelector('.fdia')
+const heatSources = await page.$$eval('.fdia__src-name', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+const heatConsumers = await page.$$eval('.fdia__row-name', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  'the crew are drawn making heat, not absorbing it',
+  heatSources.some((n) => /^Crew/.test(n ?? '')) &&
+    !heatConsumers.some((n) => /^Crew/.test(n ?? '')),
+  `sources: ${heatSources.join(', ')} | consumers: ${heatConsumers.join(', ') || 'none'}`,
+)
+await page.click('.chans__btn:text-is("Power")')
+await page.waitForSelector('.fdia')
+
 // --- the engineering panel (mockup 003, option C) --------------------------
 //
 // Stations as nodes, networks as lines between them. The claim it has to
