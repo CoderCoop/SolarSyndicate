@@ -698,7 +698,7 @@ check('and the heading needle is drawn from her', await page.isVisible('.chart__
 const scaleLabel = await page.textContent('.zoomer__scale')
 check(
   'the chart says what scale it is at',
-  /^map · \d/.test(scaleLabel?.trim() ?? ''),
+  /^system · \d/.test(scaleLabel?.trim() ?? ''),
   scaleLabel?.trim() ?? '',
 )
 
@@ -826,17 +826,32 @@ await page.mouse.move(mid.x, mid.y)
 await page.mouse.down()
 await page.mouse.move(mid.x - 90, mid.y - 40, { steps: 8 })
 await page.mouse.up()
+// The locate crosshair is always there -- a control that only appears once you
+// are lost is one you have to notice mid-problem -- and it brightens when it is
+// the one you want.
 check(
-  'dragging pans the plate, and it offers to find the ship again',
-  await page.isVisible('.zoomer__btn--follow'),
+  'dragging pans the plate, and the locate control says so',
+  await page.isVisible('.zoomer__btn--locate.is-wanted'),
 )
-await page.click('.zoomer__btn--follow')
+await page.click('.zoomer__btn--locate')
 check(
-  'which puts her back in the middle',
-  (await page.$$('.zoomer__btn--follow')).length === 0,
+  'pressing it puts her back in the middle',
+  (await page.$$('.zoomer__btn--locate.is-wanted')).length === 0 &&
+    (await page.isVisible('.zoomer__btn--locate')),
 )
 
-await page.click('.zoomer__btn:text-is("Map")')
+// And it works from the system plate too, which is the fastest way in to her.
+await page.click('.zoomer__btn:text-is("System")')
+await page.waitForSelector('.chart__graticule .is-cardinal')
+await page.click('.zoomer__btn--locate')
+await page.waitForSelector('.chart__grid')
+check(
+  'and reaches her from the whole-system view as well',
+  /across$/.test(((await page.textContent('.zoomer__scale')) ?? '').trim()),
+  ((await page.textContent('.zoomer__scale')) ?? '').trim(),
+)
+
+await page.click('.zoomer__btn:text-is("System")')
 await page.waitForSelector('.chart__graticule .is-cardinal')
 
 // Nobody reads three decimal places off a drawing, and a crossing is planned
@@ -1868,7 +1883,7 @@ check(
   /Tranquillity/.test(localCaption ?? ''),
   localCaption?.trim() ?? '',
 )
-await v1.click('.zoomer__btn:text-is("Map")')
+await v1.click(`.zoomer__btn:text-is("System")`)
 
 // The chart, with a ship on it. Berthed it reads her berth's orbital motion;
 // under way it has to name where she is going and when she gets there (§5.1).
