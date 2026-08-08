@@ -521,3 +521,55 @@ export function flowChannels(state: SimState): FlowChannel[] {
 export function flowCrewCount(state: SimState): number {
   return crewViews(state).length
 }
+
+// ---------------------------------------------------------------------------
+// Which way round a channel runs
+// ---------------------------------------------------------------------------
+
+/**
+ * Channels where `return` means **removal** rather than recovery.
+ *
+ * Most of these track a store you want full, and `return` is what comes back
+ * into it -- the water recycler. Heat and carbon dioxide track a nuisance you
+ * want *gone*, and `return` is what carts it away: the radiators, the
+ * scrubbers. Same role name, opposite side of the balance.
+ *
+ * The distinction lives here, next to the code that builds both kinds, rather
+ * than in each screen that draws them. `flows.test.ts` already had to special-
+ * case it once; a second reader deriving it again from the key would be the
+ * third copy of one fact.
+ */
+const REMOVAL_CHANNELS = new Set(['heat', 'co2'])
+
+/**
+ * A channel split the way a person reads it: what puts the stuff in, and what
+ * takes it out. Both ranked biggest first, with anything idle sorted last.
+ *
+ * `FlowRole` is the diagram's vocabulary -- source, consumer, return, buffer --
+ * and it is the right one for drawing a loop. It is the wrong one for a
+ * sentence, because "return" lands on a different side depending on the
+ * channel and the buffer is on neither. This is the reading.
+ */
+export interface ChannelSides {
+  /** What puts it in. */
+  in: FlowNode[]
+  /** What takes it out. */
+  out: FlowNode[]
+}
+
+export function channelSides(channel: FlowChannel): ChannelSides {
+  const removal = REMOVAL_CHANNELS.has(channel.key)
+  const pick = (...roles: FlowRole[]) =>
+    channel.nodes
+      .filter((n) => roles.includes(n.role))
+      // Idle last: a part that is switched off is worth keeping on the list --
+      // "why is it not there" is a worse question than "why is it zero" -- but
+      // it is not the answer to "what is draining this".
+      .sort((a, b) => Number(a.idle ?? false) - Number(b.idle ?? false) || b.magnitude - a.magnitude)
+
+  // The buffer is deliberately in neither: it is the store absorbing the
+  // difference, so listing it as a contributor would double-count the net.
+  return removal
+    ? { in: pick('source'), out: pick('return') }
+    : { in: pick('source', 'return'), out: pick('consumer') }
+}

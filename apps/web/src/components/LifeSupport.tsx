@@ -5,12 +5,100 @@
  * A number without a horizon is decoration; the horizon is what turns a
  * reading into a decision.
  */
-import { formatDuration, type LifeSupportView, type LifeStatus } from '@solsyn/sim'
+import { useState } from 'react'
+import {
+  channelSides,
+  formatDuration,
+  type FlowChannel,
+  type FlowNode,
+  type LifeSupportView,
+  type LifeStatus,
+} from '@solsyn/sim'
 import { DAY, HOUR } from '@solsyn/sim'
 
 function Days({ days }: { days: number }) {
   if (!Number.isFinite(days)) return <span className="gauge-row__horizon">holding</span>
   return <span className="gauge-row__horizon">{formatDuration(days * DAY)} left</span>
+}
+
+/** Contributors named on one gauge before the tail collapses into a count. */
+const MAX_NAMED = 3
+
+function magnitude(value: number, unit: string): string {
+  if (unit === 'kg/day' && value >= 1000) return `${(value / 1000).toFixed(1)} t/day`
+  // Spares are counted, not measured: "1" beside a locker of 21, not "1.00".
+  if (unit === '') return `${Math.round(value * 10) / 10}`
+  const decimals = value >= 100 ? 0 : value >= 10 ? 1 : 2
+  return `${value.toFixed(decimals)} ${unit}`
+}
+
+/**
+ * One side of a gauge's balance, in words. Design doc §3.2, §1 pillar 1.
+ *
+ * A level and a horizon say *what* and *when*. They do not say **why**, and
+ * why is the only one of the three a player can act on: "47 days of water" is
+ * a fact, "the recycler is putting back 19.6 of the 21.5 you use" is a
+ * decision about whether to service it.
+ *
+ * The figures were all here already — `flowChannels` has built one channel per
+ * gauge on this tab since spec 004, ranked and summed — and they were only
+ * ever drawn one tab along, so reading a gauge meant leaving the gauge. This is
+ * the same data, on the screen the question is asked on.
+ */
+function Side({
+  which,
+  nodes,
+  unit,
+}: {
+  which: 'in' | 'out'
+  nodes: FlowNode[]
+  unit: string
+}) {
+  // The tail opens rather than being a count you cannot act on. Three names is
+  // the right default -- on most channels it is the whole story -- but heat has
+  // twelve contributors and every part aboard is one of them, so "+8 more"
+  // there was hiding most of the answer to the question the panel exists for.
+  const [all, setAll] = useState(false)
+  if (nodes.length === 0) return null
+  const named = all ? nodes : nodes.slice(0, MAX_NAMED)
+  const rest = nodes.length - named.length
+
+  return (
+    <div className={`supply supply--${which}`}>
+      <span className="supply__side">{which}</span>
+      <ul className="supply__list">
+        {named.map((n) => (
+          <li key={n.id} className={`supply__item ${n.idle ? 'is-idle' : ''}`}>
+            <span className="supply__name">{n.name}</span>{' '}
+            <span className="supply__figure">
+              {n.idle ? 'off' : magnitude(n.magnitude, unit)}
+            </span>
+          </li>
+        ))}
+        {(rest > 0 || all) && (
+          <li className="supply__item">
+            <button type="button" className="supply__more" onClick={() => setAll(!all)}>
+              {all ? 'fewer' : `+${rest} more`}
+            </button>
+          </li>
+        )}
+      </ul>
+    </div>
+  )
+}
+
+/** Both sides of a gauge, when there is a channel behind it. */
+function Supply({ channel }: { channel?: FlowChannel }) {
+  if (!channel) return null
+  const sides = channelSides(channel)
+  if (sides.in.length === 0 && sides.out.length === 0) return null
+
+  return (
+    <div className="gauge-row__supply">
+      <Side which="in" nodes={sides.in} unit={channel.unit} />
+      <Side which="out" nodes={sides.out} unit={channel.unit} />
+    </div>
+  )
 }
 
 function Row({
@@ -20,6 +108,7 @@ function Row({
   status = 'nominal',
   fill,
   horizon,
+  channel,
 }: {
   label: string
   value: string
@@ -27,6 +116,7 @@ function Row({
   status?: LifeStatus
   fill?: number
   horizon?: React.ReactNode
+  channel?: FlowChannel
 }) {
   return (
     <li className={`gauge-row gauge-row--${status}`}>
@@ -46,6 +136,7 @@ function Row({
         {detail && <span className="gauge-row__detail">{detail}</span>}
         {horizon}
       </div>
+      <Supply channel={channel} />
     </li>
   )
 }
@@ -128,7 +219,19 @@ function Crew({ life }: { life: LifeSupportView }) {
   )
 }
 
-export function LifeSupport({ life }: { life: LifeSupportView }) {
+export function LifeSupport({
+  life,
+  channels,
+}: {
+  life: LifeSupportView
+  channels: FlowChannel[]
+}) {
+  // Matched on the label the channel already carries, which `flows.ts` keeps
+  // identical to the gauge's on purpose ("one channel per gauge on the Life
+  // tab"). A gauge with no channel simply shows no breakdown rather than
+  // guessing at one.
+  const by = new Map(channels.map((c) => [c.label, c]))
+
   return (
     <section className="panel" aria-label="Life support">
       <h2 className="panel__title">Life Support</h2>
@@ -138,6 +241,7 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
       <ul className="gauges">
         <Row
           label="Cabin CO2"
+          channel={by.get('Cabin CO2')}
           value={`${Math.round(life.co2Ppm).toLocaleString()} ppm`}
           status={life.co2Status}
           fill={life.co2Ppm / 15000}
@@ -152,6 +256,7 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
 
         <Row
           label="Cabin temperature"
+          channel={by.get('Cabin temperature')}
           value={`${life.temperatureC.toFixed(1)} °C`}
           status={life.tempStatus}
           fill={(life.temperatureC - 21) / 30}
@@ -167,6 +272,7 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
 
         <Row
           label="Oxygen"
+          channel={by.get('Oxygen')}
           value={`${life.o2Kg.toFixed(1)} kg`}
           fill={life.o2Kg / 90}
           /* Partial pressure alongside the tank reading: the mass is what you
@@ -177,6 +283,7 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
 
         <Row
           label="Water"
+          channel={by.get('Water')}
           value={`${life.waterKg.toFixed(0)} kg`}
           fill={life.waterKg / 900}
           detail={
@@ -190,6 +297,7 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
 
         <Row
           label="Food"
+          channel={by.get('Food')}
           value={`${life.foodKg.toFixed(0)} kg`}
           fill={life.foodKg / 620}
           horizon={<Days days={life.foodDays} />}
@@ -197,12 +305,18 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
 
         <Row
           label="Propellant"
+          channel={by.get('Propellant')}
           value={`${(life.propellantKg / 1000).toFixed(1)} t`}
           fill={life.propellantKg / 18000}
-          detail="No consumers until the ship can leave — M2"
+          detail="A budget, not a rate — this empties during a burn and at no other time"
         />
 
-        <Row label="Spares" value={`${Math.floor(life.spares)}`} fill={life.spares / 60} />
+        <Row
+          label="Spares"
+          channel={by.get('Spares')}
+          value={`${Math.floor(life.spares)}`}
+          fill={life.spares / 60}
+        />
       </ul>
 
       {life.docked && (
@@ -211,6 +325,12 @@ export function LifeSupport({ life }: { life: LifeSupportView }) {
           clocks only start once the ship casts off.
         </p>
       )}
+
+      <p className="panel__note">
+        Under each gauge: what puts it in and what takes it out, biggest first, with anything
+        switched off at the end. The Flows tab draws the same figures as a diagram, with the
+        loops and the what-ifs.
+      </p>
     </section>
   )
 }
