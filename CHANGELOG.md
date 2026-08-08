@@ -9,6 +9,42 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.10] — 2026-08-08
+
+### Changed
+
+- **The chart pinches and drags, like a map.** The four fixed scales shipped in
+  `0.11.6` were a scale *picker*, and a chart is not something you pick a
+  setting for — it is something you lean into. One finger drags, two pinch
+  about the point between them, a wheel notch steps and a double tap goes in,
+  continuously from three million kilometres across out to Ceres' orbit.
+
+  The point under the fingers **stays under the fingers**, which is the whole
+  difference between this feeling right and feeling broken: the gesture
+  converts plate coordinates back into AU before rescaling rather than zooming
+  about the middle of the plate.
+
+  The square-root map stays as a place to return to rather than becoming a
+  fifth stop on the scale. It is a different *projection*, not a different
+  magnification, and pinching your way into it would be a lie about what the
+  gesture does — but dragging a map does move you into the close view, because
+  grabbing a chart and having it refuse to budge is the wrong answer to a
+  gesture that plainly means "move".
+
+  Buttons remain for what a pinch cannot serve: closer, wider, back to the map,
+  and — once the ship has actually been left behind — centre on her again. They
+  also give the plate somewhere to say **what scale it is at**, which a
+  continuous zoom needs far more than fixed stops did; with four buttons the
+  scale was the label on the pressed one.
+
+### Fixed
+
+- `setPointerCapture` was called unguarded. It is an optimisation that keeps a
+  drag alive past the edge of the plate, and it is allowed to fail — a pointer
+  can be gone by the time the handler runs, and an uncaught throw there would
+  have taken the whole gesture with it rather than degrading to an ordinary
+  drag. Found by the end-to-end pinch, which drives synthetic pointers.
+
 ## [0.11.9] — 2026-08-08
 
 ### Changed

@@ -692,14 +692,14 @@ check('and the heading needle is drawn from her', await page.isVisible('.chart__
 //
 // The square-root plate is the right map and the wrong instrument: it puts the
 // inner system and the Belt on one page and it cannot answer "where exactly".
-// The close views are the same positions drawn linearly around the ship.
-const scales = await page.$$eval('.zoomer__btn', (els) =>
-  els.map((e) => [e.textContent?.trim(), e.getAttribute('aria-pressed')]),
-)
+// The close view is the same positions drawn linearly, and the scale is
+// continuous because a chart is something you lean into rather than pick a
+// setting for.
+const scaleLabel = await page.textContent('.zoomer__scale')
 check(
-  'the chart offers a scale to read it at',
-  scales.length === 4 && scales.at(-1)?.[0] === 'System' && scales.at(-1)?.[1] === 'true',
-  scales.map(([l, on]) => (on === 'true' ? `[${l}]` : l)).join(' '),
+  'the chart says what scale it is at',
+  /^map · \d/.test(scaleLabel?.trim() ?? ''),
+  scaleLabel?.trim() ?? '',
 )
 
 /**
@@ -733,8 +733,60 @@ check(
   `${systemGaps.join(' > ')} plate units per AU`,
 )
 
-await page.click('.zoomer__btn:text-is("1 AU")')
+// Pinch. Two pointers drawn apart is the gesture the whole control now rests
+// on, and it is the one that silently does nothing if `touch-action` is left
+// to the browser -- so it is driven here rather than assumed.
+const plate = await page.$('.chart')
+const box = await plate.boundingBox()
+const mid = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+
+/* The body of evaluate runs in the browser, not in Node -- so its globals are
+   the page's, which is why eslint cannot see them here. */
+/* eslint-disable no-undef */
+const pinch = async (from, to) => {
+  await plate.evaluate(
+    (el, [cx, cy, a, b]) => {
+      const send = (type, points) => {
+        for (const [id, dx] of points) {
+          el.dispatchEvent(
+            new PointerEvent(type, {
+              pointerId: id,
+              pointerType: 'touch',
+              clientX: cx + dx,
+              clientY: cy,
+              bubbles: true,
+              isPrimary: id === 1,
+            }),
+          )
+        }
+      }
+      send('pointerdown', [
+        [1, -a],
+        [2, a],
+      ])
+      send('pointermove', [
+        [1, -b],
+        [2, b],
+      ])
+      send('pointerup', [
+        [1, -b],
+        [2, b],
+      ])
+    },
+    [mid.x, mid.y, from, to],
+  )
+}
+/* eslint-enable no-undef */
+
+await pinch(30, 90)
 await page.waitForSelector('.chart__grid')
+const afterPinch = await page.textContent('.zoomer__scale')
+check(
+  'pinching the plate zooms it, continuously rather than in fixed stops',
+  /across$/.test(afterPinch?.trim() ?? '') && !/^map/.test(afterPinch?.trim() ?? ''),
+  afterPinch?.trim() ?? '',
+)
+
 const closeGaps = await tickScale()
 check(
   'and a close view is evenly spaced, because its scale is even',
@@ -746,6 +798,20 @@ check(
   (await page.$$('.chart__graticule .is-cardinal')).length === 0,
 )
 
+// A pinch that holds nothing still is a pinch that feels broken, so the two
+// buttons are checked to move the scale in the direction they claim.
+const scaleOf = async () => Number((await page.textContent('.zoomer__scale')).match(/[\d.]+/)[0])
+const beforeStep = await scaleOf()
+await page.click('.zoomer__btn[aria-label="Zoom in"]')
+const afterIn = await scaleOf()
+await page.click('.zoomer__btn[aria-label="Zoom out"]')
+const afterOut = await scaleOf()
+check(
+  'and the buttons step the same scale, for a mouse and a keyboard',
+  afterIn < beforeStep && afterOut > afterIn,
+  `${beforeStep} → ${afterIn} → ${afterOut}`,
+)
+
 const offplate = await page.$$eval('.chart__offplate text', (els) =>
   els.map((e) => e.textContent?.trim()),
 )
@@ -754,7 +820,23 @@ check(
   offplate.includes('Mars') && offplate.some((t) => /AU$/.test(t ?? '')),
   offplate.join(' · '),
 )
-await page.click('.zoomer__btn:text-is("System")')
+
+// Dragging leaves the ship behind, and the plate offers to go back to her.
+await page.mouse.move(mid.x, mid.y)
+await page.mouse.down()
+await page.mouse.move(mid.x - 90, mid.y - 40, { steps: 8 })
+await page.mouse.up()
+check(
+  'dragging pans the plate, and it offers to find the ship again',
+  await page.isVisible('.zoomer__btn--follow'),
+)
+await page.click('.zoomer__btn--follow')
+check(
+  'which puts her back in the middle',
+  (await page.$$('.zoomer__btn--follow')).length === 0,
+)
+
+await page.click('.zoomer__btn:text-is("Map")')
 await page.waitForSelector('.chart__graticule .is-cardinal')
 
 // Nobody reads three decimal places off a drawing, and a crossing is planned
