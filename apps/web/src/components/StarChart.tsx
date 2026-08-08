@@ -39,7 +39,7 @@
  * repeated underneath, because an arrow is a direction and a player planning a
  * burn wants a number.
  */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ChartBody, ChartView, ChartWindow } from '@solsyn/sim'
 
 const SIZE = 300
@@ -78,15 +78,42 @@ const REFERENCE_SPEED_MS = 29784
  * positions drawn **linearly**, centred on the ship, so a millimetre is a
  * millimetre wherever it falls.
  *
- * 0.2 AU is thirty million kilometres, about the closest Mars ever gets. 4 AU
- * holds the whole inner system and Ceres at true scale, which is the picture
- * that shows what the square root was hiding.
+ * The scale is continuous and the gesture is the one everybody already has:
+ * pinch, drag, wheel, double tap. Four fixed stops were a scale *picker*, and
+ * a chart is not something you pick a scale for — it is something you lean
+ * into. The map stays as a place to return to rather than becoming a fifth
+ * stop, because it is a different projection and not a different
+ * magnification.
  */
-const ZOOMS = [0.2, 1, 4] as const
-type Zoom = (typeof ZOOMS)[number] | 'system'
+const REACH = {
+  /** Closest in: about three million kilometres across. */
+  min: 0.01,
+  /** Furthest out: Ceres' orbit with room around it. */
+  max: 4,
+  /** Where a fresh close view starts — half an AU across. */
+  start: 0.25,
+}
 
-/** Candidate grid and ruler steps, in AU. The largest that fits at least two. */
-const STEPS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]
+/** How far one wheel notch or one tap of the buttons moves the scale. */
+const ZOOM_STEP = 1.35
+
+/**
+ * What the plate is showing, and from where.
+ *
+ * `centre` is null while the camera is following the ship, which is the state
+ * it starts in and returns to: a chart that quietly stopped tracking her the
+ * first time somebody nudged it would be a worse instrument than one that
+ * cannot pan at all.
+ */
+interface Camera {
+  mode: 'map' | 'close'
+  /** Half the plate's width, AU. Close view only. */
+  reachAu: number
+  centre: { x: number; y: number } | null
+}
+
+/** Candidate grid and ruler steps, in AU. The largest that fits at least three. */
+const STEPS = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]
 
 /**
  * How the plate maps heliocentric AU onto drawing units.
@@ -99,6 +126,8 @@ interface View {
   kind: 'system' | 'close'
   /** Heliocentric AU to plate coordinates. */
   to: (x: number, y: number) => [number, number]
+  /** And back again, which is what a pinch needs to hold a point still. */
+  from: (plateX: number, plateY: number) => { x: number; y: number }
   /** Where the sun lands, which in the close view is usually off the plate. */
   sun: [number, number]
   /** An orbit's radius in plate units -- a circle about the sun either way. */
@@ -199,26 +228,39 @@ function longitudeOf(x: number, y: number): number {
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360
 }
 
-function viewFor(zoom: Zoom, chart: ChartView): View {
+function viewFor(camera: Camera, chart: ChartView): View {
   const { extentAu, ship } = chart
-  if (zoom === 'system') {
+  if (camera.mode === 'map') {
     return {
       kind: 'system',
       to: (x, y) => project(x, y, extentAu),
+      from: () => ({ x: ship.x, y: ship.y }),
       sun: [CENTRE, CENTRE],
       orbitR: (au) => radial(au, extentAu),
       reachAu: extentAu,
       perAu: PLATE / extentAu,
     }
   }
-  // Linear and ship-centred: the view that answers "exactly where".
-  const reachAu = zoom / 2
+  // Linear: the view that answers "exactly where". Centred on the ship until
+  // somebody drags it somewhere else.
+  const at = camera.centre ?? { x: ship.x, y: ship.y }
+  const reachAu = camera.reachAu
   const perAu = PLATE / reachAu
   const to = (x: number, y: number): [number, number] => [
-    CENTRE + (x - ship.x) * perAu,
-    CENTRE - (y - ship.y) * perAu,
+    CENTRE + (x - at.x) * perAu,
+    CENTRE - (y - at.y) * perAu,
   ]
-  return { kind: 'close', to, sun: to(0, 0), orbitR: (au) => au * perAu, reachAu, perAu }
+  return {
+    kind: 'close',
+    to,
+    // The inverse, for gestures: a pinch has to hold whatever is under the
+    // fingers still, which means turning plate coordinates back into AU.
+    from: (px, py) => ({ x: at.x + (px - CENTRE) / perAu, y: at.y - (py - CENTRE) / perAu }),
+    sun: to(0, 0),
+    orbitR: (au) => au * perAu,
+    reachAu,
+    perAu,
+  }
 }
 
 /** Is this plate position inside the drawn circle? */
@@ -226,15 +268,155 @@ function onPlateAt(x: number, y: number, inset = 0): boolean {
   return Math.hypot(x - CENTRE, y - CENTRE) <= PLATE - inset
 }
 
+/**
+ * Pinch, drag and wheel on the plate. Design doc §5.1, §8.1.
+ *
+ * Four fixed scales were a scale *picker*, and a chart is not a thing you pick
+ * a scale for — it is a thing you lean into. This is the gesture set anybody
+ * who has used a maps app already knows: one finger drags, two pinch about the
+ * point between them, a wheel notch steps, and a double tap goes in.
+ *
+ * Two details that are the whole difference between this feeling right and
+ * feeling broken. The point under the fingers **stays under the fingers**,
+ * which means converting plate coordinates back into AU before rescaling
+ * rather than scaling about the middle of the plate. And `touch-action: none`
+ * on the SVG, without which the browser claims the gesture and pans the page
+ * instead — the chart would simply appear not to respond.
+ */
+function useGestures(
+  view: View,
+  camera: Camera,
+  setCamera: (next: Camera) => void,
+  chart: ChartView,
+) {
+  const svg = useRef<SVGSVGElement | null>(null)
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const pinch = useRef<{ span: number; reachAu: number } | null>(null)
+
+  /** Client coordinates to the plate's own units. */
+  const toPlate = (clientX: number, clientY: number) => {
+    const box = svg.current?.getBoundingClientRect()
+    if (!box || box.width === 0) return { x: CENTRE, y: CENTRE }
+    const scale = SIZE / box.width
+    return { x: (clientX - box.left) * scale, y: (clientY - box.top) * scale }
+  }
+
+  /** Rescale about a plate point, keeping whatever is under it still. */
+  const zoomAbout = (plateX: number, plateY: number, nextReach: number) => {
+    const reachAu = Math.min(REACH.max, Math.max(REACH.min, nextReach))
+    // Where the gesture is pointing, in AU, before anything moves.
+    const anchor = view.from(plateX, plateY)
+    const perAu = PLATE / reachAu
+    // Choose the centre that puts that same AU point back under the gesture.
+    setCamera({
+      mode: 'close',
+      reachAu,
+      centre: {
+        x: anchor.x - (plateX - CENTRE) / perAu,
+        y: anchor.y + (plateY - CENTRE) / perAu,
+      },
+    })
+  }
+
+  const spanOf = () => {
+    const [a, b] = [...pointers.current.values()]
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0
+  }
+  const midOf = () => {
+    const [a, b] = [...pointers.current.values()]
+    return a && b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : { x: CENTRE, y: CENTRE }
+  }
+
+  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    // Capture is an optimisation -- it keeps a drag alive when the finger
+    // leaves the plate -- and it is allowed to fail: a pointer can be gone by
+    // the time the handler runs, and an uncaught throw here would take the
+    // whole gesture with it rather than degrading to an ordinary drag.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* the drag still works, it just stops at the edge of the plate */
+    }
+    pointers.current.set(e.pointerId, toPlate(e.clientX, e.clientY))
+    if (pointers.current.size === 2) pinch.current = { span: spanOf(), reachAu: view.reachAu }
+  }
+
+  const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    const was = pointers.current.get(e.pointerId)
+    if (!was) return
+    const now = toPlate(e.clientX, e.clientY)
+    pointers.current.set(e.pointerId, now)
+
+    if (pointers.current.size >= 2 && pinch.current) {
+      const span = spanOf()
+      if (span > 4 && pinch.current.span > 4) {
+        const mid = midOf()
+        zoomAbout(mid.x, mid.y, (pinch.current.reachAu * pinch.current.span) / span)
+      }
+      return
+    }
+
+    // One finger: drag. A map view is dragged into the close one, because
+    // grabbing a chart and having it refuse to move is the wrong answer to a
+    // gesture that plainly means "move".
+    const perAu = view.kind === 'close' ? view.perAu : PLATE / REACH.start
+    const at = camera.centre ?? { x: chart.ship.x, y: chart.ship.y }
+    setCamera({
+      mode: 'close',
+      reachAu: view.kind === 'close' ? view.reachAu : REACH.start,
+      centre: { x: at.x - (now.x - was.x) / perAu, y: at.y + (now.y - was.y) / perAu },
+    })
+  }
+
+  const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    pointers.current.delete(e.pointerId)
+    if (pointers.current.size < 2) pinch.current = null
+  }
+
+  const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+    const at = toPlate(e.clientX, e.clientY)
+    const base = view.kind === 'close' ? view.reachAu : REACH.start
+    zoomAbout(at.x, at.y, e.deltaY > 0 ? base * ZOOM_STEP : base / ZOOM_STEP)
+  }
+
+  const onDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    const at = toPlate(e.clientX, e.clientY)
+    zoomAbout(at.x, at.y, (view.kind === 'close' ? view.reachAu : REACH.start) / 2)
+  }
+
+  return {
+    ref: svg,
+    handlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp,
+      onPointerCancel: onPointerUp,
+      onWheel,
+      onDoubleClick,
+    },
+    zoomAbout,
+  }
+}
+
 export function StarChart({ chart }: { chart: ChartView }) {
   const { extentAu, ship } = chart
-  // Starts where it always was. The system plate is the right map; the close
-  // views are the instrument you reach for when the map is too small to answer
-  // the question.
-  const [zoom, setZoom] = useState<Zoom>('system')
-  const view = viewFor(zoom, chart)
+  // Starts where it always was. The map is the right first view; the close one
+  // is what you lean into when the map is too small to answer the question.
+  const [camera, setCamera] = useState<Camera>({
+    mode: 'map',
+    reachAu: REACH.start,
+    centre: null,
+  })
+  const view = viewFor(camera, chart)
   const close = view.kind === 'close'
+  const { ref: svgRef, handlers, zoomAbout } = useGestures(view, camera, setCamera, chart)
   const [shipX, shipY] = view.to(ship.x, ship.y)
+
+  // Far enough off the ship that "centre on her" is worth offering.
+  const adrift =
+    close &&
+    camera.centre !== null &&
+    Math.hypot(shipX - CENTRE, shipY - CENTRE) > PLATE * 0.25
 
   // The arc split at the ship. What is behind her is history and what is ahead
   // is a commitment, and drawing them the same made the most useful thing on
@@ -265,13 +447,23 @@ export function StarChart({ chart }: { chart: ChartView }) {
     <section className="panel" aria-label="Star chart">
       <h2 className="panel__title">Chart</h2>
 
-      <Zoomer zoom={zoom} onZoom={setZoom} extentAu={extentAu} />
+      <Controls
+        camera={camera}
+        view={view}
+        adrift={adrift}
+        extentAu={extentAu}
+        onStep={(factor) => zoomAbout(CENTRE, CENTRE, view.reachAu * factor)}
+        onMap={() => setCamera({ ...camera, mode: 'map' })}
+        onFollow={() => setCamera({ ...camera, mode: 'close', centre: null })}
+      />
 
       <svg
-        className="chart"
+        ref={svgRef}
+        className={`chart ${close ? 'is-grabbable' : ''}`}
         viewBox={`0 0 ${SIZE} ${SIZE + FOOT}`}
         role="img"
         aria-label={describe(chart)}
+        {...handlers}
       >
         <defs>
           {/* The sun's glare, and the light that decides which limb of a world
@@ -524,10 +716,11 @@ export function StarChart({ chart }: { chart: ChartView }) {
       <p className="panel__note">
         {close ? (
           <>
-            Centred on the ship and drawn to a <strong>true, even scale</strong> — a
-            millimetre is a millimetre wherever it falls, and the ruler's evenly spaced ticks
-            say so. The grid is {distance(stepFor(view.reachAu))} square. Anything that will
-            not fit is pointed at from the rim with its range.
+            Drawn to a <strong>true, even scale</strong> — a millimetre is a millimetre
+            wherever it falls, and the ruler's evenly spaced ticks say so. The grid is{' '}
+            {distance(stepFor(view.reachAu))} square. Pinch or scroll to change the scale,
+            drag to move about; anything that will not fit is pointed at from the rim with
+            its range.
           </>
         ) : (
           <>
@@ -553,50 +746,82 @@ function closeTicks(reachAu: number): number[] {
 }
 
 /**
- * The scale picker. Design doc §5.1.
+ * The controls beside the gesture. Design doc §5.1, §8.1.
  *
- * Three linear reaches and the map. Labelled by what they *span* rather than
- * "in" and "out", because the number is the useful part: a player who knows
- * Mars is 0.9 AU away can pick the plate that will show it.
+ * A pinch is the primary way in, and it is also invisible, unavailable to a
+ * mouse and unavailable to anybody driving by keyboard. So the same three
+ * moves are here as buttons: closer, wider, and back to the map. They also
+ * give the plate somewhere to *say what scale it is at*, which a continuous
+ * zoom needs far more than a set of fixed stops did — with four buttons the
+ * scale was the label on the pressed one.
  */
-function Zoomer({
-  zoom,
-  onZoom,
+function Controls({
+  camera,
+  view,
+  adrift,
   extentAu,
+  onStep,
+  onMap,
+  onFollow,
 }: {
-  zoom: Zoom
-  onZoom: (z: Zoom) => void
+  camera: Camera
+  view: View
+  adrift: boolean
   extentAu: number
+  onStep: (factor: number) => void
+  onMap: () => void
+  onFollow: () => void
 }) {
-  const stops: { value: Zoom; label: string; title: string }[] = [
-    // "0.2 AU", not "0.20 AU": a scale picker is a set of labels, and the
-    // trailing zero is precision the button is not claiming.
-    ...ZOOMS.map((au) => ({
-      value: au as Zoom,
-      label: `${au} AU`,
-      title: `${au} AU across, true scale, centred on the ship`,
-    })),
-    {
-      value: 'system',
-      label: 'System',
-      title: `${extentAu.toFixed(1)} AU, square-root scale, centred on the sun`,
-    },
-  ]
+  const close = view.kind === 'close'
+  const across = view.reachAu * 2
 
   return (
     <div className="zoomer" role="group" aria-label="Chart scale">
-      {stops.map((s) => (
-        <button
-          key={String(s.value)}
-          type="button"
-          className={`zoomer__btn ${s.value === zoom ? 'is-on' : ''}`}
-          aria-pressed={s.value === zoom}
-          title={s.title}
-          onClick={() => onZoom(s.value)}
-        >
-          {s.label}
+      <button
+        type="button"
+        className="zoomer__btn zoomer__btn--step"
+        aria-label="Zoom out"
+        disabled={close && view.reachAu >= REACH.max - 1e-9}
+        onClick={() => onStep(ZOOM_STEP)}
+      >
+        −
+      </button>
+
+      <span className="zoomer__scale" aria-live="polite">
+        {close ? `${distance(across)} across` : `map · ${distance(extentAu * 2)}`}
+      </span>
+
+      <button
+        type="button"
+        className="zoomer__btn zoomer__btn--step"
+        aria-label="Zoom in"
+        disabled={close && view.reachAu <= REACH.min + 1e-9}
+        onClick={() => onStep(1 / ZOOM_STEP)}
+      >
+        +
+      </button>
+
+      {/* Back to the square-root plate. Kept as a place to return to rather
+          than a fourth stop on the scale: it is a different projection, not a
+          different magnification, and pinching your way to it would be a lie
+          about what the gesture does. */}
+      <button
+        type="button"
+        className={`zoomer__btn ${camera.mode === 'map' ? 'is-on' : ''}`}
+        aria-pressed={camera.mode === 'map'}
+        onClick={onMap}
+      >
+        Map
+      </button>
+
+      {/* Only once the ship has actually been left behind: a control that is
+          always there is one more thing to read on a plate that is mostly
+          numbers. */}
+      {adrift && (
+        <button type="button" className="zoomer__btn zoomer__btn--follow" onClick={onFollow}>
+          Centre ship
         </button>
-      ))}
+      )}
     </div>
   )
 }

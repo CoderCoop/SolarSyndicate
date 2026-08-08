@@ -1566,6 +1566,7 @@ button {
 .zoomer {
   display: flex;
   gap: 6px;
+  align-items: center;
   justify-content: center;
   margin: 0 0 10px;
 }
@@ -1583,10 +1584,58 @@ button {
   cursor: pointer;
 }
 
+/* Comfortably tappable without being the loudest thing on the panel. */
+.zoomer__btn--step {
+  width: 30px;
+  padding: 4px 0;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.zoomer__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .zoomer__btn.is-on {
   color: var(--bg);
   background: var(--cyan);
   border-color: var(--cyan);
+}
+
+.zoomer__btn--follow {
+  color: var(--cyan);
+  border-color: color-mix(in srgb, var(--cyan) 45%, var(--line));
+}
+
+/*
+ * A continuous zoom needs somewhere to say what scale it is at far more than
+ * fixed stops did: with four buttons the scale was the label on the pressed
+ * one, and now nothing else says it.
+ */
+.zoomer__scale {
+  min-width: 96px;
+  text-align: center;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+/*
+ * Without this the browser claims the gesture and pans the page: the chart
+ * would simply appear not to respond to a pinch, which is the least debuggable
+ * possible symptom.
+ */
+.chart {
+  touch-action: none;
+}
+
+.chart.is-grabbable {
+  cursor: grab;
+}
+
+.chart.is-grabbable:active {
+  cursor: grabbing;
 }
 
 /* Evenly spaced, because the scale is even -- which is the entire difference
