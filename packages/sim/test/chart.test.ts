@@ -497,3 +497,113 @@ describe('the chart says how far away things are', () => {
     }
   })
 })
+
+/**
+ * The neighbourhood of one world. Design doc §5.1, §5.2, §1 pillar 2.
+ *
+ * Gateway to Tranquillity is 0.0026 AU. At every scale the solar-system plate
+ * can usefully draw, the two berths and the ship are one dot -- so for five
+ * days the chart pinned her at Earth and she never moved, while the mission
+ * board's route strip showed her crossing the whole time. The instrument that
+ * is supposed to be the truthful one was the one that looked broken.
+ *
+ * The standard here is higher than the route strip's, which draws a
+ * half-ellipse-shaped flourish and interpolates the ship along it. This plate
+ * claims its numbers are real, so she goes where Kepler puts her.
+ */
+describe('the chart can draw the world the ship is at, close up', () => {
+  it('names the body and draws it to the same scale as the orbits round it', () => {
+    const local = chartView(world()).local!
+    expect(local.bodyId).toBe('earth')
+    // 6,371 km as a fraction of an AU. The point of drawing it to scale is
+    // that Earth's limb comes up almost to Gateway's ring, which is the honest
+    // picture of how low a low orbit is.
+    expect(local.bodyRadiusAu).toBeCloseTo((6371 * 1000) / 1.495978707e11, 9)
+    const gateway = local.ports.find((p) => p.id === 'port.gateway')!
+    expect(gateway.orbitRadiusAu).toBeGreaterThan(local.bodyRadiusAu)
+    expect(gateway.orbitRadiusAu).toBeLessThan(local.bodyRadiusAu * 1.2)
+  })
+
+  it('puts Luna far enough out to explain why the hop takes five days', () => {
+    const local = chartView(world()).local!
+    const gateway = local.ports.find((p) => p.id === 'port.gateway')!
+    const luna = local.ports.find((p) => p.id === 'port.tranquillity')!
+    // 384,400 against 6,778 km: the factor of fifty-seven that is the entire
+    // reason the crossing costs what it costs.
+    expect(luna.orbitRadiusAu / gateway.orbitRadiusAu).toBeCloseTo(384400 / 6778, 3)
+  })
+
+  it('sits the ship at her berth when she is alongside', () => {
+    const local = chartView(world()).local!
+    const gateway = local.ports.find((p) => p.id === 'port.gateway')!
+    expect(local.ship.x).toBeCloseTo(gateway.at.x, 12)
+    expect(local.ship.y).toBeCloseTo(gateway.at.y, 12)
+    expect(local.track).toHaveLength(0)
+  })
+
+  it('moves her along the real ellipse once she casts off', () => {
+    // The whole point. Not interpolated between two rings: solved from the
+    // same transfer the astrogator priced, about Earth's own mu.
+    const s = underWay()
+    const { departedAt, arrivesAt } = s.voyage!
+    // Fractions of the *crossing*, not of the clock. A Gateway-to-Luna ellipse
+    // is e = 0.97, so radius climbs steeply out of periapsis: a tenth of a per
+    // cent of the way in she is already eleven per cent higher, and measuring
+    // from t = 0 rather than from departure quietly tests the wrong thing.
+    const at = (frac: number) =>
+      chartView(advanceTo(s, departedAt + (arrivesAt - departedAt) * frac)).local!.ship
+
+    const start = at(0)
+    const middle = at(0.5)
+    // Just short of arrival: at exactly `arrivesAt` the ARRIVE event has fired
+    // and she is berthed, which is a different question from where the arc put
+    // her. The arc's own far end is checked in the next test.
+    const end = at(0.98)
+
+    const r = (p: { x: number; y: number }) => Math.hypot(p.x, p.y)
+    // Climbing the whole way out, from Gateway's ring toward Luna's.
+    expect(r(start)).toBeLessThan(r(middle))
+    expect(r(middle)).toBeLessThan(r(end))
+
+    const local = chartView(s).local!
+    const gateway = local.ports.find((p) => p.id === 'port.gateway')!
+    const luna = local.ports.find((p) => p.id === 'port.tranquillity')!
+    expect(r(start)).toBeCloseTo(gateway.orbitRadiusAu, 9)
+    expect(r(end)).toBeGreaterThan(luna.orbitRadiusAu * 0.9)
+
+    // And she has actually gone somewhere on the plate, which is the thing the
+    // heliocentric frame could never show: fifty times Gateway's own orbit.
+    expect(Math.hypot(end.x - start.x, end.y - start.y)).toBeGreaterThan(
+      gateway.orbitRadiusAu * 50,
+    )
+  })
+
+  it('draws the arc she is on, end to end', () => {
+    const local = chartView(underWay()).local!
+    expect(local.track.length).toBeGreaterThan(20)
+    const gateway = local.ports.find((p) => p.id === 'port.gateway')!
+    const luna = local.ports.find((p) => p.id === 'port.tranquillity')!
+    expect(Math.hypot(local.track.at(0)!.x, local.track.at(0)!.y)).toBeCloseTo(
+      gateway.orbitRadiusAu,
+      6,
+    )
+    expect(Math.hypot(local.track.at(-1)!.x, local.track.at(-1)!.y)).toBeCloseTo(
+      luna.orbitRadiusAu,
+      5,
+    )
+  })
+
+  it('reaches far enough out to hold everything it draws', () => {
+    const local = chartView(underWay()).local!
+    for (const p of [...local.track, local.ship, ...local.ports.map((x) => x.at)]) {
+      expect(local.extentAu).toBeGreaterThanOrEqual(Math.hypot(p.x, p.y))
+    }
+  })
+
+  it('says its angles are the transfer own reference, not a modelled sky', () => {
+    // The sim does not track where Luna is in its month. Inventing a phase
+    // would be a number the player could check and find made up, so the flag
+    // is on the data rather than in a comment nobody reads.
+    expect(chartView(world()).local!.phaseIsRelative).toBe(true)
+  })
+})

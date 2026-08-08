@@ -1818,6 +1818,58 @@ check(
   underWayZones.join(', '),
 )
 
+// --- the chart follows a crossing inside one gravity well (§5.1) -----------
+//
+// Gateway to Tranquillity is 0.0026 AU. On every heliocentric plate the two
+// berths and the ship are one dot, so the chart pinned her at Earth and let her
+// sit there for five days while the route strip beside it showed her crossing
+// the whole time -- the instrument meant to be the truthful one was the one
+// that looked broken. Keep zooming and the plate lands in Earth's own frame.
+await tap(v1, '.tabs__btn:has-text("Chart")')
+await v1.waitForSelector('.chart')
+const plateBox = await (await v1.$('.chart')).boundingBox()
+const overPlate = { x: plateBox.x + plateBox.width / 2, y: plateBox.y + plateBox.height / 2 }
+await v1.mouse.move(overPlate.x, overPlate.y)
+for (let i = 0; i < 15; i++) await v1.mouse.wheel(0, -100)
+await v1.waitForSelector('.chart__local')
+
+const berths = await v1.$$eval('.chart__local-port text', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  "zooming in far enough lands in the world's own frame",
+  berths.some((b) => /Gateway/.test(b ?? '')) && berths.some((b) => /Luna/.test(b ?? '')),
+  berths.join(' · '),
+)
+check(
+  'with a ruler in kilometres, because AU stopped being readable',
+  /1000 km/.test((await v1.textContent('.chart__ruler')) ?? ''),
+  (await v1.textContent('.chart__ruler'))?.replace(/\s+/g, ' ').trim() ?? '',
+)
+
+// The whole point: she moves.
+const shipAt = async () => {
+  const t = await v1.getAttribute('.chart__ship-mark', 'transform')
+  return t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1, 3).map(Number)
+}
+const wasAt = await shipAt()
+await voyageCtx.clock.fastForward('00:03:00')
+await v1.waitForTimeout(1200)
+const nowAt = await shipAt()
+check(
+  'and the ship visibly crosses it, rather than sitting on the planet',
+  Math.hypot(nowAt[0] - wasAt[0], nowAt[1] - wasAt[1]) > 20,
+  `moved ${Math.round(Math.hypot(nowAt[0] - wasAt[0], nowAt[1] - wasAt[1]))} plate units`,
+)
+
+const localCaption = await v1.textContent('.chart__caption')
+check(
+  'named by the berth she is booked into, not by the planet they share',
+  /Tranquillity/.test(localCaption ?? ''),
+  localCaption?.trim() ?? '',
+)
+await v1.click('.zoomer__btn:text-is("Map")')
+
 // The chart, with a ship on it. Berthed it reads her berth's orbital motion;
 // under way it has to name where she is going and when she gets there (§5.1).
 await tap(v1, '.tabs__btn:has-text("Chart")')

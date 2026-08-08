@@ -9,6 +9,59 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.11] — 2026-08-08
+
+### Added
+
+- **Keep pinching and the chart lands in the world's own frame, where the ship
+  is actually moving.** Gateway to Tranquillity is 384,400 km — 0.0026 AU — so
+  on every heliocentric plate the two berths and the ship are one dot. The
+  chart said so honestly by pinning her at Earth, and she sat there for five
+  days while the mission board's route strip showed her crossing the whole
+  time: the instrument meant to be the truthful one was the one that looked
+  broken.
+
+  Below about a million kilometres across, the plate switches to the body's own
+  frame: the planet drawn to the **same scale as the orbits around it**, a ring
+  for each berth, and the ship on her real transfer ellipse between them.
+  Earth's limb comes up almost to Gateway's ring and Luna's is fifty-seven
+  times further out, which is the whole reason the hop costs five days and
+  3.91 km/s.
+
+  Not the route strip's stylised half-ellipse with the ship interpolated along
+  it: this is `stretchedBetween` about Earth's own gravitational parameter,
+  read at `now`. This is the plate that claims its numbers are real.
+
+  The angles here are the transfer's own reference, and the chart says so. The
+  sim does not track where Luna is in its month, and inventing a bearing would
+  be a number the player could check and find made up — so the angles *between*
+  things on this plate are true while their bearing against the stars is not
+  claimed.
+
+  The ruler switches to kilometres at these scales, because "0.002 AU" is not a
+  number anybody can hold, and the caption names the **berth** rather than the
+  planet: "under way to Earth" was true of the dot and useless about the
+  errand.
+
+### Fixed
+
+- **Rapid gestures were being thrown away.** Wheel notches and pinch moves
+  arrive faster than React re-renders, and each handler was reading the camera
+  its render had closed over — so thirty notches moved the scale about as far
+  as two, which reads as a chart ignoring you. Every gesture now applies
+  against the latest camera.
+
+- **Crossing into the local frame threw the ship off the plate.** The camera's
+  centre is a pair of numbers whose meaning changes with the frame — "1 AU from
+  the sun" and "1 AU from Earth" are not the same place — so the first pinch
+  across the boundary put her six hundred thousand plate-widths away, which was
+  the heliocentric distance to Earth quoted in a frame that had just stopped
+  meaning that. The camera now records which origin it is measured from.
+
+- The scale readout said "here across" once the plate was measuring the gap
+  between two berths: `distance` is right to call anything under a thousandth
+  of an AU "here" when answering *how far is that*, and wrong as a legend.
+
 ## [0.11.10] — 2026-08-08
 
 ### Changed
