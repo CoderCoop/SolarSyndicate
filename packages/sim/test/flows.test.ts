@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCommand,
   createWorld,
+  channelSides,
   flowChannels,
   lifeSupportView,
   powerView,
@@ -278,5 +279,83 @@ describe('the arrows add up to the number under them', () => {
         6,
       )
     }
+  })
+})
+
+/**
+ * The reading, as opposed to the diagram's vocabulary. Design doc §3.2.
+ *
+ * `FlowRole` is right for drawing a loop and wrong for a sentence: "return"
+ * lands on a different side depending on the channel, and the buffer is on
+ * neither. `channelSides` is what the Life tab reads, so it has to be right
+ * about the direction on every channel rather than on most of them.
+ */
+describe('a channel splits into what puts it in and what takes it out', () => {
+  it('puts the recycler on the same side as the tap, because both fill the tank', () => {
+    const sides = channelSides(channel(world(), 'water'))
+    expect(sides.in.map((n) => n.name)).toContain('Water Recycler')
+    expect(sides.in.map((n) => n.name)).toContain('Station services')
+    expect(sides.out.map((n) => n.name)).toContain('Crew ×4')
+  })
+
+  it('puts the scrubbers opposite the crew, because they empty the cabin', () => {
+    // The channel that inverts. `return` here is removal, not recovery -- get
+    // this backwards and the panel says the scrubbers are making the CO2.
+    const sides = channelSides(channel(world(), 'co2'))
+    expect(sides.in.map((n) => n.name)).toEqual(['Crew ×4'])
+    expect(sides.out.map((n) => n.name)).toContain('CO2 Scrubber')
+  })
+
+  it('does the same for heat: the reactor in, the radiators out', () => {
+    const sides = channelSides(channel(world(), 'heat'))
+    expect(sides.in.map((n) => n.name)).toContain('Beacon-4 Fission Plant')
+    expect(sides.in.map((n) => n.name)).toContain('Crew ×4')
+    expect(sides.out.map((n) => n.name)).toContain('Thermal Loop & Radiators')
+  })
+
+  it('leaves the buffer out of both, so nothing is counted twice', () => {
+    for (const c of flowChannels(world())) {
+      const sides = channelSides(c)
+      const buffers = c.nodes.filter((n) => n.role === 'buffer').map((n) => n.id)
+      for (const id of [...sides.in, ...sides.out].map((n) => n.id)) {
+        expect(buffers, `${c.key} lists its buffer as a contributor`).not.toContain(id)
+      }
+    }
+  })
+
+  it('accounts for every node exactly once, buffers aside', () => {
+    // A node that falls through both sides is invisible on the panel while
+    // still being in the net -- which is the failure the diagram's sum-check
+    // exists to catch, one screen along.
+    for (const c of flowChannels(world())) {
+      const sides = channelSides(c)
+      const listed = [...sides.in, ...sides.out].map((n) => n.id)
+      const expected = c.nodes.filter((n) => n.role !== 'buffer').map((n) => n.id)
+      expect(listed.slice().sort(), `${c.key} loses or repeats a node`).toEqual(
+        expected.slice().sort(),
+      )
+    }
+  })
+
+  it('ranks by magnitude and sinks anything switched off to the bottom', () => {
+    const w = world()
+    const s = applyCommand(w, {
+      at: w.now,
+      command: { kind: 'SET_PART_ENABLED', partId: 'comms.array', enabled: false },
+    })
+    const out = channelSides(channel(s, 'power')).out
+
+    // Still listed: "where did it go" is a worse question than "why is it
+    // zero", which is the same rule the diagram draws idle parts by.
+    const comms = out.find((n) => n.name === 'Comms Array')!
+    expect(comms.idle).toBe(true)
+
+    // Everything still drawing comes first, in order, and the dark parts are
+    // gathered at the end rather than scattered among them by magnitude.
+    const firstIdle = out.findIndex((n) => n.idle)
+    expect(firstIdle).toBeGreaterThan(0)
+    expect(out.slice(firstIdle).every((n) => n.idle)).toBe(true)
+    const drawing = out.slice(0, firstIdle).map((n) => n.magnitude)
+    expect(drawing).toEqual([...drawing].sort((a, b) => b - a))
   })
 })

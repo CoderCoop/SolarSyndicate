@@ -1041,6 +1041,69 @@ check(
 const closure = await page.textContent('.gauge-row:has-text("Water") .gauge-row__detail')
 check('water reports loop closure', /loop closure/.test(closure ?? ''), closure?.trim() ?? '')
 
+// §1 pillar 1: a level and a horizon say what and when. Only "why" is
+// actionable, and it used to live one tab away on the flow diagram.
+const withSupply = await page.$$eval('.gauge-row', (rows) =>
+  rows.filter((r) => r.querySelector('.gauge-row__supply')).length,
+)
+check(
+  'every gauge says what puts it in and what takes it out (§3.2)',
+  withSupply === 7,
+  `${withSupply} of 7 gauges`,
+)
+
+/** Read one gauge's breakdown as `{ in: [...], out: [...] }`. */
+/* The body of page.evaluate runs in the browser, not in Node -- so its globals
+   are the page's, which is why eslint cannot see them here. */
+/* eslint-disable no-undef */
+const supplyOf = (label) =>
+  page.evaluate((wanted) => {
+    const row = [...document.querySelectorAll('.gauge-row')].find(
+      (r) => r.querySelector('.gauge-row__label')?.textContent === wanted,
+    )
+    const side = (which) =>
+      [...(row?.querySelectorAll(`.supply--${which} .supply__name`) ?? [])].map((e) =>
+        e.textContent?.trim(),
+      )
+    return { in: side('in'), out: side('out') }
+  }, label)
+/* eslint-enable no-undef */
+
+const water = await supplyOf('Water')
+check(
+  'the recycler is named on the side that fills the tank',
+  water.in.includes('Water Recycler') && water.out.includes('Crew ×4'),
+  `in ${water.in.join(', ')} | out ${water.out.join(', ')}`,
+)
+
+// The channel that runs the other way. Get this backwards and the panel says
+// the scrubbers are the thing making the carbon dioxide.
+const co2 = await supplyOf('Cabin CO2')
+check(
+  'and the scrubbers on the side that empties the cabin',
+  co2.in.includes('Crew ×4') && co2.out.includes('CO2 Scrubber'),
+  `in ${co2.in.join(', ')} | out ${co2.out.join(', ')}`,
+)
+
+// Heat has twelve contributors -- every part aboard makes some -- so the top
+// three are not the whole story and the tail has to open rather than being a
+// count you cannot act on.
+const heatShort = await supplyOf('Cabin temperature')
+check(
+  'a long list is summarised rather than dumped',
+  heatShort.in.length === 3,
+  `${heatShort.in.length} named of twelve`,
+)
+await tap(page, '.gauge-row:has-text("Cabin temperature") .supply--in .supply__more')
+const heat = await supplyOf('Cabin temperature')
+check(
+  'and opens in full when asked, down to the four warm bodies',
+  heat.in.length > heatShort.in.length &&
+    heat.in.includes('Crew ×4') &&
+    heat.out.includes('Thermal Loop & Radiators'),
+  `${heat.in.length} in | out ${heat.out.join(', ')}`,
+)
+
 await page.screenshot({ path: join(SHOTS, '07-life-support.png'), fullPage: true })
 
 await page.click('.tabs__btn:has-text("Ship")')

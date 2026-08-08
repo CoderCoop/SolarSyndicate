@@ -9,6 +9,42 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.5] — 2026-08-08
+
+### Added
+
+- **Every gauge on the Life tab says what puts it in and what takes it out.**
+  A level and a horizon answer *what* and *when*. Neither answers **why**, and
+  why is the only one of the three a player can act on: "47 days of water" is a
+  fact, "the recycler is putting back 18.3 of the 21.5 you use" is a decision
+  about whether to service it.
+
+  Every figure was already there. `flowChannels` has built one channel per
+  gauge on this tab since spec 004 — ranked, summed, and checked against the
+  same balance the gauge reads — and it was only ever drawn one tab along on
+  the flow diagram, so reading a gauge meant leaving the gauge.
+
+  Each row now carries two lines under it: **in** and **out**, contributors
+  named biggest first, with anything switched off greyed at the end rather than
+  dropped, because "where did it go" is a worse question than "why is it zero".
+  Three names by default; the tail opens on a tap. Heat has twelve
+  contributors — every part aboard makes some — and summarising it to "+8 more"
+  hid most of the answer the panel exists to give.
+
+  The two channels that run backwards run backwards correctly: **crew put CO2
+  into the cabin and the scrubbers take it out**, and the radiators are the
+  only thing on the out side of heat. Get that the wrong way round and the
+  panel says the scrubbers are what makes the carbon dioxide.
+
+### Changed
+
+- New `channelSides(channel)` in the sim splits a flow channel the way a person
+  reads it — what puts it in, what takes it out — rather than the way a diagram
+  draws it. `FlowRole` is right for drawing a loop and wrong for a sentence:
+  `return` lands on a different side depending on the channel, and the buffer is
+  on neither. That distinction now lives once, next to the code that builds both
+  kinds, instead of being re-derived by each screen that shows them.
+
 ## [0.11.4] — 2026-08-08
 
 ### Fixed

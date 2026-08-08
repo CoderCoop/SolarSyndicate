@@ -2325,6 +2325,94 @@ button {
   color: var(--red);
 }
 
+/* --- what puts it in, what takes it out --- */
+
+/*
+ * Design §3.2, §1 pillar 1. A level and a horizon say what and when; they do
+ * not say *why*, and why is the only one of the three a player can act on.
+ * "47 days of water" is a fact. "The recycler puts back 19.6 of the 21.5 you
+ * use" is a decision about whether to service it.
+ *
+ * Two ruled rows rather than a table: the side label is a fixed column so the
+ * eye can run down "in / out" across all seven gauges, and the contributors
+ * wrap freely because a part name is as long as it is.
+ */
+.gauge-row__supply {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+
+.supply {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.supply__side {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* In is the side that helps, out is the side that costs -- on every channel,
+   including the two that run backwards: crew put CO2 *in* the cabin and the
+   scrubbers take it out. */
+.supply--in .supply__side {
+  color: color-mix(in srgb, var(--green, #6fcf8f) 75%, var(--ink-faint));
+}
+
+.supply--out .supply__side {
+  color: color-mix(in srgb, var(--amber) 65%, var(--ink-faint));
+}
+
+.supply__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 12px;
+}
+
+.supply__item {
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.supply__figure {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+
+/* A part that is switched off stays on the list. "Where did it go" is a worse
+   question than "why is it zero" -- the same rule the flow diagram draws by. */
+.supply__item.is-idle {
+  opacity: 0.5;
+}
+
+.supply__more {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-style: italic;
+  color: var(--ink-faint);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.supply__more:hover {
+  color: var(--ink-dim);
+}
+
 /* condition bars on parts */
 
 .condition {

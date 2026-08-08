@@ -278,7 +278,7 @@ export function App() {
           </>
         )}
 
-        {tab === 'life' && <LifeSupport life={life} />}
+        {tab === 'life' && <LifeSupport life={life} channels={channels} />}
 
         {tab === 'crew' && (
           <>
