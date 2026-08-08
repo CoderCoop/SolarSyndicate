@@ -235,4 +235,48 @@ describe('the arrows add up to the number under them', () => {
     expect(supply.role).toBe('source')
     expect(supply.note).toMatch(/casts off/)
   })
+
+  /**
+   * Heat and carbon dioxide run the other way round: the thing being tracked
+   * is a nuisance, `return` is what *removes* it, and a positive net means the
+   * ship is winning. Two roles, no third -- everything on these channels either
+   * makes the problem or takes it away, and there is nothing that consumes
+   * cabin heat or breathes CO2 in.
+   */
+  const removal = ['heat', 'co2'] as const
+
+  it('puts everything on a removal channel on one side or the other', () => {
+    // The check that would have caught the crew sitting on the wrong side of
+    // the heat balance. `crewNode` used to default to `consumer`; CO2 remembered
+    // to override it and heat did not, so four people were drawn absorbing
+    // 0.47 kW between them. Summing the nodes could not see it -- subtracting a
+    // consumer and subtracting a source come to the same figure -- so the thing
+    // to assert is that the role does not occur here at all.
+    for (const key of removal) {
+      const strays = channel(world(), key).nodes.filter((n) => n.role === 'consumer')
+      expect(strays.map((n) => n.name), `${key} has nodes on neither side`).toEqual([])
+    }
+  })
+
+  it('makes the crew a source of both, because a warm body is', () => {
+    // 110 W each and about a kilogram of CO2 a day. Four of them is a radiator
+    // panel's worth of heat, not a rounding error.
+    for (const key of removal) {
+      const crew = channel(world(), key).nodes.find((n) => n.id === 'crew')!
+      expect(crew.role, `crew are on the wrong side of ${key}`).toBe('source')
+      expect(crew.magnitude).toBeGreaterThan(0)
+    }
+  })
+
+  it('adds up on a removal channel too, mirrored', () => {
+    for (const key of removal) {
+      const c = channel(world(), key)
+      const of = (role: string) =>
+        c.nodes.filter((n) => n.role === role).reduce((sum, n) => sum + n.magnitude, 0)
+      expect(of('return') - of('source'), `${key} nodes do not sum to its net`).toBeCloseTo(
+        c.net,
+        6,
+      )
+    }
+  })
 })
