@@ -1125,6 +1125,23 @@ check(
 const closure = await page.textContent('.gauge-row:has-text("Water") .gauge-row__detail')
 check('water reports loop closure', /loop closure/.test(closure ?? ''), closure?.trim() ?? '')
 
+// §7.4 turns on the player believing this panel. A working cabin sits around
+// 1,500 ppm -- "stuffy", four per cent off a work rate, no health lost -- and
+// raising a coloured alarm for it every watch is how a player learns to look
+// past the one place the game promises to foreshadow a death.
+const vitalsAlarms = await page.$$('.vital')
+const vitalsNote = await page.textContent('.vitals')
+check(
+  'a cabin that is merely close raises no alarm (§7.4)',
+  vitalsAlarms.length === 0 && /Nothing aboard is harming the crew/.test(vitalsNote ?? ''),
+  vitalsNote?.replace(/\s+/g, ' ').trim() ?? '',
+)
+check(
+  'but it still says what the crew are working at, and what that costs',
+  /working at \d+% and jobs take about \d+% longer/.test(vitalsNote ?? ''),
+  vitalsNote?.replace(/\s+/g, ' ').trim() ?? '',
+)
+
 // Green, amber and red, with the ranges drawn on the track (§3.2). Two of the
 // seven gauges used to carry a status from thresholds hand-written in
 // engine.ts; the other five carried none, so 11 kg of oxygen and 900 kg of
