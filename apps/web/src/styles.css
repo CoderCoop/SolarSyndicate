@@ -1603,9 +1603,39 @@ button {
   border-color: var(--cyan);
 }
 
-.zoomer__btn--follow {
+/*
+ * The locate crosshair. Every maps application on a phone has taught that this
+ * button means "put me back in the middle", which is worth more than any label
+ * would be -- and it is the one control a chart you can drag off the edge
+ * genuinely needs.
+ */
+.zoomer__btn--locate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  padding: 3px 0;
+}
+
+.zoomer__btn--locate svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.zoomer__btn--locate .locate__dot {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Brightened once she is actually off the plate: the same control, saying it
+   is the one you want now. */
+.zoomer__btn--locate.is-wanted {
   color: var(--cyan);
-  border-color: color-mix(in srgb, var(--cyan) 45%, var(--line));
+  border-color: color-mix(in srgb, var(--cyan) 55%, var(--line));
 }
 
 /*

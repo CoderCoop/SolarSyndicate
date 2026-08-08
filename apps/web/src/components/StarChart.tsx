@@ -554,7 +554,17 @@ export function StarChart({ chart }: { chart: ChartView }) {
         extentAu={extentAu}
         onStep={(factor) => zoomAbout(CENTRE, CENTRE, (r) => r * factor)}
         onMap={() => setCamera({ ...camera, mode: 'map' })}
-        onFollow={() => setCamera({ ...camera, mode: 'close', centre: null })}
+        // Straight to her wherever the camera has wandered, keeping whatever
+        // scale is already in force -- unless it is the system plate, which
+        // has no linear scale to keep.
+        onFollow={() =>
+          setCamera({
+            mode: 'close',
+            reachAu: camera.mode === 'map' ? REACH.start : camera.reachAu,
+            centre: null,
+            centreFrame: 'sun',
+          })
+        }
       />
 
       <svg
@@ -912,7 +922,7 @@ function Controls({
       </button>
 
       <span className="zoomer__scale" aria-live="polite">
-        {close ? `${span(across)} across` : `map · ${span(extentAu * 2)}`}
+        {close ? `${span(across)} across` : `system · ${span(extentAu * 2)}`}
       </span>
 
       <button
@@ -925,27 +935,48 @@ function Controls({
         +
       </button>
 
-      {/* Back to the square-root plate. Kept as a place to return to rather
-          than a fourth stop on the scale: it is a different projection, not a
-          different magnification, and pinching your way to it would be a lie
-          about what the gesture does. */}
+      {/* All the way out. It was labelled "Map", which named the projection
+          rather than what pressing it does -- and what a player wants from it
+          is not a square-root scale, it is the whole solar system on one
+          plate. Kept as a place to return to rather than a stop on the scale:
+          a different projection is not a different magnification, and pinching
+          your way into it would be a lie about what the gesture does. */}
       <button
         type="button"
         className={`zoomer__btn ${camera.mode === 'map' ? 'is-on' : ''}`}
         aria-pressed={camera.mode === 'map'}
+        title="The whole system on one plate"
         onClick={onMap}
       >
-        Map
+        System
       </button>
 
-      {/* Only once the ship has actually been left behind: a control that is
-          always there is one more thing to read on a plate that is mostly
-          numbers. */}
-      {adrift && (
-        <button type="button" className="zoomer__btn zoomer__btn--follow" onClick={onFollow}>
-          Centre ship
-        </button>
-      )}
+      {/*
+        Find the ship, from anywhere.
+
+        A crosshair, because every maps application on a phone has taught that
+        this button means "put me back in the middle" -- and it is the one
+        control a chart you can drag off the edge of genuinely needs. Always
+        there rather than only once she is lost: a control that appears when
+        you are already in trouble is one you have to notice mid-problem, and
+        from the system plate it is also the fastest way in to her.
+      */}
+      <button
+        type="button"
+        className={`zoomer__btn zoomer__btn--locate ${adrift ? 'is-wanted' : ''}`}
+        aria-label="Centre on the ship"
+        title="Centre on the ship"
+        onClick={onFollow}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="6.5" />
+          <circle className="locate__dot" cx="12" cy="12" r="2.4" />
+          <line x1="12" y1="1.5" x2="12" y2="5" />
+          <line x1="12" y1="19" x2="12" y2="22.5" />
+          <line x1="1.5" y1="12" x2="5" y2="12" />
+          <line x1="19" y1="12" x2="22.5" y2="12" />
+        </svg>
+      </button>
     </div>
   )
 }
