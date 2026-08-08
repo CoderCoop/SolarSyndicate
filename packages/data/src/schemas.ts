@@ -686,8 +686,30 @@ export const RecoveryTuning = z.object({
 })
 export type RecoveryTuning = z.infer<typeof RecoveryTuning>
 
+/**
+ * When a store stops being comfortable. Design doc §3.2.
+ *
+ * Time, not level: a gauge's job is to say whether you can still do something
+ * about it. Seven days is shorter than any crossing on the board, so red means
+ * "you cannot finish a run from here"; thirty is shorter than the quickest leg
+ * to Mars, so amber means "you cannot start a long one".
+ *
+ * The two that are not clocks: spares empty when something breaks rather than
+ * on a schedule, so the reserve is roughly one repair's worth held back for
+ * the next failure; propellant is a budget, and the multiple is how many times
+ * the astrogator's untouchable reserve still counts as thin.
+ */
+export const StoresTuning = z.object({
+  watchDays: z.number().positive(),
+  criticalDays: z.number().positive(),
+  sparesReserve: z.number().nonnegative(),
+  propellantWatchMultiple: z.number().positive(),
+})
+export type StoresTuning = z.infer<typeof StoresTuning>
+
 export const Tuning = z.object({
   survey: SurveyTuning,
+  stores: StoresTuning,
   attendance: AttendanceTuning,
   tune: TuneTuning,
   upkeep: UpkeepTuning,

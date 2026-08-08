@@ -146,6 +146,9 @@ export const TUNE = content.tuning.tune
 /** How a yard values a used hull (§6.2). */
 export const SURVEY = content.tuning.survey
 
+/** When a store stops being comfortable (§3.2). */
+export const STORES = content.tuning.stores
+
 /** The starter hull for M0. Session zero will make this a guild-driven choice (§10.1). */
 export const STARTER_HULL_ID = 'hull.kestrel'
 

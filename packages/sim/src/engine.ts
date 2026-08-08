@@ -35,7 +35,17 @@ import {
 } from './crew.js'
 import { attendanceView } from './attendance.js'
 import { abandonContract, acceptContract } from './contracts.js'
-import { arrive, depart } from './voyage.js'
+import { PROPELLANT_RESERVE_KG, arrive, depart } from './voyage.js'
+import {
+  co2Gauge,
+  o2Gauge,
+  propellantGauge,
+  sparesGauge,
+  storeGauge,
+  tempGauge,
+  type Gauge,
+  type LifeStatus,
+} from './gauges.js'
 import { purchaseHull } from './shipyard.js'
 import { dismissCrew, hireCrew, payWages } from './hiring.js'
 import { OPENING_BALANCE_CR, post } from './ledger.js'
@@ -587,7 +597,7 @@ export function powerView(state: SimState): PowerView {
   }
 }
 
-export type LifeStatus = 'nominal' | 'watch' | 'critical'
+export type { LifeStatus }
 
 export interface LifeSupportView {
   co2Ppm: number
@@ -617,7 +627,20 @@ export interface LifeSupportView {
   environment: Environment
   /** Who is in trouble and how long they have, when anybody is (§7.4). */
   casualties: { name: string; secondsLeft: number; dead: boolean }[]
+  /**
+   * Green, amber and red for every gauge, with the ranges they sit in.
+   *
+   * Two of these used to carry a status, from thresholds hand-written here
+   * that duplicated `physiology.ts`; the other five carried none, so 11 kg of
+   * oxygen and 900 kg of water were drawn the same colour. `gauges.ts` derives
+   * all seven -- from the crew-impact ladder where the crew are what is at
+   * stake, and from time-to-empty where the ship is (§3.2).
+   */
+  gauges: Record<GaugeKey, Gauge>
 }
+
+/** The seven gauges on the Life tab, in the order the panel draws them. */
+export type GaugeKey = 'co2' | 'temp' | 'o2' | 'water' | 'food' | 'propellant' | 'spares'
 
 /** Days until a store runs out at the current rate; Infinity if it is not falling. */
 function daysRemaining(value: number, ratePerSecond: number): number {
@@ -632,11 +655,40 @@ export function lifeSupportView(state: SimState): LifeSupportView {
   const ppm = co2Ppm(state, t)
   const temp = levelAt(res.heat, t)
 
+  const hull = getHull(state.ship.hullId)
+
+  // Oxygen is dangerous for two unrelated reasons at once -- the tank emptying
+  // on a clock, and the cabin thinning below what a body can use -- so the
+  // gauge is built from both rules on one track rather than coloured by one
+  // and drawn by the other.
+  const o2 = o2Gauge(levelAt(res.o2, t), hull.o2CapacityKg, res.o2.rate, (kg) =>
+    o2KPaAt({ ...state, ship: { ...state.ship, resources: { ...res, o2: { ...res.o2, value: kg, rate: 0, since: t } } } }, t),
+  )
+
+  // What the open work orders have already claimed. Spares do not drain on a
+  // clock; the locker empties when something breaks.
+  const claimed = openOrders(state).reduce((sum, w) => sum + w.spares, 0)
+
+  const gauges: Record<GaugeKey, Gauge> = {
+    co2: co2Gauge(ppm),
+    temp: tempGauge(temp),
+    o2,
+    water: storeGauge(levelAt(res.water, t), hull.waterCapacityKg, res.water.rate),
+    food: storeGauge(levelAt(res.food, t), hull.foodCapacityKg, res.food.rate),
+    propellant: propellantGauge(
+      levelAt(res.propellant, t),
+      hull.propellantCapacityKg,
+      PROPELLANT_RESERVE_KG,
+    ),
+    spares: sparesGauge(levelAt(res.spares, t), hull.sparesCapacity, claimed),
+  }
+
   return {
     co2Ppm: ppm,
-    co2Status: ppm > 10000 ? 'critical' : ppm > 5000 ? 'watch' : 'nominal',
+    co2Status: gauges.co2.status,
     temperatureC: temp,
-    tempStatus: temp > 35 ? 'critical' : temp > 28 ? 'watch' : 'nominal',
+    tempStatus: gauges.temp.status,
+    gauges,
     heatInKw: life.heatInKw,
     heatRejectKw: life.heatRejectKw,
     heatMarginKw: life.heatRejectKw - life.heatInKw,

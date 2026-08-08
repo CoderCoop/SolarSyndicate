@@ -6,11 +6,13 @@
  * reading into a decision.
  */
 import { useState } from 'react'
+import { STORES } from '@solsyn/data'
 import {
   channelSides,
   formatDuration,
   type FlowChannel,
   type FlowNode,
+  type Gauge,
   type LifeSupportView,
   type LifeStatus,
 } from '@solsyn/sim'
@@ -101,12 +103,64 @@ function Supply({ channel }: { channel?: FlowChannel }) {
   )
 }
 
+/**
+ * The track, with its ranges on it. Design doc §3.2.
+ *
+ * A coloured bar says whether the reading is all right *now*. The ranges say
+ * how much room is left before it stops being — which is the difference
+ * between a warning light and an instrument, and it is what lets a player
+ * decide whether to act this watch or next week.
+ *
+ * A store's bands move as consumption does, and that is worth watching rather
+ * than a defect: the same 300 kg of water is comfortable with four aboard and
+ * thin with eight, and a fixed mark would say the same thing in both.
+ */
+function Track({ gauge, label }: { gauge: Gauge; label: string }) {
+  let from = 0
+  const zones = gauge.zones.map((z) => {
+    const band = { ...z, from }
+    from = z.until
+    return band
+  })
+
+  return (
+    <div
+      className="gauge-row__bar"
+      role="meter"
+      aria-label={label}
+      aria-valuenow={Math.round(gauge.fill * 100)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      {zones.map((z) => (
+        <span
+          key={`${z.status}-${z.from}`}
+          className={`gauge-row__zone gauge-row__zone--${z.status}`}
+          style={{ left: `${z.from * 100}%`, width: `${(z.until - z.from) * 100}%` }}
+        />
+      ))}
+      {gauge.kind === 'store' && (
+        <div
+          className="gauge-row__fill"
+          style={{ width: `${Math.max(0, Math.min(100, gauge.fill * 100))}%` }}
+        />
+      )}
+      {/* The needle. The fill says how full, the mark says exactly where —
+          which is the only part that can be read against a boundary. */}
+      <span
+        className="gauge-row__needle"
+        style={{ left: `${Math.max(0, Math.min(100, gauge.fill * 100))}%` }}
+      />
+    </div>
+  )
+}
+
 function Row({
   label,
   value,
   detail,
   status = 'nominal',
-  fill,
+  gauge,
   horizon,
   channel,
 }: {
@@ -114,7 +168,7 @@ function Row({
   value: string
   detail?: string
   status?: LifeStatus
-  fill?: number
+  gauge?: Gauge
   horizon?: React.ReactNode
   channel?: FlowChannel
 }) {
@@ -124,14 +178,7 @@ function Row({
         <span className="gauge-row__label">{label}</span>
         <span className="gauge-row__value">{value}</span>
       </div>
-      {fill !== undefined && (
-        <div className="gauge-row__bar">
-          <div
-            className="gauge-row__fill"
-            style={{ width: `${Math.max(0, Math.min(100, fill * 100))}%` }}
-          />
-        </div>
-      )}
+      {gauge && <Track gauge={gauge} label={label} />}
       <div className="gauge-row__foot">
         {detail && <span className="gauge-row__detail">{detail}</span>}
         {horizon}
@@ -243,8 +290,8 @@ export function LifeSupport({
           label="Cabin CO2"
           channel={by.get('Cabin CO2')}
           value={`${Math.round(life.co2Ppm).toLocaleString()} ppm`}
-          status={life.co2Status}
-          fill={life.co2Ppm / 15000}
+          status={life.gauges.co2.status}
+          gauge={life.gauges.co2}
           detail={
             life.co2Status === 'nominal'
               ? 'Scrubbers keeping ahead'
@@ -258,8 +305,8 @@ export function LifeSupport({
           label="Cabin temperature"
           channel={by.get('Cabin temperature')}
           value={`${life.temperatureC.toFixed(1)} °C`}
-          status={life.tempStatus}
-          fill={(life.temperatureC - 21) / 30}
+          status={life.gauges.temp.status}
+          gauge={life.gauges.temp}
           detail={`${life.heatInKw.toFixed(1)} kW in, ${life.heatRejectKw.toFixed(1)} kW rejected`}
           horizon={
             <span className={`gauge-row__horizon ${life.heatMarginKw < 0 ? 'is-bad' : ''}`}>
@@ -274,7 +321,8 @@ export function LifeSupport({
           label="Oxygen"
           channel={by.get('Oxygen')}
           value={`${life.o2Kg.toFixed(1)} kg`}
-          fill={life.o2Kg / 90}
+          status={life.gauges.o2.status}
+          gauge={life.gauges.o2}
           /* Partial pressure alongside the tank reading: the mass is what you
              buy, the kPa is what a body responds to. Sea level is 21.2. */
           detail={`${life.o2KPa.toFixed(1)} kPa partial pressure`}
@@ -285,13 +333,13 @@ export function LifeSupport({
           label="Water"
           channel={by.get('Water')}
           value={`${life.waterKg.toFixed(0)} kg`}
-          fill={life.waterKg / 900}
+          gauge={life.gauges.water}
           detail={
             life.recycleFraction > 0
               ? `${(life.recycleFraction * 100).toFixed(1)}% loop closure`
               : 'Recycler down — open loop'
           }
-          status={life.recycleFraction > 0 ? 'nominal' : 'critical'}
+          status={life.gauges.water.status}
           horizon={<Days days={life.waterDays} />}
         />
 
@@ -299,7 +347,8 @@ export function LifeSupport({
           label="Food"
           channel={by.get('Food')}
           value={`${life.foodKg.toFixed(0)} kg`}
-          fill={life.foodKg / 620}
+          status={life.gauges.food.status}
+          gauge={life.gauges.food}
           horizon={<Days days={life.foodDays} />}
         />
 
@@ -307,7 +356,8 @@ export function LifeSupport({
           label="Propellant"
           channel={by.get('Propellant')}
           value={`${(life.propellantKg / 1000).toFixed(1)} t`}
-          fill={life.propellantKg / 18000}
+          status={life.gauges.propellant.status}
+          gauge={life.gauges.propellant}
           detail="A budget, not a rate — this empties during a burn and at no other time"
         />
 
@@ -315,7 +365,8 @@ export function LifeSupport({
           label="Spares"
           channel={by.get('Spares')}
           value={`${Math.floor(life.spares)}`}
-          fill={life.spares / 60}
+          status={life.gauges.spares.status}
+          gauge={life.gauges.spares}
         />
       </ul>
 
@@ -325,6 +376,16 @@ export function LifeSupport({
           clocks only start once the ship casts off.
         </p>
       )}
+
+      <p className="panel__note">
+        The bands on each bar are where the reading stops being all right. For anything the
+        crew breathe or sit in they come from what it does to a person — amber where health
+        starts costing, red where it costs fast, which puts the carbon dioxide marks on
+        OSHA's 5,000 ppm and NIOSH's 10,000. For a store they come from how long it lasts:
+        amber inside {STORES.watchDays} days, red inside {STORES.criticalDays}, and they move
+        as consumption does, so the same tank is comfortable with four aboard and thin with
+        eight.
+      </p>
 
       <p className="panel__note">
         Under each gauge: what puts it in and what takes it out, biggest first, with anything
