@@ -1480,6 +1480,28 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * The zero point of ecliptic longitude, marked where a chart marks it. A plate
+ * that says "0°" without saying zero *of what* is quoting a coordinate it has
+ * not defined.
+ */
+.chart__equinox line {
+  stroke: var(--amber);
+  stroke-width: 0.7;
+  opacity: 0.7;
+}
+
+.chart__equinox path {
+  fill: var(--amber);
+  opacity: 0.7;
+}
+
+.chart__equinox text {
+  font-size: 9px;
+  fill: var(--amber);
+  opacity: 0.9;
+}
+
 .chart__rim {
   fill: none;
   stroke: var(--line);
@@ -1863,6 +1885,82 @@ button {
   font-size: 13.5px;
   color: var(--ink);
   text-align: center;
+}
+
+/* ------------------------------------------------------------- coordinates */
+
+/*
+ * Design §5.1. Real solar-system work quotes a heliocentric ecliptic triple --
+ * longitude, latitude, radius vector -- from the First Point of Aries, and
+ * JPL's vector tables give the same position as Cartesian AU. Both are here
+ * because they answer different questions: one is what you plan a transfer
+ * with, the other is what the plate is drawn from.
+ */
+.coords {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.coords__title {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.coords__epoch {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-style: italic;
+}
+
+.coords__list {
+  margin: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.coords__row {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+/* The symbol carries the meaning for anyone who reads ephemerides, and the
+   name underneath carries it for everyone else. */
+.coords__symbol {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--cyan);
+  text-align: center;
+}
+
+.coords__value {
+  margin: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.coords__name {
+  margin-left: 8px;
+  font-size: 11px;
+  font-variant-numeric: normal;
+  color: var(--ink-dim);
+}
+
+.coords__detail {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  font-variant-numeric: normal;
+  color: var(--ink-faint);
 }
 
 /* --------------------------------------------------------- exact positions */

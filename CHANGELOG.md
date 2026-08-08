@@ -9,6 +9,49 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.13] — 2026-08-08
+
+### Added
+
+- **The chart is drawn in the frame real solar-system work is quoted in, and
+  the ship has coordinates.** Heliocentric ecliptic: longitude measured from
+  the **First Point of Aries**, anticlockwise seen from ecliptic north, radius
+  vector in AU. That is the Solar Ecliptic / HAE convention — X toward the
+  vernal equinox, Z northward from the ecliptic plane — and it is exactly how
+  this plate was already drawn. Declaring the zero point costs nothing and buys
+  the difference between an angle and a *coordinate*: 149° now means the same
+  thing here as it does in an ephemeris, rather than "anticlockwise from
+  whichever spoke we drew first".
+
+  ♈ is marked on the rim with the arrow that points along it, and the tick ring
+  is labelled every 30° the way an orrery's is — twelve marks is the count that
+  makes a bearing readable off the plate instead of estimated between two
+  quadrant labels.
+
+  The ship's position is now stated as a set of coordinates: **λ, β, r** — the
+  triple heliocentric work uses — plus the Cartesian **x, y** JPL's vector
+  tables give, because the two answer different questions. λ and r are what you
+  plan a transfer with; x and y are what the plate is literally drawn from.
+  Longitude is given in decimal degrees and in the sexagesimal an ephemeris
+  prints.
+
+  **β always reads 0.000°, and that is the point.** §5.1 states the model does
+  not do inclination, and a latitude row that never moves is the simplification
+  saying so in the one place a player would otherwise assume it had been
+  handled.
+
+  Planetary symbols are deliberately *not* used for the worlds. The IAU
+  discourages them in modern work and proposes letter abbreviations for tables
+  — and "Mars" is a better label than ♂ for anybody who has not memorised the
+  set. ♈ stays, because a direction marker is where those symbols are still
+  standard practice.
+
+### Changed
+
+- The chart's telemetry block no longer repeats the ship's position. It is
+  stated properly an inch above, to five decimals; two versions of one number
+  on a screen is something the reader has to stop and reconcile.
+
 ## [0.11.12] — 2026-08-08
 
 ### Changed

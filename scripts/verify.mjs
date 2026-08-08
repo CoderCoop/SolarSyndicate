@@ -664,27 +664,28 @@ const bearings = await page.$$eval('.chart__graticule text', (els) =>
 )
 check(
   'longitude can be read off the plate, not just off the readout',
-  bearings.length === 4 && bearings.includes('0°') && bearings.includes('180°'),
+  bearings.includes('0°') && bearings.includes('180°') && bearings.includes('♈'),
   bearings.join(' '),
 )
 
 const telem = await page.$$eval('.telemetry__row', (els) =>
   els.map((e) => e.textContent?.replace(/\s+/g, ' ').trim()),
 )
+// Position lives in the coordinates block, stated to five decimals in the
+// frame real work is quoted in; this one carries what she is *doing*.
 check(
-  'the chart reports the ship as position, velocity and course',
-  telem.length >= 3 &&
-    /^Position\d+\.\d+ AU/.test(telem[0] ?? '') &&
-    /^Velocity\d+\.\d+ km\/s/.test(telem[1] ?? '') &&
-    /^Course/.test(telem[2] ?? ''),
+  'the chart reports the ship as velocity and course',
+  telem.length >= 2 &&
+    /^Velocity\d+\.\d+ km\/s/.test(telem[0] ?? '') &&
+    /^Course/.test(telem[1] ?? ''),
   telem.join(' | '),
 )
 check(
   'a berthed ship is moving with her berth, not standing still (§5.1)',
   // 29.8 km/s round the sun. Reporting nought would be quoting a frame the
   // plate is not drawn in.
-  /^Velocity29\.[0-9]+ km\/s/.test(telem[1] ?? ''),
-  telem[1] ?? '',
+  /^Velocity29\.[0-9]+ km\/s/.test(telem[0] ?? ''),
+  telem[0] ?? '',
 )
 check('and the heading needle is drawn from her', await page.isVisible('.chart__velocity line'))
 
@@ -853,6 +854,66 @@ check(
 
 await page.click('.zoomer__btn:text-is("System")')
 await page.waitForSelector('.chart__graticule .is-cardinal')
+
+// --- the chart is drawn in a frame real work is quoted in (§5.1) -----------
+//
+// Heliocentric ecliptic: longitude measured from the First Point of Aries,
+// anticlockwise seen from ecliptic north, radius vector in AU. The plate was
+// already drawn that way; declaring the zero point is what turns its angles
+// from "anticlockwise from whichever spoke we drew first" into coordinates
+// that mean the same thing here as in an ephemeris.
+const rimTicks = await page.$$eval('.chart__graticule text', (els) =>
+  els.map((e) => e.textContent?.trim()).filter((t) => /°$/.test(t ?? '')),
+)
+check(
+  'the rim is ticked every thirty degrees, the way an orrery is',
+  rimTicks.length === 12 && rimTicks.includes('0°') && rimTicks.includes('150°'),
+  rimTicks.join(' '),
+)
+check(
+  'and the zero point is named, not merely drawn',
+  (await page.textContent('.chart__equinox')) === '♈',
+  await page.textContent('.chart__equinox'),
+)
+
+const coords = await page.$$eval('.coords__row', (rows) =>
+  rows.map((r) => ({
+    symbol: r.querySelector('.coords__symbol')?.textContent?.trim(),
+    value: r.querySelector('.coords__value')?.firstChild?.textContent?.trim(),
+  })),
+)
+check(
+  'the ship has coordinates, in the triple real work uses',
+  coords.map((c) => c.symbol).join('') === 'λβrxy',
+  coords.map((c) => `${c.symbol} ${c.value}`).join(' · '),
+)
+check(
+  'with longitude also in the sexagesimal an ephemeris prints',
+  /\d+° \d\d′ \d\d″ from ♈/.test((await page.textContent('.coords')) ?? ''),
+  (await page.textContent('.coords__detail')) ?? '',
+)
+
+// The model is coplanar by design (§5.1 states it), so the latitude row always
+// reads zero -- which is the model stating its own simplification in the one
+// place a player would otherwise assume it had been handled.
+check(
+  'and a latitude that says why it is always nought',
+  coords[1]?.value === '0.000°' &&
+    /coplanar model/.test((await page.textContent('.coords')) ?? ''),
+  coords[1]?.value ?? '',
+)
+
+// The claim that matters: the coordinates and the drawing are the same thing.
+// x = r cos λ, y = r sin λ is not a formatting detail, it is whether the
+// readout describes the plate or merely sits under it.
+const num = (s) => Number(String(s).replace(/[^\d.\-+]/g, '').replace('−', '-'))
+const [lam, , rad, xx, yy] = coords.map((c) => num(c.value))
+check(
+  'and the figures are the position the plate is drawn from',
+  Math.abs(rad * Math.cos((lam * Math.PI) / 180) - xx) < 0.001 &&
+    Math.abs(rad * Math.sin((lam * Math.PI) / 180) - yy) < 0.001,
+  `r=${rad} λ=${lam}° → x=${xx} y=${yy}`,
+)
 
 // Nobody reads three decimal places off a drawing, and a crossing is planned
 // in decimals (§1 pillar 2).
@@ -1894,8 +1955,8 @@ const underWayTelem = await v1.$$eval('.telemetry__row', (els) =>
 )
 check(
   'the chart names the berth being flown to, and when she gets there',
-  /^Course\S.*arrival burn in \d+ [hd]/.test(underWayTelem[2] ?? ''),
-  underWayTelem[2] ?? '',
+  /^Course\S.*arrival burn in \d+ [hd]/.test(underWayTelem[1] ?? ''),
+  underWayTelem[1] ?? '',
 )
 check(
   'and the ship glyph is turned to her heading rather than pointing up',
