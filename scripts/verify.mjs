@@ -688,6 +688,90 @@ check(
 )
 check('and the heading needle is drawn from her', await page.isVisible('.chart__velocity line'))
 
+// --- the chart zooms in, to a true scale (§5.1) ----------------------------
+//
+// The square-root plate is the right map and the wrong instrument: it puts the
+// inner system and the Belt on one page and it cannot answer "where exactly".
+// The close views are the same positions drawn linearly around the ship.
+const scales = await page.$$eval('.zoomer__btn', (els) =>
+  els.map((e) => [e.textContent?.trim(), e.getAttribute('aria-pressed')]),
+)
+check(
+  'the chart offers a scale to read it at',
+  scales.length === 4 && scales.at(-1)?.[0] === 'System' && scales.at(-1)?.[1] === 'true',
+  scales.map(([l, on]) => (on === 'true' ? `[${l}]` : l)).join(' '),
+)
+
+/**
+ * Plate units per AU between successive ruler ticks.
+ *
+ * Not the raw gap: the tick *values* are not evenly spaced on the map either
+ * (0.5, 1, 2, 3), so dividing by the step is what isolates the scale from the
+ * choice of labels.
+ */
+/* The body of page.evaluate runs in the browser, not in Node -- so its globals
+   are the page's, which is why eslint cannot see them here. */
+/* eslint-disable no-undef */
+const tickScale = () =>
+  page.evaluate(() => {
+    const marks = [...document.querySelectorAll('.chart__ruler g')].map((g) => ({
+      x: Number(g.querySelector('line')?.getAttribute('x1')),
+      au: Number(g.querySelector('text')?.textContent),
+    }))
+    return marks
+      .slice(1)
+      .map((m, i) => Math.round(((m.x - marks[i].x) / (m.au - marks[i].au)) * 10) / 10)
+  })
+/* eslint-enable no-undef */
+
+// On the map the ticks crowd toward the rim, and that crowding *is* the square
+// root -- the distortion drawn rather than described.
+const systemGaps = await tickScale()
+check(
+  'the map states its own distortion, by crowding its ticks',
+  systemGaps.length > 2 && systemGaps.every((g, i) => i === 0 || g < systemGaps[i - 1]),
+  `${systemGaps.join(' > ')} plate units per AU`,
+)
+
+await page.click('.zoomer__btn:text-is("1 AU")')
+await page.waitForSelector('.chart__grid')
+const closeGaps = await tickScale()
+check(
+  'and a close view is evenly spaced, because its scale is even',
+  closeGaps.length > 2 && closeGaps.every((g) => Math.abs(g - closeGaps[0]) < 0.5),
+  `${closeGaps.join(' = ')} plate units per AU`,
+)
+check(
+  'with the longitude spokes gone, since the sun is off the plate',
+  (await page.$$('.chart__graticule .is-cardinal')).length === 0,
+)
+
+const offplate = await page.$$eval('.chart__offplate text', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  'and anything that will not fit pointed at, with its range',
+  offplate.includes('Mars') && offplate.some((t) => /AU$/.test(t ?? '')),
+  offplate.join(' · '),
+)
+await page.click('.zoomer__btn:text-is("System")')
+await page.waitForSelector('.chart__graticule .is-cardinal')
+
+// Nobody reads three decimal places off a drawing, and a crossing is planned
+// in decimals (§1 pillar 2).
+const positions = await page.$$eval('.positions tbody tr', (rows) =>
+  rows.map((r) =>
+    [...r.querySelectorAll('th, td')].map((c) => c.textContent?.trim().split('\n')[0]),
+  ),
+)
+check(
+  'and gives every place exactly, in figures',
+  positions.length === 4 &&
+    /^Ship/.test(positions[0]?.[0] ?? '') &&
+    positions.every((r) => /^\d+\.\d{3}$/.test(r[1] ?? '') && /^\d+\.\d°$/.test(r[2] ?? '')),
+  positions.map((r) => r.join(' ')).join(' | '),
+)
+
 await page.screenshot({ path: join(SHOTS, '11-chart.png'), fullPage: true })
 
 // --- the mission: board, allowance, astrogator (TR-3b, TR-16, TR-20) -------

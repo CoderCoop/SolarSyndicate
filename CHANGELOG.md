@@ -9,6 +9,36 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.6] — 2026-08-08
+
+### Added
+
+- **The chart zooms in, and says exactly where everything is.** The square-root
+  plate is the right *map* — it puts the inner system and the Belt on one page
+  and states the distortion it uses to do it — and it is the wrong instrument
+  for "where exactly am I". Three closer scales draw the same positions
+  **linearly and centred on the ship**, so a millimetre is a millimetre
+  wherever it falls: 0.2 AU across (thirty million kilometres, about the
+  closest Mars ever gets), 1 AU, and 4 AU, which holds the whole inner system
+  and Ceres at true scale — the picture the square root was hiding.
+
+  The two rulers say the difference rather than claiming it. On the map the
+  ticks crowd toward the rim: 39.9, then 28.2, then 21.7 plate units per AU.
+  Switch to a close view and the same ruler comes out flat at 240. Close up the
+  longitude spokes give way to an evenly spaced square grid, anchored to the
+  sun so the ship moves through it; the sun itself is usually off the plate, so
+  a chevron on the rim points at it.
+
+  **Nothing is dropped for being off the edge.** A world that will not fit is
+  pointed at from the rim with its name and its range, because a close view
+  that simply loses Mars would be worse than the wide one it replaced.
+
+- **A table of exact positions**, under the plate on every scale: radius from
+  the sun and heliocentric longitude for the ship and each world, plus range
+  from the ship, with the berths at each place named under it. Nobody reads
+  three decimal places off a drawing and a crossing is planned in decimals
+  (§1 pillar 2).
+
 ## [0.11.5] — 2026-08-08
 
 ### Added

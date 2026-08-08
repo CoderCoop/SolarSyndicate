@@ -1555,6 +1555,83 @@ button {
 .sun-core { stop-color: color-mix(in srgb, var(--amber) 55%, transparent); }
 .sun-edge { stop-color: transparent; }
 
+/* --- the scale picker, and the close views --- */
+
+/*
+ * Design §5.1. The square-root plate is the right map and the wrong
+ * instrument: it puts the inner system and the Belt on one page and it cannot
+ * answer "where exactly am I". These draw the same positions linearly, centred
+ * on the ship, so a millimetre is a millimetre wherever it falls.
+ */
+.zoomer {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 0 0 10px;
+}
+
+.zoomer__btn {
+  appearance: none;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.zoomer__btn.is-on {
+  color: var(--bg);
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+/* Evenly spaced, because the scale is even -- which is the entire difference
+   between this view and the map. */
+.chart__grid line {
+  stroke: var(--line);
+  stroke-width: 0.4;
+  opacity: 0.22;
+}
+
+.chart__sunward path {
+  fill: var(--amber);
+  opacity: 0.8;
+}
+
+.chart__sunward text {
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--amber);
+  opacity: 0.75;
+}
+
+/* A world that will not fit on the plate is pointed at rather than dropped:
+   losing Mars would make the close view worse than the wide one. */
+.chart__offplate path {
+  fill: var(--world, var(--ink-faint));
+  opacity: 0.85;
+}
+
+.chart__offplate text {
+  font-size: 7.5px;
+  fill: var(--ink-dim);
+}
+
+.chart__offplate-range {
+  font-size: 6.5px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--ink-faint);
+}
+
+.chart__offplate--earth { --world: #5b8cc4; }
+.chart__offplate--mars { --world: #c47a52; }
+.chart__offplate--ceres { --world: #8d94a0; }
+
 /* --- the ruler --- */
 
 /*
@@ -1672,6 +1749,72 @@ button {
   font-size: 13.5px;
   color: var(--ink);
   text-align: center;
+}
+
+/* --------------------------------------------------------- exact positions */
+
+/*
+ * Design §5.1, §1 pillar 2. The plate answers "roughly where, relative to
+ * what". Nobody reads three decimal places off a drawing, and a crossing is
+ * planned in decimals -- so the same instant is also given as figures.
+ */
+.positions {
+  width: 100%;
+  margin: 12px 0 0;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.positions__caption {
+  caption-side: top;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-align: left;
+}
+
+.positions th,
+.positions td {
+  padding: 5px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.positions thead th {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
+.positions thead th:first-child,
+.positions tbody th {
+  text-align: left;
+}
+
+.positions tbody th {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.positions tbody td {
+  color: var(--ink-dim);
+}
+
+.positions tr.is-ship th,
+.positions tr.is-ship td {
+  color: var(--cyan);
+}
+
+/* The berths at a place, under its name: "Mars" is where it is, "Phobos Yard"
+   is where the ship can tie up. */
+.positions__ports {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ink-faint);
 }
 
 /* -------------------------------------------------------------------- parts */
