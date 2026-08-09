@@ -799,18 +799,51 @@ check(
   (await page.$$('.chart__graticule .is-cardinal')).length === 0,
 )
 
-// A pinch that holds nothing still is a pinch that feels broken, so the two
-// buttons are checked to move the scale in the direction they claim.
-const scaleOf = async () => Number((await page.textContent('.zoomer__scale')).match(/[\d.]+/)[0])
-const beforeStep = await scaleOf()
-await page.click('.zoomer__btn[aria-label="Zoom in"]')
-const afterIn = await scaleOf()
-await page.click('.zoomer__btn[aria-label="Zoom out"]')
-const afterOut = await scaleOf()
+// --- one button per frame, not a pair of steppers (§5.1, §8.1) -------------
+//
+// Pinching from the system plate to cislunar crosses a square-root projection
+// into a linear one and then a heliocentric origin into a planetocentric one.
+// Those are the three things a reader was already seeing -- it looked like a
+// zoom that stuttered twice -- so they are named and one press away. A pair of
+// ± buttons could only move the scale, which a pinch already does.
+const levels = await page.$$eval('.zoomer__levels .zoomer__btn', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
 check(
-  'and the buttons step the same scale, for a mouse and a keyboard',
-  afterIn < beforeStep && afterOut > afterIn,
-  `${beforeStep} → ${afterIn} → ${afterOut}`,
+  'the chart names its three frames rather than offering a stepper',
+  levels.length === 3 && levels[0] === 'System' && levels[1] === 'Route' && levels[2] === 'Earth',
+  levels.join(' · '),
+)
+check(
+  'and says which one it is in',
+  (await page.getAttribute('.zoomer__btn:text-is("Route")', 'aria-pressed')) === 'true',
+  `pressed: ${(await page.$$eval('.zoomer__levels [aria-pressed="true"]', (e) => e.map((x) => x.textContent))).join()}`,
+)
+
+// The innermost one is a *different origin*, and reaching it used to be
+// twenty-six wheel notches with nothing anywhere saying the frame had changed.
+await page.click('.zoomer__btn:text-is("Earth")')
+await page.waitForSelector('.chart__local')
+const localBerths = await page.$$eval('.chart__local-port text', (els) =>
+  els.map((e) => e.textContent?.trim()),
+)
+check(
+  "and one press reaches the world's own frame, framed on its berths",
+  localBerths.some((b) => /Gateway/.test(b ?? '')) &&
+    localBerths.some((b) => /Luna|Tranquillity/.test(b ?? '')),
+  localBerths.join(' · '),
+)
+
+// Back out the same way, and the scale is the crossing's own rather than a
+// fixed reach -- "the route" is a different size for cislunar than for a Belt
+// run, and it has to still be the heliocentric frame when it gets there.
+await page.click('.zoomer__btn:text-is("Route")')
+await page.waitForSelector('.chart__grid')
+check(
+  'while Route comes back to a true-scale heliocentric plate',
+  /across$/.test(((await page.textContent('.zoomer__scale')) ?? '').trim()) &&
+    (await page.$$('.chart__local')).length === 0,
+  ((await page.textContent('.zoomer__scale')) ?? '').trim(),
 )
 
 const offplate = await page.$$eval('.chart__offplate text', (els) =>

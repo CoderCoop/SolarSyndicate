@@ -600,6 +600,37 @@ describe('the chart can draw the world the ship is at, close up', () => {
     }
   })
 
+  it('says plainly when she is neither berthed nor in one world neighbourhood', () => {
+    // `local` is built from where the voyage *departed*, so on a crossing
+    // between worlds it is the neighbourhood she left -- with her drawn tied up
+    // at a berth she cast off from three weeks ago. The chart's frame picker
+    // withholds that frame, and this is the pair of flags it reads to know: no
+    // berth, and the crossing is not inside one gravity well. Deriving it any
+    // other way (guessing from a distance, say) is how it would come back.
+    const s = world()
+    const departedAt = s.now
+    const { durationS } = stretchedTransfer('earth', 'mars', 1)
+    s.voyage = {
+      optionId: 'hohmann',
+      fromPortId: 'port.gateway',
+      toPortId: 'port.phobos',
+      departedAt,
+      arrivesAt: departedAt + durationS,
+      deltaVMs: 0,
+      propellantSpentKg: 0,
+    }
+    s.ship.docked = false
+
+    const crossing = chartView(advanceTo(s, departedAt + 40 * DAY))
+    expect(crossing.ship.atPortId).toBeUndefined()
+    expect(crossing.ship.local).toBe(false)
+
+    // Both flags say "yes, this frame is hers" in the two cases it is: berthed,
+    // and hopping between two berths around the same world.
+    expect(chartView(world()).ship.atPortId).toBe('port.gateway')
+    expect(chartView(underWay()).ship.local).toBe(true)
+  })
+
   it('says its angles are the transfer own reference, not a modelled sky', () => {
     // The sim does not track where Luna is in its month. Inventing a phase
     // would be a number the player could check and find made up, so the flag

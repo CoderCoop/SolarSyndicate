@@ -9,6 +9,47 @@ means here.
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-08-09
+
+A minor: the chart is navigated by naming a frame rather than by working a
+scale.
+
+### Changed
+
+- **One button per frame on the chart, and the ± steppers are gone.** The chart
+  draws in three frames, and they are not three magnifications of one picture:
+  **System** is a square-root projection of the whole solar system, **Route** is
+  the same positions drawn linearly at true scale, and **Earth** — whichever
+  world she is at — is a different origin entirely, the planetocentric frame
+  where a cislunar crossing has been happening all along.
+
+  Pinching from the outermost to the innermost crosses both of those boundaries,
+  which is why it read as a zoom that stuttered twice. The three are now named
+  and one press away; it was twenty-six wheel notches from the system plate down
+  to Earth's own frame, and nothing anywhere said the frame had changed under
+  you. The pressed button is the answer to "where am I looking".
+
+  The steppers went with them. They could only move the scale, which is the one
+  thing pinch, wheel and double-tap already do — and the scale *inside* a frame
+  stays continuous, so these are places to go rather than the fixed stops the
+  control had before. The readout still states the span, which is what keeps a
+  continuous zoom legible between named frames.
+
+  **Route** is measured from the ship to the far end of her own arc rather than
+  from a fixed reach, so it is a different size for the Luna hop than for a Belt
+  run, and falls back to half an AU across when she is alongside.
+
+### Fixed
+
+- **The chart offered a close-in view of a world the ship had left.** The local
+  frame is built from where the voyage *departed*, so on a crossing between
+  worlds it drew her tied up at the berth she cast off from — three weeks and a
+  third of an AU ago. That frame is not a level, it is a wrong picture: it is
+  withheld while she is between worlds, where the chart now offers two frames
+  and a pinch bottoms out in the heliocentric one. Pinned by a test on the pair
+  of flags the picker reads, because deriving it by guessing from a distance is
+  how it would come back.
+
 ## [0.12.1] — 2026-08-09
 
 ### Fixed
