@@ -9,6 +9,54 @@ means here.
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-08-09
+
+A minor: stores stopped being free, and where you buy them started to matter.
+
+### Added
+
+- **Every kilogramme is bought, at the price of the port selling it.** The
+  price table has been in `ports.json` since M2 and it is a good one —
+  volatiles get cheaper the further out you go, because ice is abundant in the
+  Belt and dear in low Earth orbit, while food runs the other way because
+  nothing grows out there. Ceres water is a fifth of Gateway water; Ceres food
+  is twice Gateway food. Nothing consulted any of it except the settlement, so
+  all that geography was written down and inert.
+
+  Now a stop posts a line to the ledger: `Stores at Ceres Local, −4,182 cr`.
+
+- **The contract reimburses the allowance it budgeted**, at the arrival port's
+  rates (TR-18), instead of netting the underrun into a single figure. Money
+  out at the pump, money in at the desk — two events rather than one number
+  that has already had the subtraction done to it. The settlement panel shows
+  both, because **the gap between them is the mechanic**: a tended ship buys
+  back less than it was given and keeps the difference.
+
+  ```
+  Payment                              +74,000 cr
+  Allowance reimbursed                 +51,544 cr
+  Stores bought at Tranquillity Yards  −44,775 cr
+  The run was worth                    +80,770 cr
+  ```
+
+  **This is not a balance change for an ordinary run.** Buy back what the
+  crossing spent, at the port you arrived at, and the arithmetic is what it
+  always was — the same delivery paid 80,768 cr before and 80,770 cr after. It
+  becomes a change the moment the player does something interesting: top up
+  where a store is cheap, decline the stores and keep the reimbursement, or sit
+  at a berth between contracts, which used to be free and is now a bill.
+
+### Fixed
+
+- **The delivery restock was quietly buying a quarter of a propellant tank.**
+  It filled every store to *capacity*, but the ship sets out at 75% propellant
+  and 88% water — so once stores had a price, every delivery bought eight
+  tonnes the Guild had never budgeted for: 34,000 credits on a job paying
+  74,000, and a cost that depended on how empty the ship happened to have been
+  when she signed on. A resupply allowance restores the ship to the state she
+  set out in, so that is what it does now. Topping up beyond that is still
+  possible, and is now a real decision made at a port's own prices.
+
 ## [0.11.14] — 2026-08-08
 
 ### Added

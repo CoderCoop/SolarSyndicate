@@ -2044,10 +2044,24 @@ check('every line reads as under or over its allowance', overUnder === settleRow
 
 const totals = await v2.$$eval('.settle__totals li span', (els) => els.map((e) => e.textContent))
 check(
-  'payment and allowance are settled separately, then totalled',
-  totals.length === 3 && /worth/.test(totals[2] ?? ''),
+  'payment, allowance and the stores bill are settled separately, then totalled',
+  totals.length === 4 &&
+    /Allowance reimbursed/.test(totals[0] ?? '') === false &&
+    /worth/.test(totals[3] ?? ''),
   totals.join(' · '),
 )
+
+// The two halves of §6.2 on one panel: what the Guild gave, and what the port
+// took. The gap between them is the mechanic -- a tended ship buys back less
+// than it was budgeted and keeps the difference -- and it is invisible if the
+// two are added up before the player sees them.
+const settleText = (await v2.textContent('.settle__totals')) ?? ''
+check(
+  'the reimbursement and the bill are shown side by side',
+  /Allowance reimbursed/.test(settleText) && /Stores bought at Tranquillity/.test(settleText),
+  settleText.replace(/\s+/g, ' ').trim().slice(0, 120),
+)
+
 
 // The bigger of the two refills: delivering a contract fills every store to
 // capacity in one step, because the allowance has just settled what the

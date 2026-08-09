@@ -21,7 +21,7 @@ import { adjustStanding, guildForContract, STANDING_DELTA } from './guild.js'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { settle } from './resources.js'
-import { beginResupply, storeAmount } from './resupply.js'
+import { beginResupply, buyStores, storeAmount } from './resupply.js'
 import { type GameTime } from './time.js'
 import type { SimState } from './types.js'
 
@@ -32,7 +32,17 @@ export interface SettlementLine {
   key: AllowanceKey
   usedKg: number
   allowedKg: number
-  /** Positive is credited back, negative is billed. */
+  /**
+   * What the Guild reimburses for this store: the whole allowance, at the
+   * arrival port's rate.
+   *
+   * It used to be `(allowed - used) x price` -- the netted position, credited
+   * or billed. That was the right shape while the stores themselves were free.
+   * Now that every kilogramme is bought at the pump, netting here would bill
+   * the same kilogramme twice: once when it came aboard and again against the
+   * budget. So this is the money *in*, the pump is the money *out*, and the
+   * difference is the same figure it always was.
+   */
   creditsCr: number
   unitCr: number
 }
@@ -46,9 +56,18 @@ export interface Settlement {
   /** What the contract actually paid, after any late reduction. */
   payCr: number
   lines: SettlementLine[]
-  /** Sum of the lines: positive means the run came in under budget. */
+  /** Sum of the lines: what the Guild reimbursed for stores. */
   allowanceCr: number
-  /** Payment plus allowance. What the run was worth in the end. */
+  /**
+   * What refilling the tanks at this port actually cost, as a negative.
+   *
+   * Shown beside the reimbursement rather than folded into it, because the gap
+   * between them *is* the mechanic: a tended ship buys back less than it was
+   * budgeted and banks the difference, and that is invisible if the two are
+   * added up before the player sees them.
+   */
+  storesCr: number
+  /** Payment, plus what was reimbursed, less what the stores cost. */
   totalCr: number
 }
 
@@ -77,7 +96,9 @@ export function reconcileArrival(state: SimState, at: GameTime): void {
     // Under the allowance is money back; over it is a bill. Same rate either
     // way at the port's price -- the penalty is that the port's price is
     // dearer than what the Guild budgeted at (TR-18).
-    return { key, usedKg, allowedKg, creditsCr: (allowedKg - usedKg) * unitCr, unitCr }
+    // The whole allowance, reimbursed. What was actually consumed is bought
+    // back at the pump, so netting it here would charge for it twice.
+    return { key, usedKg, allowedKg, creditsCr: allowedKg * unitCr, unitCr }
   })
 
   const allowanceCr = lines.reduce((sum, l) => sum + l.creditsCr, 0)
@@ -94,12 +115,13 @@ export function reconcileArrival(state: SimState, at: GameTime): void {
   )
 
   post(state, at, payCr, `${def.title} delivered to ${port.name}`)
-  post(
-    state,
-    at,
-    allowanceCr,
-    allowanceCr >= 0 ? 'Resupply allowance unspent' : 'Resupply overrun',
-  )
+  post(state, at, allowanceCr, 'Resupply allowance reimbursed')
+
+  // Put the ship back as she left, and pay for it -- before the settlement is
+  // built, because what the stop cost is part of what the run was worth and a
+  // panel reporting the reimbursement without the bill beside it tells half
+  // the story.
+  const storesCr = -restock(state, at, held.storesAtDeparture)
 
   state.settlement = {
     contractId: def.id,
@@ -110,7 +132,8 @@ export function reconcileArrival(state: SimState, at: GameTime): void {
     payCr,
     lines,
     allowanceCr,
-    totalCr: payCr + allowanceCr,
+    storesCr,
+    totalCr: payCr + allowanceCr + storesCr,
   }
 
   state.ship.cargoKg = Math.max(0, state.ship.cargoKg - def.cargoKg)
@@ -126,65 +149,78 @@ export function reconcileArrival(state: SimState, at: GameTime): void {
       : `${def.title} delivered, and ${settlementPhrase(allowanceCr)}.`,
     `${payCr >= 0 ? '+' : '−'}${Math.abs(payCr).toLocaleString()} cr`,
   )
-
-  restock(state, at)
 }
 
 function settlementPhrase(allowanceCr: number): string {
-  const magnitude = Math.abs(Math.round(allowanceCr)).toLocaleString()
-  return allowanceCr >= 0
-    ? `${magnitude} cr of allowance came back`
-    : `${magnitude} cr of overrun to pay`
+  return `${Math.abs(Math.round(allowanceCr)).toLocaleString()} cr of allowance reimbursed`
 }
 
 /**
- * Take on stores. Alongside, the ship fills up -- the cost of doing so was
- * just settled against the allowance, so this is bookkeeping rather than a
- * second charge.
+ * Put the ship back as she left, and pay the port for it.
  *
- * Two things it now does that it did not. It **says what it put aboard**: this
- * moves more mass than anything else in the game and did it in complete
- * silence, so a player watching five gauges jump to full had nothing anywhere
- * telling them why. And it **obeys the standing order** (§7.3) -- a player who
- * has switched the pumps off has said not to fill the tanks, and filling them
+ * **Back to the departure levels, not to capacity.** A resupply allowance
+ * restores the ship to the state she set out in; it does not buy her a fuller
+ * tank than she had. Filling to the brim meant every delivery quietly bought a
+ * quarter of a propellant tank the Guild had never budgeted for -- 34,000
+ * credits a run, on a job paying 74,000 -- and it made the arithmetic
+ * impossible to reason about, because what the stop cost depended on how empty
+ * the ship happened to have been when she signed on. Restoring to the
+ * departure reading makes bought and used the same number, which is what lets
+ * the reimbursement and the bill cancel for an ordinary run.
+ *
+ * Topping up *beyond* that is still possible and is now a real decision: sit
+ * alongside with the standing order on and the pumps keep going, at that
+ * port's prices. Ceres water is a fifth of Gateway water.
+ *
+ * Two other things it does that it did not. It **says what it put aboard**:
+ * this moves more mass than anything else in the game and did it in complete
+ * silence. And it **obeys the standing order** (§7.3) -- filling the tanks
  * anyway because a contract happened to close would make the switch a lie. The
- * allowance still settles either way: that is what the Guild budgeted, and
+ * allowance is reimbursed either way: that is what the Guild budgeted, and
  * declining the stores does not un-spend what the crossing consumed.
  */
-function restock(state: SimState, at: GameTime): void {
+function restock(
+  state: SimState,
+  at: GameTime,
+  toLevels: Record<AllowanceKey, number>,
+): number {
   if (!state.ship.standingOrders.resupply) {
     pushLog(
       state,
       at,
       'info',
       'ship',
-      'Stores not taken on: the standing order is to leave them alone. The allowance was settled all the same.',
+      'Stores not taken on: the standing order is to leave them alone. The allowance is reimbursed all the same.',
     )
-    return
+    return 0
   }
 
+  const bought = {} as Partial<Record<AllowanceKey, number>>
   const taken: string[] = []
   for (const key of ALLOWANCE_KEYS) {
     const reservoir = state.ship.resources[key]
     settle(reservoir, at)
-    const delta = reservoir.max - reservoir.value
-    reservoir.value = reservoir.max
-    if (delta > 0 && !/^0(\.0+)? /.test(storeAmount(key, delta))) {
-      taken.push(storeAmount(key, delta))
-    }
+    const target = Math.min(reservoir.max, toLevels[key])
+    const delta = target - reservoir.value
+    if (delta <= 0) continue
+    reservoir.value = target
+    bought[key] = delta
+    if (!/^0(\.0+)? /.test(storeAmount(key, delta))) taken.push(storeAmount(key, delta))
   }
-  if (taken.length === 0) return
+  if (taken.length === 0) return 0
 
+  const cr = buyStores(state, at, bought)
   pushLog(
     state,
     at,
     'info',
     'ship',
     `Stores filled at ${getPort(state.ship.portId).name}: took on ${taken.join(', ')}.`,
-    'against the allowance',
+    `−${Math.round(cr).toLocaleString()} cr`,
   )
   // The tanks are full, so the running count starts again from here.
   beginResupply(state, at)
+  return cr
 }
 
 export function lastSettlement(state: SimState): Settlement | undefined {

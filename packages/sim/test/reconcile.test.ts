@@ -26,6 +26,17 @@ import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
 const T0 = Date.UTC(2200, 0, 1)
+
+/** What the starting hull carries when a world opens, per `createWorld`. */
+const STARTING_LEVELS = (() => {
+  const s = createWorld(20260726, T0)
+  return {
+    water: s.ship.resources.water.value,
+    food: s.ship.resources.food.value,
+    o2: s.ship.resources.o2.value,
+    propellant: s.ship.resources.propellant.value,
+  }
+})()
 const world = () => createWorld(20260726, T0)
 
 /** Book the Luna run and fly it on the cheapest flyable trajectory. */
@@ -78,27 +89,55 @@ describe('arriving settles the books', () => {
     // at the wrong end would quietly overcharge every inbound run.
     const settlement = lastSettlement(fly())!
     const water = settlement.lines.find((l) => l.key === 'water')!
-    const delta = water.allowedKg - water.usedKg
-    expect(water.creditsCr).toBeCloseTo(delta * priceAt('port.tranquillity', 'water'), 6)
+    // The whole allowance is reimbursed; what the crossing actually spent is
+    // bought back at the pump, so netting it here would charge for it twice.
+    expect(water.creditsCr).toBeCloseTo(water.allowedKg * priceAt('port.tranquillity', 'water'), 6)
     expect(settlement.portId).toBe('port.tranquillity')
   })
 
-  it('tops the tanks back up once the books are closed', () => {
+  it('puts the tanks back where they started, not to the brim', () => {
+    // A resupply allowance restores the ship to the state she set out in; it
+    // does not buy her a fuller tank than she had. Filling to capacity meant
+    // every delivery quietly bought a quarter of a propellant tank the Guild
+    // had never budgeted for -- 34,000 credits on a job paying 74,000.
     const s = fly()
     const r = s.ship.resources
-    expect(r.water.value).toBeGreaterThan(r.water.max * 0.95)
-    expect(r.food.value).toBeGreaterThan(r.food.max * 0.95)
-    expect(r.o2.value).toBeGreaterThan(r.o2.max * 0.95)
+    expect(r.propellant.value).toBeCloseTo(STARTING_LEVELS.propellant, 0)
+    expect(r.propellant.value).toBeLessThan(r.propellant.max * 0.8)
+    expect(r.water.value).toBeLessThan(r.water.max * 0.95)
   })
 })
 
 describe('the allowance is what makes efficiency worth money', () => {
-  it('credits an underrun and bills an overrun, at the stated price', () => {
+  it('reimburses the budget and charges for the stores, separately', () => {
+    // Money in at the desk, money out at the pump. Two events rather than one
+    // netted figure, so the gap between them is visible -- and that gap is the
+    // whole mechanic.
     const settlement = lastSettlement(fly())!
     for (const line of settlement.lines) {
-      const delta = line.allowedKg - line.usedKg
-      expect(Math.sign(line.creditsCr)).toBe(Math.sign(delta) || 0)
+      expect(line.creditsCr).toBeCloseTo(line.allowedKg * line.unitCr, 6)
     }
+    expect(settlement.allowanceCr).toBeGreaterThan(0)
+    expect(settlement.storesCr).toBeLessThan(0)
+    expect(settlement.totalCr).toBeCloseTo(
+      settlement.payCr + settlement.allowanceCr + settlement.storesCr,
+      6,
+    )
+  })
+
+  it('leaves the ordinary run worth what it always was', () => {
+    // Buy back what the crossing spent, at the port you arrived at, and the
+    // arithmetic is unchanged: allowed x price in, used x price out. Charging
+    // at the pump is a change to what the player can *see* and decide, not to
+    // what a straightforward delivery pays.
+    const settlement = lastSettlement(fly())!
+    const netted = settlement.lines.reduce(
+      (sum, l) => sum + (l.allowedKg - l.usedKg) * l.unitCr,
+      0,
+    )
+    // Within the difference between what was consumed and what it took to
+    // refill -- the tanks did not start the run completely full.
+    expect(settlement.allowanceCr + settlement.storesCr).toBeLessThan(netted + 1)
   })
 
   it('a tended ship arrives under and a neglected one over', () => {
@@ -121,7 +160,13 @@ describe('the allowance is what makes efficiency worth money', () => {
 
     const waterOf = (s: SimState) => lastSettlement(s)!.lines.find((l) => l.key === 'water')!
     expect(waterOf(neglected).usedKg).toBeGreaterThan(waterOf(tended).usedKg)
-    expect(waterOf(neglected).creditsCr).toBeLessThan(waterOf(tended).creditsCr)
+    // The incentive now lives in the bottom line rather than in one netted
+    // figure: both ships are reimbursed the same budget, and the neglected one
+    // spends more of it buying the water back.
+    expect(lastSettlement(neglected)!.storesCr).toBeLessThan(
+      lastSettlement(tended)!.storesCr,
+    )
+    expect(lastSettlement(neglected)!.totalCr).toBeLessThan(lastSettlement(tended)!.totalCr)
   })
 
   it('makes the difference visible in the balance, not just in a gauge', () => {

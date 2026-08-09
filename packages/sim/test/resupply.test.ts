@@ -12,6 +12,7 @@ import {
   advanceTo,
   applyCommand,
   createWorld,
+  priceStores,
   recentLog,
   transferOptions,
   resupplying,
@@ -178,11 +179,27 @@ describe('delivering a contract fills the tanks, and now says so', () => {
     expect(line).toMatch(/t propellant/)
   })
 
-  it('and actually fills them', () => {
-    const s = delivered(true)
-    for (const key of ['water', 'o2', 'food', 'propellant', 'spares'] as const) {
-      expect(s.ship.resources[key].value).toBeCloseTo(s.ship.resources[key].max, 6)
-    }
+  it('puts them back where they started, not to the brim', () => {
+    // The allowance restores the ship to the state she set out in. Filling to
+    // capacity bought a quarter of a propellant tank nobody had budgeted for,
+    // and made the cost of a stop depend on how empty she happened to be when
+    // she signed on.
+    let s = world()
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    const option = transferOptions(s).find((o) => o.feasible)!
+    s = applyCommand(s, { at: s.now, command: { kind: 'DEPART', optionId: option.id } })
+    const departure = { ...s.contract!.storesAtDeparture }
+
+    const arrived = advanceTo(s, s.voyage!.arrivesAt + 60)
+    // Propellant is the one the burn actually moves, and the one a fill to
+    // capacity would have quietly bought eight tonnes of.
+    expect(arrived.ship.resources.propellant.value).toBeCloseTo(departure.propellant, 0)
+    expect(arrived.ship.resources.propellant.value).toBeLessThan(
+      arrived.ship.resources.propellant.max * 0.8,
+    )
   })
 
   it('leaves them alone when the order says to', () => {
@@ -202,5 +219,70 @@ describe('delivering a contract fills the tanks, and now says so', () => {
       expect(s.settlement, `settlement missing with order ${order}`).toBeTruthy()
       expect(s.settlement!.lines.length).toBeGreaterThan(0)
     }
+  })
+})
+
+/**
+ * What a stop costs, and where. Design doc §6.2.
+ *
+ * The price table has been in `ports.json` since M2 and it is a good one:
+ * volatiles get cheaper the further out you go, because ice is abundant in the
+ * Belt and dear in low Earth orbit, while food runs the other way because
+ * nothing grows out there. Until now nothing consulted it except the
+ * settlement, so all of that geography was written down and inert.
+ */
+describe('stores are bought, at the price of the port selling them', () => {
+  it('prices a delivery from the port the ship is actually at', () => {
+    // Ceres water is a fifth of Gateway water; Ceres food is twice Gateway
+    // food. Same cargo, opposite answers.
+    const water = { water: 100 }
+    expect(priceStores('port.ceres', water)).toBeLessThan(priceStores('port.gateway', water))
+
+    const food = { food: 100 }
+    expect(priceStores('port.ceres', food)).toBeGreaterThan(priceStores('port.gateway', food))
+  })
+
+  it('charges the ledger when the stores come aboard', () => {
+    const drained = world()
+    drained.ship.resources.propellant.value = 1000
+    drained.ship.resources.propellant.since = drained.now
+    const s = setResupplyOrder(setResupplyOrder(drained, false), true)
+
+    const before = s.credits
+    const after = setResupplyOrder(advanceTo(s, s.now + 10 * DAY), false)
+    expect(after.credits).toBeLessThan(before)
+
+    const entry = after.ledger.find((l) => /Stores at/.test(l.reason))
+    expect(entry, 'no ledger line for the stores').toBeTruthy()
+    expect(entry!.credits).toBeLessThan(0)
+    expect(entry!.reason).toMatch(/Gateway/)
+  })
+
+  it('bills nothing when the order says not to take any on', () => {
+    const s = setResupplyOrder(world(), false)
+    const after = advanceTo(s, s.now + 10 * DAY)
+    expect(after.ledger.some((l) => /Stores at/.test(l.reason))).toBe(false)
+  })
+
+  it('reimburses the budget and bills the refill as two separate movements', () => {
+    // Both halves reach the books, which is the point: the player can see what
+    // the Guild gave them and what the port took, rather than one figure that
+    // has already had the subtraction done to it.
+    let s = world()
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    const option = transferOptions(s).find((o) => o.feasible)!
+    s = applyCommand(s, { at: s.now, command: { kind: 'DEPART', optionId: option.id } })
+    s = advanceTo(s, s.voyage!.arrivesAt + 60)
+
+    const reasons = s.ledger.map((l) => l.reason)
+    expect(reasons.some((r) => /allowance reimbursed/i.test(r))).toBe(true)
+    expect(reasons.some((r) => /Stores at Tranquillity/.test(r))).toBe(true)
+
+    const settlement = s.settlement!
+    expect(settlement.allowanceCr).toBeGreaterThan(0)
+    expect(settlement.storesCr).toBeLessThan(0)
   })
 })
