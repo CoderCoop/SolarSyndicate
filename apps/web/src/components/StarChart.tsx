@@ -97,8 +97,16 @@ const REFERENCE_SPEED_MS = 29784
 const LOCAL_BELOW_AU = 0.004
 
 const REACH = {
-  /** Closest in: Earth's own limb filling the plate. */
-  min: 0.0002,
+  /**
+   * Closest in: a plate 300 km across, which is a berth against a limb.
+   *
+   * It was 0.0002 AU — 30,000 km — chosen when Earth was the only world the
+   * close view had ever been pointed at. Phobos Anchorage orbits 9,376 km up
+   * and the Ceres berth 1,150 km, so at both of them the floor was a plate
+   * wider than anything on it: Ceres came out a 1.6% dot with its only station
+   * inside the dot. A floor set for one world is not a floor.
+   */
+  min: 1e-6,
   /** Furthest out: Ceres' orbit with room around it. */
   max: 4,
   /** Where a fresh close view starts — half an AU across. */
@@ -200,8 +208,35 @@ interface Camera {
   centreFrame: 'sun' | 'body'
 }
 
+/** Kilometres to AU, for the scales that are quoted in kilometres. */
+const KM = 1 / 149597871
+
 /** Candidate grid and ruler steps, in AU. The largest that fits at least three. */
-const STEPS = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]
+const STEPS_AU = [0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]
+
+/**
+ * And the same, in kilometres, for the plates that are read in kilometres.
+ *
+ * A step has to be round in **the unit the ruler is labelled in**. 0.002 AU is
+ * a round number to nobody, and it was the smallest step the chart had: close
+ * in on Mars the whole grid was one cell 299,195 km on a side, with Phobos
+ * Anchorage 9,376 km up and no line anywhere near it. The AU steps stay for the
+ * plates that are genuinely read in AU.
+ */
+const STEPS_KM = [20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5]
+
+/** Every candidate step, smallest first, in AU. */
+const STEPS = [...STEPS_KM.map((km) => km * KM), ...STEPS_AU].sort((a, b) => a - b)
+
+/**
+ * Where a ruler stops being readable in thousands of kilometres.
+ *
+ * Above this the labels are thousands — "100 · 200 · 300" against a "1000 km"
+ * legend, because six digits repeated across a ruler is unreadable. Below it
+ * they are plain kilometres, because a 200 km step in thousands is "0.2", and
+ * rounded to a whole number, as it was, it is "0".
+ */
+const RULER_THOUSANDS_ABOVE_KM = 5000
 
 /**
  * How the plate maps heliocentric AU onto drawing units.
@@ -606,6 +641,7 @@ export function StarChart({ chart }: { chart: ChartView }) {
 
   // Below a hundredth of an AU the ruler is better read in kilometres.
   const inKm = close && view.reachAu < 0.01
+  const marks = ruler(stepFor(view.reachAu))
 
   // Far enough off the ship that "centre on her" is worth offering.
   const adrift =
@@ -934,16 +970,17 @@ export function StarChart({ chart }: { chart: ChartView }) {
               <g key={au}>
                 <line x1={x} y1="-2.5" x2={x} y2="2.5" />
                 <text x={x} y="9" textAnchor="middle">
-                  {inKm ? Math.round(au * 149597.871).toLocaleString() : au}
+                  {inKm ? marks.of(au) : au}
                 </text>
               </g>
             )
           })}
           {/* Once the plate is measuring the gap between two berths, "0.002 AU"
               is a number nobody can hold. Kilometres are what that distance is
-              quoted in everywhere else in the game. */}
+              quoted in everywhere else in the game -- in thousands while the
+              gap is cislunar, and plain once it is the height of an orbit. */}
           <text className="chart__ruler-unit" x={CENTRE - 4} y="9" textAnchor="end">
-            {inKm ? '1000 km' : 'AU'}
+            {inKm ? marks.unit : 'AU'}
           </text>
         </g>
       </svg>
@@ -1004,8 +1041,25 @@ export function StarChart({ chart }: { chart: ChartView }) {
 function closeTicks(reachAu: number): number[] {
   const step = stepFor(reachAu)
   const out: number[] = []
-  for (let au = step; au <= reachAu * 1.001; au += step) out.push(Number(au.toFixed(4)))
+  // Nine places, not four: a 200 km step is 1.3e-6 AU, and rounding the ticks
+  // to four decimals collapsed every one of them to zero.
+  for (let au = step; au <= reachAu * 1.001; au += step) out.push(Number(au.toFixed(9)))
   return out
+}
+
+/**
+ * How a close plate's ruler is labelled, given the step it is drawn at.
+ *
+ * The unit is chosen from the *step* rather than the reach, because the step is
+ * what the labels are increments of — that is the number that has to come out
+ * legible.
+ */
+function ruler(stepAu: number): { unit: string; of: (au: number) => string } {
+  const km = stepAu / KM
+  if (km >= RULER_THOUSANDS_ABOVE_KM) {
+    return { unit: '1000 km', of: (au) => Math.round(au / KM / 1000).toLocaleString() }
+  }
+  return { unit: 'km', of: (au) => Math.round(au / KM).toLocaleString() }
 }
 
 /**

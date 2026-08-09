@@ -2041,6 +2041,53 @@ check(
   (await v1.textContent('.chart__ruler'))?.replace(/\s+/g, ' ').trim() ?? '',
 )
 
+// --- the ruler is round in the unit it is written in (§5.1) ----------------
+//
+// The smallest step the chart had was 0.002 AU. That is 299,195 km, a round
+// number to nobody, and it was the *floor*: close in on Mars the grid was one
+// cell wider than the plate with Phobos Anchorage 9,376 km up and no line
+// anywhere near it. The steps are round kilometres once the labels are.
+const tickValues = async () =>
+  (await v1.$$eval('.chart__ruler g text', (els) => els.map((e) => e.textContent?.trim()))).map(
+    (t) => Number((t ?? '').replace(/,/g, '')),
+  )
+
+const cislunarTicks = await tickValues()
+check(
+  'the ruler carries marks to read a position against, not just an end stop',
+  cislunarTicks.length >= 3 &&
+    cislunarTicks.every((n, i) => n > 0 && (i === 0 || n > cislunarTicks[i - 1])),
+  `${cislunarTicks.join(' · ')} × ${(await v1.textContent('.chart__ruler-unit'))?.trim()}`,
+)
+
+// Deeper still, to the height of an orbit rather than a cislunar gap. This is
+// the scale Phobos Anchorage and the Ceres berth live at, and the floor used to
+// sit 30,000 km above it -- so both came out as a dot with the station inside
+// the dot. Rounding a 200 km step to thousands printed every tick as "0".
+await v1.mouse.move(overPlate.x, overPlate.y)
+for (let i = 0; i < 20; i++) await v1.mouse.wheel(0, -100)
+// Attached rather than visible: a vertical `<line>` has no width, so Playwright
+// never calls one visible however plainly it is drawn.
+await v1.waitForSelector('.chart__grid line', { state: 'attached' })
+const orbitTicks = await tickValues()
+const orbitUnit = (await v1.textContent('.chart__ruler-unit'))?.trim()
+check(
+  'and stays readable down to the height of an orbit, in plain kilometres',
+  orbitUnit === 'km' &&
+    orbitTicks.length >= 3 &&
+    orbitTicks.every((n, i) => n > 0 && (i === 0 || n > orbitTicks[i - 1])),
+  `${orbitTicks.join(' · ')} ${orbitUnit}`,
+)
+check(
+  'with a grid that still has lines in it at that scale',
+  (await v1.$$('.chart__grid line')).length >= 4,
+  `${(await v1.$$('.chart__grid line')).length} lines`,
+)
+
+// Back to where the rest of this section expects to be.
+await v1.click('.zoomer__btn:text-is("Earth")')
+await v1.waitForSelector('.chart__local')
+
 // The whole point: she moves.
 const shipAt = async () => {
   const t = await v1.getAttribute('.chart__ship-mark', 'transform')
