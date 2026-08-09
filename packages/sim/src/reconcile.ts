@@ -21,6 +21,7 @@ import { adjustStanding, guildForContract, STANDING_DELTA } from './guild.js'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { settle } from './resources.js'
+import { beginResupply, storeAmount } from './resupply.js'
 import { type GameTime } from './time.js'
 import type { SimState } from './types.js'
 
@@ -140,13 +141,50 @@ function settlementPhrase(allowanceCr: number): string {
  * Take on stores. Alongside, the ship fills up -- the cost of doing so was
  * just settled against the allowance, so this is bookkeeping rather than a
  * second charge.
+ *
+ * Two things it now does that it did not. It **says what it put aboard**: this
+ * moves more mass than anything else in the game and did it in complete
+ * silence, so a player watching five gauges jump to full had nothing anywhere
+ * telling them why. And it **obeys the standing order** (§7.3) -- a player who
+ * has switched the pumps off has said not to fill the tanks, and filling them
+ * anyway because a contract happened to close would make the switch a lie. The
+ * allowance still settles either way: that is what the Guild budgeted, and
+ * declining the stores does not un-spend what the crossing consumed.
  */
 function restock(state: SimState, at: GameTime): void {
+  if (!state.ship.standingOrders.resupply) {
+    pushLog(
+      state,
+      at,
+      'info',
+      'ship',
+      'Stores not taken on: the standing order is to leave them alone. The allowance was settled all the same.',
+    )
+    return
+  }
+
+  const taken: string[] = []
   for (const key of ALLOWANCE_KEYS) {
     const reservoir = state.ship.resources[key]
     settle(reservoir, at)
+    const delta = reservoir.max - reservoir.value
     reservoir.value = reservoir.max
+    if (delta > 0 && !/^0(\.0+)? /.test(storeAmount(key, delta))) {
+      taken.push(storeAmount(key, delta))
+    }
   }
+  if (taken.length === 0) return
+
+  pushLog(
+    state,
+    at,
+    'info',
+    'ship',
+    `Stores filled at ${getPort(state.ship.portId).name}: took on ${taken.join(', ')}.`,
+    'against the allowance',
+  )
+  // The tanks are full, so the running count starts again from here.
+  beginResupply(state, at)
 }
 
 export function lastSettlement(state: SimState): Settlement | undefined {

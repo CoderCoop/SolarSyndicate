@@ -25,7 +25,7 @@ import type { GameTime } from './time.js'
  * the shape and a test refuses any change to it that this number did not
  * follow.
  */
-export const SIM_STATE_VERSION = 11
+export const SIM_STATE_VERSION = 12
 
 /**
  * A continuous quantity stored as (value at a known time, rate of change).
@@ -124,6 +124,14 @@ export interface ShipState {
   /** Stood to by the captain after an unanswered emergency (§7.4, §4.6). */
   safeMode?: boolean
   /**
+   * Stores when the pumps were connected, so the log can say what came aboard.
+   *
+   * A reading to difference against, not an accumulator -- the same shape the
+   * contract allowance uses, and for the same reason: a running total would
+   * drift across catch-up and a difference of two levels cannot.
+   */
+  resupplyFrom?: { at: GameTime; stores: Record<string, number> }
+  /**
    * The emergency the log has already announced, so escalating air raises one
    * dispatch per stage instead of one per network resolve.
    */
@@ -151,6 +159,15 @@ export interface StandingOrders {
    * moment they would need to know.
    */
   safeMode: boolean
+  /**
+   * Let station services top the stores up while alongside.
+   *
+   * On by default, because nobody wants to press a button to be handed water
+   * they have already been budgeted for. A toggle all the same: a default that
+   * cannot be turned off is not a policy, it is a fact, and this one quietly
+   * changes what the allowance settles at.
+   */
+  resupply: boolean
 }
 
 /** What a crew member is doing right now. Driven by the watch bill (§4.3). */

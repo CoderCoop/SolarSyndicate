@@ -1396,6 +1396,45 @@ check(
   co2Row,
 )
 
+// Station services (§3.2, §7.3). Five stores have topped themselves up while
+// alongside since M1 and nothing on any screen said so -- a top-up nothing
+// mentions is indistinguishable from a bug.
+check(
+  'the Life tab says stores are being taken on, and lets you stop it',
+  (await page.getAttribute('.standing__toggle', 'aria-checked')) === 'true' &&
+    /top up on their own/.test((await page.textContent('.standing__note')) ?? ''),
+  (await page.textContent('.standing__note'))?.replace(/\s+/g, ' ').trim().slice(0, 90) ?? '',
+)
+
+await tap(page, '.standing__toggle')
+check(
+  'switching it off says the tanks are yours to fill',
+  (await page.getAttribute('.standing__toggle', 'aria-checked')) === 'false' &&
+    /hold where they are/.test((await page.textContent('.standing__note')) ?? ''),
+  (await page.textContent('.standing__note'))?.replace(/\s+/g, ' ').trim().slice(0, 80) ?? '',
+)
+
+// And the log carries the decision. What actually came aboard needs depleted
+// tanks and time alongside, so it is checked after the run below -- here the
+// ship has been berthed for minutes with full stores, and reporting a delivery
+// of nothing would be the bug, not the feature.
+await tap(page, '.tabs__btn:has-text("Log")')
+await page.waitForSelector('.log')
+const resupplyLines = await page.$$eval('.log li', (els) =>
+  els
+    .map((e) => e.textContent?.replace(/\s+/g, ' ').trim())
+    .filter((t) => /[Ss]ervices/.test(t ?? '')),
+)
+check(
+  'and the dispatch log records the decision',
+  resupplyLines.some((l) => /disconnected/.test(l ?? '')) &&
+    !resupplyLines.some((l) => /took on 0/.test(l ?? '')),
+  resupplyLines.slice(0, 2).join(' || ') || 'none',
+)
+await tap(page, '.tabs__btn:has-text("Life")')
+await page.waitForSelector('.gauges')
+await tap(page, '.standing__toggle')
+
 // §1 pillar 1: a level and a horizon say what and when. Only "why" is
 // actionable, and it used to live one tab away on the flow diagram.
 const withSupply = await page.$$eval('.gauge-row', (rows) =>
@@ -2009,6 +2048,26 @@ check(
   totals.length === 3 && /worth/.test(totals[2] ?? ''),
   totals.join(' · '),
 )
+
+// The bigger of the two refills: delivering a contract fills every store to
+// capacity in one step, because the allowance has just settled what the
+// crossing consumed. That has moved more mass than anything else in the game
+// since M2 and did it in complete silence -- five gauges jumped to full and
+// nothing anywhere said why.
+await tap(v2, '.tabs__btn:has-text("Log")')
+await v2.waitForSelector('.log')
+const tookOn = await v2.$$eval('.log li', (els) =>
+  els
+    .map((e) => e.textContent?.replace(/\s+/g, ' ').trim())
+    .filter((t) => /Stores filled/.test(t ?? '')),
+)
+check(
+  'the log says what the tanks were filled with, and where',
+  tookOn.length > 0 && /Tranquillity/.test(tookOn[0] ?? '') && /t propellant/.test(tookOn[0] ?? ''),
+  tookOn[0]?.slice(20, 130) ?? 'nothing reported',
+)
+await tap(v2, '.tabs__btn:has-text("Mission")')
+await v2.waitForSelector('.settle__list')
 
 check(
   'the settlement says it was priced where the ship arrived (TR-19)',
