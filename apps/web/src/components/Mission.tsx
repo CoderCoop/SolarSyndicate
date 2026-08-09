@@ -401,18 +401,18 @@ function UnderWay({ voyage, active }: { voyage: VoyageView; active?: ActiveContr
 /* ------------------------------------------------------------- settlement */
 
 function SettlementRow({ line }: { line: SettlementLine }) {
-  const delta = line.allowedKg - line.usedKg
-  const under = delta >= 0
+  // Under or over the budget is still the thing worth seeing at a glance --
+  // the colour says how the run went. The figure beside it is the whole
+  // allowance reimbursed, because what was consumed is bought back at the pump
+  // and netting it here would charge for it twice.
+  const under = line.allowedKg - line.usedKg >= 0
   return (
     <li className={`settle__row ${under ? 'is-under' : 'is-over'}`}>
       <span className="settle__key">{STORE_LABEL[line.key] ?? line.key}</span>
       <span className="settle__against">
         {formatStores(line.key, line.usedKg)} of {formatStores(line.key, line.allowedKg)}
       </span>
-      <span className="settle__cr">
-        {under ? '+' : '−'}
-        {Math.abs(Math.round(line.creditsCr)).toLocaleString()}
-      </span>
+      <span className="settle__cr">+{Math.round(line.creditsCr).toLocaleString()}</span>
     </li>
   )
 }
@@ -431,7 +431,7 @@ function SettlementPanel({ settlement }: { settlement: Settlement }) {
         <li className="settle__row settle__row--head">
           <span className="settle__key">Store</span>
           <span className="settle__against">Used against allowance</span>
-          <span className="settle__cr">cr</span>
+          <span className="settle__cr">cr back</span>
         </li>
         {settlement.lines.map((line) => (
           <SettlementRow key={line.key} line={line} />
@@ -444,9 +444,16 @@ function SettlementPanel({ settlement }: { settlement: Settlement }) {
           <strong>{credits(settlement.payCr)}</strong>
         </li>
         <li>
-          <span>{settlement.allowanceCr >= 0 ? 'Allowance returned' : 'Overrun billed'}</span>
-          <strong className={settlement.allowanceCr >= 0 ? 'is-good' : 'is-bad'}>
-            {credits(settlement.allowanceCr)}
+          <span>Allowance reimbursed</span>
+          <strong className="is-good">{credits(settlement.allowanceCr)}</strong>
+        </li>
+        {/* The bill beside the budget. The gap between them is the mechanic:
+            a tended ship buys back less than it was given and keeps the
+            difference, which is invisible if the two are added up first. */}
+        <li>
+          <span>Stores bought at {portName(settlement.portId)}</span>
+          <strong className={settlement.storesCr < 0 ? 'is-bad' : ''}>
+            {credits(settlement.storesCr)}
           </strong>
         </li>
         <li className="settle__total">
@@ -456,8 +463,11 @@ function SettlementPanel({ settlement }: { settlement: Settlement }) {
       </ul>
 
       <p className="panel__note">
-        Priced at the rates of {portName(settlement.portId)}, where the ship actually arrived —
-        not at the port it left. Tanks have been topped back up.
+        The Guild reimburses the whole allowance at the rates of{' '}
+        {portName(settlement.portId)}, where the ship actually arrived — not at the port it
+        left. Refilling the tanks is bought from that port at its own prices, so what you
+        keep is the difference: spend less than you were budgeted and the gap is yours.
+        Volatiles are cheap in the Belt and dear in low orbit; food runs the other way.
       </p>
     </section>
   )

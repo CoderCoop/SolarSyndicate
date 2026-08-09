@@ -1,5 +1,5 @@
 /**
- * Station services. Design doc §3.2, §7.3.
+ * Station services. Design doc §3.2, §6.2, §7.3.
  *
  * While the ship is alongside, five stores top themselves up: water, food,
  * oxygen, spares and propellant. That has been true since M1 -- it is why the
@@ -10,16 +10,25 @@
  *
  * ## What it costs
  *
- * Nothing at the pump, and that is deliberate rather than an oversight. The
- * bill arrives on delivery: `reconcileArrival` measures what the crossing
- * consumed against the Guild's allowance and credits the underrun or bills the
- * overrun at the arrival port's price (TR-17, TR-18). Charging again here
- * would bill the same kilogramme twice.
+ * **Every kilogramme is bought, at the price of the port it is bought from.**
+ * The price table has always been there -- and it is a good one: volatiles get
+ * cheaper the further out you go, because ice is abundant in the Belt and
+ * dear in low Earth orbit, while food runs the other way because nothing grows
+ * out there. Ceres water is a fifth of Gateway water; Ceres food is twice
+ * Gateway food. Until now nothing consulted it except the settlement, so all
+ * of that geography was written down and inert.
  *
- * Two honest consequences of that model, which the log now makes visible
- * rather than leaving to be discovered: the allowance baseline is taken at
- * *departure*, so whatever comes aboard before casting off is free; and a ship
- * sitting at a berth with no contract refills for nothing at all.
+ * The Guild still pays: the contract **reimburses the allowance it budgeted**,
+ * at the arrival port's rates (TR-18). What changes is that the two halves are
+ * now separate events instead of one netted figure -- money out at the pump,
+ * money in at the desk.
+ *
+ * That is not a balance change for the ordinary run. Buy back what the
+ * crossing spent, at the port you arrived at, and the bottom line is what it
+ * always was: `allowed x price` in, `used x price` out. It becomes a change
+ * the moment the player does something interesting -- top up at Ceres where
+ * water is cheap, decline the stores and keep the reimbursement, or sit at a
+ * berth between contracts, which used to be free and is now a bill.
  *
  * ## Why it is a standing order
  *
@@ -29,7 +38,9 @@
  * a policy, it is a fact, and a player running a tight allowance may want the
  * tanks left exactly where they are.
  */
+import { getPort, priceAt } from '@solsyn/data'
 import { ALLOWANCE_KEYS, storesNow, type AllowanceKey } from './contracts.js'
+import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { type GameTime } from './time.js'
 import type { SimState } from './types.js'
@@ -92,14 +103,50 @@ export function endResupply(state: SimState, at: GameTime, why: string): void {
     .sort((a, b) => b.delta - a.delta)
   if (taken.length === 0) return
 
+  const cr = buyStores(
+    state,
+    at,
+    Object.fromEntries(taken.map((t) => [t.key, t.delta])) as Partial<
+      Record<AllowanceKey, number>
+    >,
+  )
+
   pushLog(
     state,
     at,
     'info',
     'ship',
-    `Station services: took on ${taken.map((t) => storeAmount(t.key, t.delta)).join(', ')}. ${why}`,
-    'alongside',
+    `Station services at ${getPort(state.ship.portId).name}: took on ${taken
+      .map((t) => storeAmount(t.key, t.delta))
+      .join(', ')}. ${why}`,
+    `−${Math.round(cr).toLocaleString()} cr`,
   )
+}
+
+/** What a delivery of these stores costs at this port. */
+export function priceStores(portId: string, taken: Partial<Record<AllowanceKey, number>>): number {
+  let cr = 0
+  for (const key of ALLOWANCE_KEYS) cr += (taken[key] ?? 0) * priceAt(portId, key)
+  return cr
+}
+
+/**
+ * Buy what came aboard, from whoever is selling it here.
+ *
+ * One ledger line rather than five: a player reading the books wants "stores
+ * at Ceres Local", not a column of five entries they have to add up to find
+ * out what a stop cost.
+ */
+export function buyStores(
+  state: SimState,
+  at: GameTime,
+  taken: Partial<Record<AllowanceKey, number>>,
+): number {
+  const portId = state.ship.portId
+  const cr = priceStores(portId, taken)
+  if (cr <= 0.5) return 0
+  post(state, at, -cr, `Stores at ${getPort(portId).name}`)
+  return cr
 }
 
 /**

@@ -329,7 +329,9 @@ describe('the incentive points the right way', () => {
 
     s = advanceTo(s, arrivesAt + 60)
     return {
-      allowanceCr: lastSettlement(s)!.allowanceCr,
+      // What the run was actually worth: the budget reimbursed, less what
+      // buying the stores back cost. Neglect shows up in the second half.
+      allowanceCr: lastSettlement(s)!.allowanceCr + lastSettlement(s)!.storesCr,
       tradeInCr: surveyShip(s, s.now).tradeInCr,
     }
   }
