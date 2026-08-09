@@ -39,7 +39,7 @@
  * repeated underneath, because an arrow is a direction and a player planning a
  * burn wants a number.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChartBody, ChartLocal, ChartView, ChartWindow } from '@solsyn/sim'
 
 const SIZE = 300
@@ -383,8 +383,11 @@ function useGestures(
   const zoomAbout = (plateX: number, plateY: number, next: (fromReach: number) => number) => {
     setCamera((prev) => {
       const was = viewFor(prev, chart)
-      // Coming off the map there is no linear scale yet to step from.
-      const base = was.kind === 'system' ? REACH.start : was.reachAu
+      // The scale the plate is *already showing*, whichever projection it is
+      // in. Stepping off the system view from a fixed `REACH.start` instead
+      // made the first notch a seventeen-fold jump -- 6.20 AU across to 0.37 --
+      // which is the whole of "zooming seems to jump between levels".
+      const base = was.reachAu
       const reachAu = Math.min(REACH.max, Math.max(REACH.min, next(base)))
       // Where the gesture is pointing, in AU, before anything moves.
       const anchor = was.from(plateX, plateY)
@@ -450,7 +453,10 @@ function useGestures(
     const by = { x: now.x - was.x, y: now.y - was.y }
     setCamera((prev) => {
       const had = viewFor(prev, chart)
-      const reachAu = had.kind === 'system' ? REACH.start : had.reachAu
+      // Same rule for a drag off the system plate: keep the scale, change the
+      // projection. Landing somewhere else entirely is not what grabbing
+      // something means.
+      const reachAu = had.reachAu
       const perAu = PLATE / reachAu
       const at = had.kind === 'system' ? { x: chart.ship.x, y: chart.ship.y } : had.from(CENTRE, CENTRE)
       return {
@@ -467,10 +473,35 @@ function useGestures(
     if (pointers.current.size < 2) pinch.current = null
   }
 
-  const onWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+  /**
+   * The wheel, attached by hand because React's is passive.
+   *
+   * `onWheel` goes on at the root as a passive listener, so `preventDefault`
+   * inside it is ignored and the page scrolls underneath the gesture. The
+   * symptom was worse than it sounds: scrolling in is a no-op at the top of
+   * the page so zooming *in* worked, while every notch back out slid the chart
+   * out from under the cursor and the next notch landed on something else
+   * entirely. Zooming out stopped after one step and looked like the plate
+   * had a floor.
+   *
+   * The handler lives in a ref so the listener can be attached once while
+   * still closing over the current chart -- re-binding it on every cosmetic
+   * tick would be churn for nothing.
+   */
+  const onWheelRef = useRef<(e: WheelEvent) => void>(() => {})
+  onWheelRef.current = (e: WheelEvent) => {
+    e.preventDefault()
     const at = toPlate(e.clientX, e.clientY)
     zoomAbout(at.x, at.y, (r) => (e.deltaY > 0 ? r * ZOOM_STEP : r / ZOOM_STEP))
   }
+
+  useEffect(() => {
+    const el = svg.current
+    if (!el) return
+    const handler = (e: WheelEvent) => onWheelRef.current(e)
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
 
   const onDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
     const at = toPlate(e.clientX, e.clientY)
@@ -484,7 +515,6 @@ function useGestures(
       onPointerMove,
       onPointerUp,
       onPointerCancel: onPointerUp,
-      onWheel,
       onDoubleClick,
     },
     zoomAbout,
