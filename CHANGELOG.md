@@ -9,6 +9,30 @@ means here.
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-08-09
+
+### Fixed
+
+- **The chart's zoom jumped, and would not go back out.** Two faults reading as
+  one symptom.
+
+  Stepping off the whole-system plate started from a *fixed* reach rather than
+  the scale the plate was already showing, so the first notch went **6.20 AU
+  across to 0.37 AU** — a seventeen-fold leap out of a control that is supposed
+  to be continuous. It now keeps the scale and changes only the projection:
+  6.20 → 4.59 → 3.40 → 2.52, a steady 1.35 a notch.
+
+  And the wheel was React's `onWheel`, which is attached passively at the root
+  — so `preventDefault` was ignored and the **page scrolled instead of the
+  chart zooming**. Zooming in happened to work, because the page was already at
+  the top; every notch back out slid the plate from under the cursor and the
+  next one landed on something else entirely, so the chart appeared to have a
+  floor. The listener is now bound by hand, non-passive, and the gesture is the
+  chart's.
+
+  Both are held by a check that walks the scale in and back out and asserts the
+  page did not move.
+
 ## [0.12.0] — 2026-08-09
 
 A minor: stores stopped being free, and where you buy them started to matter.

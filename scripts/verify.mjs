@@ -822,6 +822,49 @@ check(
   offplate.join(' · '),
 )
 
+// --- the zoom is continuous, and the wheel is the chart's (§5.1, §8.1) -----
+//
+// Two failures that read as one symptom: stepping off the system plate from a
+// fixed reach made the first notch a seventeen-fold jump, and React's `onWheel`
+// is passive, so `preventDefault` was ignored and the page scrolled instead.
+// Zooming *in* worked because the page was already at the top; every notch back
+// out slid the chart from under the cursor and the next landed elsewhere, so the
+// plate appeared to have a floor.
+await page.click('.zoomer__btn:text-is("System")')
+await page.waitForSelector('.chart__graticule .is-cardinal')
+
+/** What the plate says it spans, in AU, whatever unit it is labelled in. */
+const acrossAu = async () => {
+  const label = ((await page.textContent('.zoomer__scale')) ?? '').trim()
+  const n = Number((label.match(/[\d.]+/) ?? [0])[0])
+  if (/M km/.test(label)) return n / 149.6
+  if (/ km/.test(label)) return n / 149597871
+  return n
+}
+
+const systemAcross = await acrossAu()
+await page.mouse.move(mid.x, mid.y)
+await page.mouse.wheel(0, -120)
+await page.waitForSelector('.chart__grid')
+const oneStepIn = await acrossAu()
+check(
+  'a wheel notch off the system plate is a step, not a leap',
+  oneStepIn < systemAcross && systemAcross / oneStepIn < 2,
+  `${systemAcross.toFixed(2)} AU → ${oneStepIn.toFixed(2)} AU across`,
+)
+
+const scrolledBefore = await page.evaluate(() => globalThis.scrollY)
+await page.mouse.wheel(0, 120)
+await page.mouse.wheel(0, 120)
+await page.mouse.wheel(0, 120)
+const backOut = await acrossAu()
+const scrolledAfter = await page.evaluate(() => globalThis.scrollY)
+check(
+  'and zooming out keeps working, rather than scrolling the page instead',
+  backOut > oneStepIn * 1.5 && scrolledAfter === scrolledBefore,
+  `${oneStepIn.toFixed(2)} → ${backOut.toFixed(2)} AU across, scrollY ${scrolledBefore} → ${scrolledAfter}`,
+)
+
 // Dragging leaves the ship behind, and the plate offers to go back to her.
 await page.mouse.move(mid.x, mid.y)
 await page.mouse.down()
@@ -1945,7 +1988,10 @@ await v1.waitForSelector('.chart')
 const plateBox = await (await v1.$('.chart')).boundingBox()
 const overPlate = { x: plateBox.x + plateBox.width / 2, y: plateBox.y + plateBox.height / 2 }
 await v1.mouse.move(overPlate.x, overPlate.y)
-for (let i = 0; i < 15; i++) await v1.mouse.wheel(0, -100)
+// From the system plate down to cislunar is a factor of about 1,240, and the
+// zoom is continuous now rather than jumping in fixed stops -- so it is a
+// couple of dozen notches, or one pinch.
+for (let i = 0; i < 26; i++) await v1.mouse.wheel(0, -100)
 await v1.waitForSelector('.chart__local')
 
 const berths = await v1.$$eval('.chart__local-port text', (els) =>
