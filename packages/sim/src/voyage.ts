@@ -18,6 +18,7 @@
  */
 import { getBody, getContract, getHull, getPort } from '@solsyn/data'
 import { pushLog } from './log.js'
+import { beginResupply, endResupply, resupplying } from './resupply.js'
 import { reconcileArrival } from './reconcile.js'
 import {
   AU,
@@ -212,6 +213,9 @@ export function depart(state: SimState, optionId: string, at: GameTime): boolean
     deltaVMs: option.deltaVMs,
     propellantSpentKg: option.propellantKg,
   }
+  // Say what came aboard before the pumps stop, while the stores still hold
+  // the numbers to difference against.
+  endResupply(state, at, 'Cast off.')
   state.ship.docked = false
 
   pushLog(
@@ -237,6 +241,20 @@ export function arrive(state: SimState, at: GameTime): void {
   pushLog(state, at, 'info', 'voyage', `Berthed at ${getPort(voyage.toPortId).name}.`)
   // Berthed first, so the books settle at the arrival port's prices (TR-19).
   reconcileArrival(state, at)
+
+  // Then the pumps, and a line saying so -- after the settlement, or the
+  // station's first kilogramme would land inside the crossing it is being
+  // measured against.
+  if (resupplying(state)) {
+    beginResupply(state, at)
+    pushLog(
+      state,
+      at,
+      'info',
+      'ship',
+      `Station services connected at ${getPort(voyage.toPortId).name}. Stores are topping up.`,
+    )
+  }
 }
 
 /** One end of the crossing, as the crew actually experience it. */

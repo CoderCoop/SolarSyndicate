@@ -63,6 +63,7 @@ import {
 } from './networks.js'
 import { environmentAt, o2KPaAt, type Environment } from './physiology.js'
 import { answerEmergency, standDown, standTo } from './emergency.js'
+import { beginResupply, setResupply } from './resupply.js'
 import { peekDue, pop, schedule } from './queue.js'
 import { livingCrew } from './crew.js'
 import { fillFraction, levelAt, makeReservoir, settle } from './resources.js'
@@ -179,7 +180,7 @@ export function createWorld(seed: number, utcMs: number): SimState {
       // new player discover it by wasting a locker's worth first is a tutorial
       // nobody asked for. It is a toggle because §7.3 says standing orders are
       // the player's to set, not because the default is in doubt.
-      standingOrders: { autoService: true, safeMode: true },
+      standingOrders: { autoService: true, safeMode: true, resupply: true },
       thermalTrip: false,
     },
     crew,
@@ -202,6 +203,9 @@ export function createWorld(seed: number, utcMs: number): SimState {
     `${hull.name} (${hull.className}) is on the Local's books. Reactor online, four hands aboard.`,
   )
   resolveAll(state, t0)
+  // She opens the game alongside with the pumps running, so the count starts
+  // here rather than at the first berthing she happens to make.
+  beginResupply(state, t0)
   scheduleAt(state, DAY, 'DAY_ROLL')
   scheduleAt(state, nextShiftBoundary(t0), 'SHIFT_CHANGE')
   return state
@@ -470,6 +474,16 @@ function applyCommandMut(state: SimState, at: GameTime, command: Command): void 
     }
 
     case 'SET_STANDING_ORDER': {
+      // Resupply is not just a flag: switching it changes what the pumps are
+      // doing right now, and both directions owe the log a line.
+      if (command.order === 'resupply') {
+        setResupply(state, at, command.on)
+        // The pumps are reservoir *rates*, so the order does nothing until the
+        // network is resolved again -- switch them off without this and the
+        // tanks keep filling until some unrelated event happens to re-resolve.
+        resolveAll(state, at)
+        break
+      }
       state.ship.standingOrders[command.order] = command.on
       pushLog(
         state,

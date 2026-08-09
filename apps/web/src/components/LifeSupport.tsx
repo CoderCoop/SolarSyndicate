@@ -326,9 +326,14 @@ function Crew({ life }: { life: LifeSupportView }) {
 export function LifeSupport({
   life,
   channels,
+  resupply,
+  onSetResupply,
 }: {
   life: LifeSupportView
   channels: FlowChannel[]
+  /** Whether station services are topping the stores up (§7.3). */
+  resupply: boolean
+  onSetResupply: (on: boolean) => void
 }) {
   // Matched on the label the channel already carries, which `flows.ts` keeps
   // identical to the gauge's on purpose ("one channel per gauge on the Life
@@ -427,12 +432,43 @@ export function LifeSupport({
         />
       </ul>
 
-      {life.docked && (
-        <p className="panel__note">
-          Alongside at the Local. Station services are topping up stores, so the consumable
-          clocks only start once the ship casts off.
+      {/*
+        The standing order that decides whether five of these gauges are
+        filling at all (§7.3). It lives here rather than with the work orders
+        because this is the screen where a player watches it happen -- and
+        because a top-up nothing on screen mentions is indistinguishable from a
+        bug, which is what it was until now.
+      */}
+      <div className="standing">
+        <button
+          type="button"
+          className="standing__toggle switch"
+          role="switch"
+          aria-checked={resupply}
+          onClick={() => onSetResupply(!resupply)}
+        >
+          <span className="switch__track">
+            <span className="switch__thumb" />
+          </span>
+          <span className="standing__label">Take on stores while alongside</span>
+        </button>
+        <p className="panel__note standing__note">
+          {resupply ? (
+            <>
+              Water, food, oxygen, spares and propellant top up on their own at any berth, and
+              the dispatch log says what came aboard when you cast off.{' '}
+              {life.docked
+                ? 'The consumable clocks only start once the ship leaves.'
+                : 'Under way there is nobody to take them from, so the clocks are running.'}
+            </>
+          ) : (
+            <>
+              Off. The stores hold where they are, even alongside — the tanks are yours to
+              fill when you choose to.
+            </>
+          )}
         </p>
-      )}
+      </div>
 
       <p className="panel__note">
         The bands on each bar are where the reading stops being all right. For anything the

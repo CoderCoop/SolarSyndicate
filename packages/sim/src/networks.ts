@@ -21,6 +21,7 @@ import {
   type Environment,
 } from './physiology.js'
 import { pushLog } from './log.js'
+import { ALONGSIDE_RATES, resupplying } from './resupply.js'
 import { boundTime, levelAt, settle } from './resources.js'
 import { cancelKind, schedule } from './queue.js'
 import { resolveEmergency } from './emergency.js'
@@ -106,13 +107,15 @@ export const HULL_PASSIVE_KW_PER_K = 1.2
 
 /**
  * What station services top up per day while the ship is alongside. Casting
- * off stops it, at which point the consumable clocks start mattering.
+ * off stops it, at which point the consumable clocks start mattering -- and so
+ * does switching the standing order off (§7.3), which is why every reader goes
+ * through `resupplying` rather than testing `docked` for itself.
  *
  * Named rather than inlined because the flow view has to draw this as a node:
  * it is a real input to the balance, and a diagram that leaves it out shows
  * more water going out than coming back while the tank reads "holding".
  */
-export const ALONGSIDE_SUPPLY = { o2: 0.5, water: 6, food: 8 } as const
+export const ALONGSIDE_SUPPLY = ALONGSIDE_RATES
 
 /**
  * A single part's actual contribution in kW right now: rated power, scaled by
@@ -280,7 +283,7 @@ export function lifeBalance(state: SimState, t: GameTime): LifeBalance {
   const cabinTempC = levelAt(state.ship.resources.heat, t)
   heatRejectKw += Math.max(0, cabinTempC - 21) * HULL_PASSIVE_KW_PER_K
 
-  const dockedSupply = state.ship.docked ? 1 : 0
+  const dockedSupply = resupplying(state) ? 1 : 0
 
   return {
     o2PerDay: o2Production - crewO2 + dockedSupply * ALONGSIDE_SUPPLY.o2,
@@ -367,8 +370,8 @@ export function resolveNetworks(state: SimState, at: GameTime): void {
   res.co2.rate = PER_DAY(life.co2PerDay)
   res.water.rate = PER_DAY(life.waterPerDay)
   res.food.rate = PER_DAY(life.foodPerDay)
-  res.spares.rate = state.ship.docked ? PER_DAY(2) : 0
-  res.propellant.rate = state.ship.docked ? PER_DAY(120) : 0
+  res.spares.rate = resupplying(state) ? PER_DAY(ALONGSIDE_RATES.spares) : 0
+  res.propellant.rate = resupplying(state) ? PER_DAY(ALONGSIDE_RATES.propellant) : 0
 
   // Heat: the loop modulates, so the ship holds nominal while rejection
   // capacity covers the load, and climbs once it does not. Real radiators

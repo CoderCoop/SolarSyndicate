@@ -9,6 +9,53 @@ means here.
 
 ## [Unreleased]
 
+## [0.11.14] — 2026-08-08
+
+### Added
+
+- **The ship says what it takes on, and you can tell it not to.** Two separate
+  refills have been running since M1 and M2 and *neither* said a word:
+
+  - **On contract delivery**, every store is filled to capacity in one step,
+    because the allowance has just settled what the crossing consumed. This
+    moves more mass than anything else in the game — a Luna run comes back
+    27.9 t of propellant light — and it happened in complete silence. Five
+    gauges jumped to full and nothing anywhere said why. It now names the port
+    and the amounts.
+  - **While alongside**, water, food, oxygen, spares and propellant trickle up
+    at fixed daily rates. The log now says what came aboard when the ship casts
+    off, in the units each store is counted in — tonnes for propellant, a count
+    for spares, kilogrammes for the rest.
+
+- **A `resupply` standing order** (§7.3), on by default. Automatic is the right
+  default — nobody wants to press a button to be handed water they have already
+  been budgeted for — but a default that cannot be turned off is not a policy,
+  it is a fact, and this one quietly changes what the allowance settles at. The
+  toggle sits on the Life tab, which is the screen where a player watches it
+  happen.
+
+  It governs the delivery restock too. A switch that a contract closing can
+  override is not a switch. The allowance still settles either way: declining
+  the stores does not un-spend what the crossing consumed.
+
+### Fixed
+
+- Switching a reservoir-rate standing order did not re-resolve the network, so
+  turning the pumps off left them running until some unrelated event happened
+  to resolve it. Found by the test that asserted the rate was zero.
+
+- A delivery of half a kilogramme of propellant printed as "took on 0.0 t". The
+  filter now runs on what the line would actually *say* rather than on a
+  threshold in kilogrammes, which is a unit two of the five stores are not
+  counted in.
+
+### Changed
+
+- `SIM_STATE_VERSION` 11 → 12. `standingOrders` gains a field and the ship
+  carries the reading the resupply count is differenced against; an older save
+  would load with the order reading `undefined`, which is falsy, and silently
+  stop its own pumps.
+
 ## [0.11.13] — 2026-08-08
 
 ### Added

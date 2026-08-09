@@ -278,7 +278,16 @@ export function App() {
           </>
         )}
 
-        {tab === 'life' && <LifeSupport life={life} channels={channels} />}
+        {tab === 'life' && (
+          <LifeSupport
+            life={life}
+            channels={channels}
+            resupply={state.ship.standingOrders.resupply}
+            onSetResupply={(on) =>
+              dispatch({ kind: 'SET_STANDING_ORDER', order: 'resupply', on })
+            }
+          />
+        )}
 
         {tab === 'crew' && (
           <>
