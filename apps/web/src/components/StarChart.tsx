@@ -105,8 +105,74 @@ const REACH = {
   start: 0.25,
 }
 
-/** How far one wheel notch or one tap of the buttons moves the scale. */
+/** How far one wheel notch moves the scale. */
 const ZOOM_STEP = 1.35
+
+/**
+ * The three frames this chart draws in. Design doc §5.1.
+ *
+ * They are not three magnifications of one picture — that is why they are
+ * named rather than numbered. **System** is a square-root projection of the
+ * whole solar system, **route** is the same positions drawn linearly at true
+ * scale, and **local** is a different origin entirely: the world's own frame,
+ * where a cislunar crossing has been happening all along.
+ *
+ * The scale inside route and local stays continuous, so this is a set of
+ * places to go rather than the scale picker the four fixed stops were. What it
+ * buys back is a name for where you are and one press to get anywhere: it was
+ * twenty-six wheel notches from the system plate down to cislunar, and no
+ * label anywhere said the frame had changed under you.
+ */
+type Level = 'system' | 'route' | 'local'
+
+/** Which of the three the plate is currently in. */
+function levelOf(view: View): Level {
+  return view.kind === 'system' ? 'system' : view.kind === 'local' ? 'local' : 'route'
+}
+
+function clampReach(au: number): number {
+  return Math.min(REACH.max, Math.max(REACH.min, au))
+}
+
+/**
+ * The scale that puts the whole crossing on the plate, ship-centred.
+ *
+ * Measured from the ship to the furthest point of her own arc rather than from
+ * some fixed reach, because "the route" is a different size for Gateway to
+ * Phobos than it is for a Belt run. Berthed there is no arc, so it falls back
+ * to half an AU across — far enough to see the neighbours at a true scale,
+ * which is the question the linear view exists to answer.
+ */
+function routeReachAu(chart: ChartView): number {
+  const { ship, track } = chart
+  const far = track.reduce((m, p) => Math.max(m, Math.hypot(p.x - ship.x, p.y - ship.y)), 0)
+  // Never below the boundary: the route level is the heliocentric one, and
+  // landing in the body's frame from a button marked otherwise would be a lie
+  // about what the button does.
+  return Math.max(LOCAL_BELOW_AU * 1.5, clampReach(far > 0 ? far * 1.12 : REACH.start))
+}
+
+/**
+ * The world's own frame, but only when it is a place the ship actually is.
+ *
+ * `chart.local` is built from where the voyage *departed*, so between worlds it
+ * is the neighbourhood she left — with her drawn tied up at the berth she cast
+ * off from three weeks ago. That frame is not a level, it is a wrong picture,
+ * so it does not exist while she is crossing: the buttons offer two levels then
+ * and a pinch bottoms out in the heliocentric one, which is at least true.
+ */
+function neighbourhoodOf(chart: ChartView): ChartLocal | undefined {
+  const { local, ship } = chart
+  if (!local) return undefined
+  return ship.atPortId !== undefined || ship.local ? local : undefined
+}
+
+/** The scale that frames a world and everything berthed around it. */
+function localReachAu(local: ChartLocal): number {
+  // Strictly inside the boundary, or `viewFor` would hand back the
+  // heliocentric projection and the button would appear not to work.
+  return clampReach(Math.min(local.extentAu, LOCAL_BELOW_AU * 0.98))
+}
 
 /**
  * What the plate is showing, and from where.
@@ -282,7 +348,7 @@ function viewFor(camera: Camera, chart: ChartView): View {
   // Close enough that the sun's frame shows nothing: switch to the world's
   // own, where the ship is somewhere between two berths rather than pinned to
   // a planet for five days.
-  const local = chart.local
+  const local = neighbourhoodOf(chart)
   // Where the body itself is, heliocentrically: the origin this frame swaps to.
   const origin = { x: ship.x, y: ship.y }
   if (local && camera.reachAu < LOCAL_BELOW_AU) {
@@ -517,7 +583,6 @@ function useGestures(
       onPointerCancel: onPointerUp,
       onDoubleClick,
     },
-    zoomAbout,
   }
 }
 
@@ -533,9 +598,10 @@ export function StarChart({ chart }: { chart: ChartView }) {
   })
   const view = viewFor(camera, chart)
   const isLocal = view.kind === 'local'
-  const local = isLocal ? chart.local : undefined
+  const nearby = neighbourhoodOf(chart)
+  const local = isLocal ? nearby : undefined
   const close = view.kind !== 'system'
-  const { ref: svgRef, handlers, zoomAbout } = useGestures(setCamera, chart)
+  const { ref: svgRef, handlers } = useGestures(setCamera, chart)
   const [shipX, shipY] = local ? view.to(local.ship.x, local.ship.y) : view.to(ship.x, ship.y)
 
   // Below a hundredth of an AU the ruler is better read in kilometres.
@@ -578,19 +644,43 @@ export function StarChart({ chart }: { chart: ChartView }) {
       <h2 className="panel__title">Chart</h2>
 
       <Controls
-        camera={camera}
+        level={levelOf(view)}
         view={view}
         adrift={adrift}
         extentAu={extentAu}
-        onStep={(factor) => zoomAbout(CENTRE, CENTRE, (r) => r * factor)}
-        onMap={() => setCamera({ ...camera, mode: 'map' })}
+        neighbourhood={nearby}
+        onLevel={(next) =>
+          setCamera(
+            next === 'system'
+              ? { mode: 'map', reachAu: camera.reachAu, centre: null, centreFrame: 'sun' }
+              : next === 'route'
+                ? {
+                    mode: 'close',
+                    reachAu: routeReachAu(chart),
+                    centre: null,
+                    centreFrame: 'sun',
+                  }
+                : {
+                    mode: 'close',
+                    reachAu: nearby ? localReachAu(nearby) : REACH.min,
+                    // Null centre in this frame is the world itself, which is
+                    // what "close in on Earth" means -- the ship is somewhere
+                    // between two of its berths, not the thing to centre on.
+                    centre: null,
+                    centreFrame: 'body',
+                  },
+          )
+        }
         // Straight to her wherever the camera has wandered, keeping whatever
         // scale is already in force -- unless it is the system plate, which
         // has no linear scale to keep.
         onFollow={() =>
           setCamera({
             mode: 'close',
-            reachAu: camera.mode === 'map' ? REACH.start : camera.reachAu,
+            reachAu: camera.mode === 'map' ? routeReachAu(chart) : camera.reachAu,
+            // A null centre follows her in the heliocentric frame and sits on
+            // the world in the local one, which is the right answer in both:
+            // close in on Earth she is never off the plate to begin with.
             centre: null,
             centreFrame: 'sun',
           })
@@ -921,28 +1011,35 @@ function closeTicks(reachAu: number): number[] {
 /**
  * The controls beside the gesture. Design doc §5.1, §8.1.
  *
- * A pinch is the primary way in, and it is also invisible, unavailable to a
- * mouse and unavailable to anybody driving by keyboard. So the same three
- * moves are here as buttons: closer, wider, and back to the map. They also
- * give the plate somewhere to *say what scale it is at*, which a continuous
- * zoom needs far more than a set of fixed stops did — with four buttons the
- * scale was the label on the pressed one.
+ * One button per frame, because the frames are what a reader was already
+ * seeing: pinching from the system plate down to cislunar crosses a
+ * square-root projection into a linear one and then a heliocentric origin into
+ * a planetocentric one, and it looked like a zoom that stuttered twice. A pair
+ * of ± buttons could only ever move the scale, which is the one thing a pinch
+ * already does well; what nothing did was *name where you are* or get you
+ * anywhere in one press. It was twenty-six wheel notches from the whole system
+ * down to Earth's own frame.
+ *
+ * The scale within a level stays continuous — the buttons are places, not
+ * stops — so the readout still states the span, which is what keeps a
+ * continuous zoom legible between the named frames.
  */
 function Controls({
-  camera,
+  level,
   view,
   adrift,
   extentAu,
-  onStep,
-  onMap,
+  neighbourhood,
+  onLevel,
   onFollow,
 }: {
-  camera: Camera
+  level: Level
   view: View
   adrift: boolean
   extentAu: number
-  onStep: (factor: number) => void
-  onMap: () => void
+  /** The world she is at, when its frame is a place she actually is. */
+  neighbourhood: ChartLocal | undefined
+  onLevel: (level: Level) => void
   onFollow: () => void
 }) {
   // Anything that is not the square-root map is a scale you can state.
@@ -951,45 +1048,52 @@ function Controls({
 
   return (
     <div className="zoomer" role="group" aria-label="Chart scale">
-      <button
-        type="button"
-        className="zoomer__btn zoomer__btn--step"
-        aria-label="Zoom out"
-        disabled={close && view.reachAu >= REACH.max - 1e-9}
-        onClick={() => onStep(ZOOM_STEP)}
-      >
-        −
-      </button>
+      <div className="zoomer__levels" role="group" aria-label="View">
+        {/* Outermost first, so the row reads the way the chart zooms. */}
+        <button
+          type="button"
+          className={`zoomer__btn ${level === 'system' ? 'is-on' : ''}`}
+          aria-pressed={level === 'system'}
+          title="The whole system on one plate, radius compressed"
+          onClick={() => onLevel('system')}
+        >
+          System
+        </button>
+
+        <button
+          type="button"
+          className={`zoomer__btn ${level === 'route' ? 'is-on' : ''}`}
+          aria-pressed={level === 'route'}
+          title="Her whole crossing, drawn to a true scale"
+          onClick={() => onLevel('route')}
+        >
+          Route
+        </button>
+
+        {/* Named by the world rather than "Local", because the label is also
+            the answer to what you would see: a button marked Earth says the
+            berths on it are what is down there. Disabled between worlds —
+            there is no neighbourhood to be close in on when she is a third of
+            an AU from either end. */}
+        <button
+          type="button"
+          className={`zoomer__btn ${level === 'local' ? 'is-on' : ''}`}
+          aria-pressed={level === 'local'}
+          disabled={!neighbourhood}
+          title={
+            neighbourhood
+              ? `${neighbourhood.bodyName} and its berths, close in`
+              : 'She is between worlds — nothing to see close in'
+          }
+          onClick={() => onLevel('local')}
+        >
+          {neighbourhood?.bodyName ?? 'Close in'}
+        </button>
+      </div>
 
       <span className="zoomer__scale" aria-live="polite">
         {close ? `${span(across)} across` : `system · ${span(extentAu * 2)}`}
       </span>
-
-      <button
-        type="button"
-        className="zoomer__btn zoomer__btn--step"
-        aria-label="Zoom in"
-        disabled={close && view.reachAu <= REACH.min + 1e-9}
-        onClick={() => onStep(1 / ZOOM_STEP)}
-      >
-        +
-      </button>
-
-      {/* All the way out. It was labelled "Map", which named the projection
-          rather than what pressing it does -- and what a player wants from it
-          is not a square-root scale, it is the whole solar system on one
-          plate. Kept as a place to return to rather than a stop on the scale:
-          a different projection is not a different magnification, and pinching
-          your way into it would be a lie about what the gesture does. */}
-      <button
-        type="button"
-        className={`zoomer__btn ${camera.mode === 'map' ? 'is-on' : ''}`}
-        aria-pressed={camera.mode === 'map'}
-        title="The whole system on one plate"
-        onClick={onMap}
-      >
-        System
-      </button>
 
       {/*
         Find the ship, from anywhere.

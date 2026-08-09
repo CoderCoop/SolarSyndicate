@@ -1606,12 +1606,13 @@ button {
   cursor: pointer;
 }
 
-/* Comfortably tappable without being the loudest thing on the panel. */
-.zoomer__btn--step {
-  width: 30px;
-  padding: 4px 0;
-  font-size: 15px;
-  line-height: 1;
+/*
+ * The three frames, as a segmented row: they are one choice, and a gap between
+ * them would have read as three unrelated switches.
+ */
+.zoomer__levels {
+  display: flex;
+  gap: 3px;
 }
 
 .zoomer__btn:disabled {
