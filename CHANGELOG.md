@@ -9,6 +9,33 @@ means here.
 
 ## [Unreleased]
 
+## [0.13.1] — 2026-08-09
+
+### Fixed
+
+- **The chart's close-in frame only worked at Earth.** Three numbers had all
+  been chosen while Earth was the only world anyone had pointed it at, and every
+  one of them was wrong everywhere else.
+
+  The zoom floor was 0.0002 AU — 30,000 km — but **Phobos Anchorage orbits
+  9,376 km up and the Ceres berth 1,150 km**, so at both of them the closest the
+  chart would go was a plate wider than anything on it: Ceres came out a 1.6%
+  dot with its only station inside the dot. The floor is now 300 km across.
+
+  The smallest grid and ruler step was 0.002 AU, which is 299,195 km and a round
+  number to nobody. Close in on Mars that made the whole grid **one cell wider
+  than the plate**, with no line anywhere near the thing being looked at. Steps
+  are now round in the unit the ruler is labelled in — 20 km to 500,000 km
+  below the switch to AU — so Mars reads 2,000 km a division and Ceres 200.
+
+  And the ruler wrote its labels in thousands of kilometres, rounded to a whole
+  number: a 200 km step printed as **"0", four times over**. Below 5,000 km a
+  division it now writes plain kilometres.
+
+  Held by a check that zooms to an orbit height and asserts the ticks are
+  increasing, non-zero and in kilometres, and that the grid still has lines in
+  it.
+
 ## [0.13.0] — 2026-08-09
 
 A minor: the chart is navigated by naming a frame rather than by working a
