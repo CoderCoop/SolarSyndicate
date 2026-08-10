@@ -820,6 +820,26 @@ check(
   `pressed: ${(await page.$$eval('.zoomer__levels [aria-pressed="true"]', (e) => e.map((x) => x.textContent))).join()}`,
 )
 
+// Stepping off the system plate holds her still as well. She is drawn well off
+// centre there -- square-root radius from the sun -- and Route used to put her
+// in the middle, so the one press both changed the projection and moved the
+// only thing on it you were watching.
+await page.click('.zoomer__btn:text-is("System")')
+await page.waitForSelector('.chart__graticule .is-cardinal')
+const shipOnPlate = async () => {
+  const t = await page.getAttribute('.chart__ship-mark', 'transform')
+  return t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1, 3).map(Number)
+}
+const onSystem = await shipOnPlate()
+await page.click('.zoomer__btn:text-is("Route")')
+await page.waitForSelector('.chart__grid')
+const onRoute = await shipOnPlate()
+check(
+  'and stepping off the system plate leaves her where she was drawn',
+  Math.hypot(onRoute[0] - onSystem[0], onRoute[1] - onSystem[1]) < 6,
+  `${onSystem.map(Math.round).join(',')} → ${onRoute.map(Math.round).join(',')}`,
+)
+
 // The innermost one is a *different origin*, and reaching it used to be
 // twenty-six wheel notches with nothing anywhere saying the frame had changed.
 await page.click('.zoomer__btn:text-is("Earth")')
@@ -2084,15 +2104,51 @@ check(
   `${(await v1.$$('.chart__grid line')).length} lines`,
 )
 
+const shipAt = async () => {
+  const t = await v1.getAttribute('.chart__ship-mark', 'transform')
+  return t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1, 3).map(Number)
+}
+const moved = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1])
+
+// --- the frames are aligned on the ship (§5.1, §1 pillar 2) ----------------
+//
+// Changing frame used to teleport her. The heliocentric plate has her at
+// Earth's centre for the whole cislunar crossing and the world's own plate has
+// her out on her arc, so one notch across the boundary threw her two thirds of
+// the way across the plate. The frames cannot be made to agree about
+// everything -- the sim does not track where Luna is in its month, so neither
+// one can resolve what the other draws -- but they can agree about *her*, and
+// she is the only object drawn in all three.
+await v1.click('.zoomer__btn:text-is("Route")')
+await v1.waitForSelector('.chart__grid')
+const inRoute = await shipAt()
+await v1.click('.zoomer__btn:text-is("Earth")')
+await v1.waitForSelector('.chart__local')
+const inLocal = await shipAt()
+check(
+  'changing frame leaves the ship where she is, rather than moving her',
+  moved(inRoute, inLocal) < 6,
+  `moved ${moved(inRoute, inLocal).toFixed(1)} plate units`,
+)
+
+// And by gesture, which is a different code path: the point under the fingers
+// is not a point any more once the frame beneath it changes.
+const beforeNotch = await shipAt()
+await v1.mouse.move(overPlate.x, overPlate.y)
+await v1.mouse.wheel(0, 100)
+await v1.waitForSelector('.chart__grid')
+const afterNotch = await shipAt()
+check(
+  'and a wheel notch across the boundary holds her still too',
+  (await v1.$$('.chart__local')).length === 0 && moved(beforeNotch, afterNotch) < 6,
+  `moved ${moved(beforeNotch, afterNotch).toFixed(1)} plate units`,
+)
+
 // Back to where the rest of this section expects to be.
 await v1.click('.zoomer__btn:text-is("Earth")')
 await v1.waitForSelector('.chart__local')
 
 // The whole point: she moves.
-const shipAt = async () => {
-  const t = await v1.getAttribute('.chart__ship-mark', 'transform')
-  return t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1, 3).map(Number)
-}
 const wasAt = await shipAt()
 await voyageCtx.clock.fastForward('00:03:00')
 await v1.waitForTimeout(1200)

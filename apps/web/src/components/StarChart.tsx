@@ -436,6 +436,72 @@ function viewFor(camera: Camera, chart: ChartView): View {
   }
 }
 
+/**
+ * Frames are aligned on the ship. Design doc §5.1, §1 pillar 2.
+ *
+ * Changing frame used to teleport her. Pressing Route from the system plate put
+ * her in the middle wherever she had been drawn; crossing into a world's own
+ * frame moved her **two thirds of the plate**, because the heliocentric view
+ * has her at Earth's centre for the whole cislunar crossing and the local one
+ * has her out on her arc. The picture is meant to be the truthful instrument,
+ * and something that jumps when you change the magnification does not read as
+ * true.
+ *
+ * The frames cannot be made to agree about *everything* — they disagree by
+ * construction, and honestly: the sim does not track where Luna is in its
+ * month, so the local plate's bearing against the stars is not claimed and the
+ * heliocentric one cannot resolve a 0.0026 AU offset it does not know the
+ * direction of. What it can do is agree about **her**. She is the only object
+ * drawn in all three, and she is the subject, so she is what holds still: the
+ * world rearranges around her rather than the other way about.
+ *
+ * Going *out* to the system plate is the exception, and it has to be. That
+ * projection is sun-at-the-centre with a square-root radius and no camera at
+ * all — there is nothing to solve for.
+ */
+/** Which frame a close camera at this scale resolves to. */
+function kindFor(reachAu: number, chart: ChartView): 'close' | 'local' {
+  return neighbourhoodOf(chart) && reachAu < LOCAL_BELOW_AU ? 'local' : 'close'
+}
+
+/** Where the ship is drawn on the plate, in whatever frame this view is. */
+function shipOn(view: View, chart: ChartView): [number, number] {
+  const local = view.kind === 'local' ? neighbourhoodOf(chart) : undefined
+  return local ? view.to(local.ship.x, local.ship.y) : view.to(chart.ship.x, chart.ship.y)
+}
+
+/** Where the ship is in the coordinates a frame of this kind is drawn in. */
+function shipIn(kind: 'close' | 'local', chart: ChartView): { x: number; y: number } {
+  const local = kind === 'local' ? neighbourhoodOf(chart) : undefined
+  return local ? local.ship : { x: chart.ship.x, y: chart.ship.y }
+}
+
+/**
+ * A camera in `kind` at `reachAu` that puts the ship at a given plate point.
+ *
+ * Pass her *current* plate position and she does not move at all; pass it
+ * displaced and she moves by exactly that much, which is what a drag is.
+ */
+function alignedOn(
+  kind: 'close' | 'local',
+  reachAu: number,
+  plateX: number,
+  plateY: number,
+  chart: ChartView,
+): Camera {
+  const at = shipIn(kind, chart)
+  const perAu = PLATE / reachAu
+  return {
+    mode: 'close',
+    reachAu,
+    centreFrame: kind === 'local' ? 'body' : 'sun',
+    centre: {
+      x: at.x - (plateX - CENTRE) / perAu,
+      y: at.y + (plateY - CENTRE) / perAu,
+    },
+  }
+}
+
 /** Is this plate position inside the drawn circle? */
 function onPlateAt(x: number, y: number, inset = 0): boolean {
   return Math.hypot(x - CENTRE, y - CENTRE) <= PLATE - inset
@@ -489,7 +555,19 @@ function useGestures(
       // made the first notch a seventeen-fold jump -- 6.20 AU across to 0.37 --
       // which is the whole of "zooming seems to jump between levels".
       const base = was.reachAu
-      const reachAu = Math.min(REACH.max, Math.max(REACH.min, next(base)))
+      const reachAu = clampReach(next(base))
+
+      // Crossing a frame boundary, the point under the fingers is not a point
+      // any more: the two frames disagree about where things are, and only the
+      // ship is drawn in both. So she is what the gesture holds still. Without
+      // this, one notch across the boundary threw her two thirds of the way
+      // across the plate, from Earth's centre out to her place on the arc.
+      const willBe = kindFor(reachAu, chart)
+      if (willBe !== was.kind) {
+        const [sx, sy] = shipOn(was, chart)
+        return alignedOn(willBe, reachAu, sx, sy, chart)
+      }
+
       // Where the gesture is pointing, in AU, before anything moves.
       const anchor = was.from(plateX, plateY)
       const perAu = PLATE / reachAu
@@ -554,18 +632,14 @@ function useGestures(
     const by = { x: now.x - was.x, y: now.y - was.y }
     setCamera((prev) => {
       const had = viewFor(prev, chart)
-      // Same rule for a drag off the system plate: keep the scale, change the
-      // projection. Landing somewhere else entirely is not what grabbing
-      // something means.
-      const reachAu = had.reachAu
-      const perAu = PLATE / reachAu
-      const at = had.kind === 'system' ? { x: chart.ship.x, y: chart.ship.y } : had.from(CENTRE, CENTRE)
-      return {
-        mode: 'close',
-        reachAu,
-        centreFrame: had.kind === 'local' ? 'body' : 'sun',
-        centre: { x: at.x - by.x / perAu, y: at.y + by.y / perAu },
-      }
+      // Stated as "the ship ends up where she was, plus the drag", which is the
+      // same arithmetic as moving the centre and also says what a drag means.
+      // Off the system plate it keeps the scale and changes the projection --
+      // landing somewhere else entirely is not what grabbing something means,
+      // and neither is having her jump to the middle on the way.
+      const [sx, sy] = shipOn(had, chart)
+      const kind = had.kind === 'system' ? 'close' : had.kind
+      return alignedOn(kind, had.reachAu, sx + by.x, sy + by.y, chart)
     })
   }
 
@@ -685,28 +759,27 @@ export function StarChart({ chart }: { chart: ChartView }) {
         adrift={adrift}
         extentAu={extentAu}
         neighbourhood={nearby}
-        onLevel={(next) =>
+        onLevel={(next) => {
+          // The system plate has no camera to solve for -- sun at the centre,
+          // square-root radius, and that is the whole of it -- so it is the one
+          // move that cannot be aligned. Every other change of frame leaves her
+          // exactly where she is and rearranges the world about her.
+          if (next === 'system') {
+            setCamera({ mode: 'map', reachAu: camera.reachAu, centre: null, centreFrame: 'sun' })
+            return
+          }
+          const kind = next === 'route' ? 'close' : 'local'
+          const reachAu =
+            next === 'route' ? routeReachAu(chart) : nearby ? localReachAu(nearby) : REACH.min
+          // Unless she has been dragged off the edge, in which case aligning on
+          // her would hold a frame with nothing in it. Then the button means
+          // what it did before: go to her.
           setCamera(
-            next === 'system'
-              ? { mode: 'map', reachAu: camera.reachAu, centre: null, centreFrame: 'sun' }
-              : next === 'route'
-                ? {
-                    mode: 'close',
-                    reachAu: routeReachAu(chart),
-                    centre: null,
-                    centreFrame: 'sun',
-                  }
-                : {
-                    mode: 'close',
-                    reachAu: nearby ? localReachAu(nearby) : REACH.min,
-                    // Null centre in this frame is the world itself, which is
-                    // what "close in on Earth" means -- the ship is somewhere
-                    // between two of its berths, not the thing to centre on.
-                    centre: null,
-                    centreFrame: 'body',
-                  },
+            onPlateAt(shipX, shipY)
+              ? alignedOn(kind, reachAu, shipX, shipY, chart)
+              : { mode: 'close', reachAu, centre: null, centreFrame: kind === 'local' ? 'body' : 'sun' },
           )
-        }
+        }}
         // Straight to her wherever the camera has wandered, keeping whatever
         // scale is already in force -- unless it is the system plate, which
         // has no linear scale to keep.
