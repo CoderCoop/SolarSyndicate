@@ -2472,10 +2472,25 @@ button {
  * "Mission" onto two lines and clipped the last tab out of the bar entirely.
  * So the strip scrolls, which is what a phone does with more tabs than width,
  * and each label keeps the room it needs to be read.
+ *
+ * ## Frozen under the status bar
+ *
+ * It has claimed to be sticky since M1 and has never behaved like it: stuck at
+ * `top: 0` behind a status bar that is also stuck there and paints over it, so
+ * scrolling the Ship tab slid the strip out of sight and getting to another
+ * section meant scrolling a whole cross-section back up. Sticky, invisibly.
+ *
+ * The offset is the status bar's measured height, published as `--status-h` by
+ * the bar itself -- see `usePublishedHeight` in `StatusBar.tsx` for why it is
+ * measured rather than declared. The fallback matters on the first frame and
+ * nowhere else, and 0 is the old behaviour rather than a wrong guess.
+ *
+ * Still *below* the status bar in the stack, so if the two ever disagree by a
+ * pixel the tabs slide under the readout rather than over it.
  */
 .tabs {
   position: sticky;
-  top: 0;
+  top: var(--status-h, 0px);
   z-index: 15;
   display: flex;
   gap: 2px;

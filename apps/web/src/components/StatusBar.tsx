@@ -5,6 +5,7 @@
  * networks running, the bar's job is triage: what time is it aboard, is the
  * ship making or losing power, and is anything about to need me.
  */
+import { useEffect, useRef } from 'react'
 import {
   formatDuration,
   formatShipClock,
@@ -15,6 +16,41 @@ import {
   type Whereabouts,
 } from '@solsyn/sim'
 import { Track } from './Gauges.js'
+
+/**
+ * Publish how tall this bar is, so the tab strip can freeze beneath it.
+ *
+ * Both are sticky at the top of the same scroller, and CSS has no way to ask
+ * "how tall is my sibling" -- so the one that knows says. It has to be
+ * measured rather than declared: the bar grows an alarm list when something is
+ * wrong and a progress track when the ship is under way, and a hardcoded
+ * offset would leave the tabs overlapping the readout exactly when there is
+ * something in it worth reading.
+ *
+ * A `ResizeObserver` rather than a layout effect on every render, because the
+ * height changes with content the component does not re-render for -- a long
+ * berth line wrapping to two lines when the phone is rotated, for one.
+ */
+function usePublishedHeight() {
+  const ref = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const publish = () => {
+      document.documentElement.style.setProperty(
+        '--status-h',
+        `${el.getBoundingClientRect().height}px`,
+      )
+    }
+    publish()
+    const observer = new ResizeObserver(publish)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return ref
+}
 
 export function StatusBar({
   now,
@@ -31,6 +67,7 @@ export function StatusBar({
   brokenCount: number
   where: Whereabouts
 }) {
+  const ref = usePublishedHeight()
   const deficit = power.netKw < 0
 
   let margin = 'Battery holding'
@@ -47,7 +84,7 @@ export function StatusBar({
   }
 
   return (
-    <header className={`status ${alarms.length > 0 ? 'is-alarm' : ''}`}>
+    <header ref={ref} className={`status ${alarms.length > 0 ? 'is-alarm' : ''}`}>
       <div className="status__row">
         <span className="status__clock" title="Ship time">
           {formatShipClock(now)}

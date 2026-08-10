@@ -9,6 +9,31 @@ means here.
 
 ## [Unreleased]
 
+## [0.17.2] — 2026-08-10
+
+### Fixed
+
+- **The tab strip is frozen at the top now, and was only pretending to be.** It
+  has carried `position: sticky` since M1 and has never behaved like it: stuck
+  at `top: 0` behind a status bar stuck at the same place and painting over it.
+  So on the way down a cross-section the strip left the screen, and changing
+  section meant scrolling a whole ship back up to find it — sticky, invisibly,
+  for eleven minor versions.
+
+  It now freezes directly beneath the readout. The offset is the status bar's
+  **measured** height, published by the bar itself: it grows an alarm list when
+  something is wrong and a progress track when the ship is under way, so a
+  hardcoded figure would put the tabs over the readout exactly when there was
+  something in it worth reading. The strip still sits *below* the bar in the
+  stack, so if the two ever disagree by a pixel the tabs slide under the
+  readout rather than over it.
+
+- **A section opens at its top.** The consequence of the above, and it only
+  became a question once the tabs could be reached from anywhere: tapping Chart
+  from the bottom of a cross-section used to be impossible and now lands you a
+  thousand pixels into a screen you have never seen, which reads as a broken
+  tab rather than as a preserved scroll position.
+
 ## [0.17.1] — 2026-08-10
 
 ### Changed
