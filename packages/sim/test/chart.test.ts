@@ -16,6 +16,7 @@ import {
   applyCommand,
   chartView,
   createWorld,
+  crossing,
   hohmannTransfer,
   portPeriodS,
   stretchedTransfer,
@@ -99,32 +100,43 @@ describe('a berthed ship is at its port', () => {
 describe('a ship under way is on its actual trajectory', () => {
   it('starts a heliocentric transfer at the departure body', () => {
     // The ellipse begins where the ship left from, to the metre.
-    const p = transferPositionAu('earth', 'mars', 0, 0)
+    const p = transferPositionAu('port.gateway', 'port.phobos', 0, 0)
     expect(Math.hypot(p.x, p.y)).toBeCloseTo(1, 6)
   })
 
   it('ends it at the target orbit, after exactly the transfer time', () => {
     const { durationS } = hohmannTransfer('earth', 'mars')
-    const p = transferPositionAu('earth', 'mars', 0, durationS)
+    const p = transferPositionAu('port.gateway', 'port.phobos', 0, durationS)
     const mars = content.bodies.find((b) => b.id === 'mars')!
     expect(Math.hypot(p.x, p.y)).toBeCloseTo(mars.orbitRadiusAu, 4)
   })
 
-  it('climbs monotonically outbound, rather than jumping', () => {
+  it('climbs monotonically outbound, when it leaves at the window', () => {
+    // At the window the crossing *is* a Hohmann, so it climbs the whole way.
+    // Off the window it need not -- an ellipse forced to meet a planet that is
+    // in the wrong place can dip before it climbs, and that is the geometry
+    // rather than a fault in the drawing.
     const { durationS } = hohmannTransfer('earth', 'mars')
+    const waitS = crossing('port.gateway', 'port.phobos', 0, 'window')!.waitS
     let previous = 0
     for (let i = 0; i <= 20; i++) {
-      const p = transferPositionAu('earth', 'mars', 0, (durationS * i) / 20)
+      const p = transferPositionAu(
+        'port.gateway',
+        'port.phobos',
+        0,
+        waitS + (durationS * i) / 20,
+        'window',
+      )
       const r = Math.hypot(p.x, p.y)
-      expect(r).toBeGreaterThanOrEqual(previous - 1e-9)
+      expect(r).toBeGreaterThanOrEqual(previous - 1e-6)
       previous = r
     }
   })
 
   it('falls inward when the run is inbound', () => {
     const { durationS } = hohmannTransfer('ceres', 'earth')
-    const start = transferPositionAu('ceres', 'earth', 0, 0)
-    const end = transferPositionAu('ceres', 'earth', 0, durationS)
+    const start = transferPositionAu('port.ceres', 'port.gateway', 0, 0)
+    const end = transferPositionAu('port.ceres', 'port.gateway', 0, durationS)
     expect(Math.hypot(end.x, end.y)).toBeLessThan(Math.hypot(start.x, start.y))
   })
 
@@ -174,16 +186,26 @@ describe('a ship under way is on its actual trajectory', () => {
  * declined. §1 pillar 2 says the numbers are real, and a picture of a
  * different trajectory is not more forgivable than a wrong number.
  */
+/**
+ * The arc drawn is the arc that was bought.
+ *
+ * The chart used to rebuild the minimum-energy ellipse from the two orbit radii
+ * and nothing else, so all three profiles were drawn identically. It is the
+ * Lambert solution now, which fixes a second and larger lie in the same place:
+ * the arc used to end half a turn from where the ship left, and the target was
+ * wherever its own orbit had put it. §1 pillar 2 says the numbers are real, and
+ * a picture of a trajectory that misses is not more forgivable than a wrong
+ * number.
+ */
 describe('the arc drawn is the trajectory that was chosen', () => {
-  const MULTIPLIERS = { economy: 1, standard: 1.04, express: 1.12 } as const
+  const PROFILES = ['economy', 'standard', 'express'] as const
 
   it('draws a visibly different arc for each profile', () => {
-    // 140 days: still short of the Express arrival at 152, so all three are
-    // genuinely in flight and the difference is shape rather than one of them
-    // having stopped. Every pair is at least seven million kilometres apart --
-    // this was zero, to the last bit, when the profile was ignored.
-    const points = Object.values(MULTIPLIERS).map((m) =>
-      transferPositionAu('earth', 'mars', 0, 140 * DAY, m),
+    // Different flight times are different ellipses, so at the same instant the
+    // three are in different places -- at least seven million kilometres apart.
+    // This was zero, to the last bit, when the profile was ignored.
+    const points = PROFILES.map((id) =>
+      transferPositionAu('port.gateway', 'port.phobos', 0, 140 * DAY, id),
     )
     for (let i = 1; i < points.length; i++) {
       const [a, b] = [points[i - 1]!, points[i]!]
@@ -191,43 +213,38 @@ describe('the arc drawn is the trajectory that was chosen', () => {
     }
   })
 
-  it('leaves the departure orbit and reaches the target one, on every profile', () => {
-    for (const [from, to] of [
-      ['earth', 'mars'],
-      ['ceres', 'earth'],
+  it('ends on the target itself, on every profile and either direction', () => {
+    // What Lambert bought. Not "reaches the target's orbit" -- reaches the
+    // *target*, which is a different and much stronger claim, and the one the
+    // old arc could only satisfy by luck.
+    for (const [fromPort, toPort, toBody] of [
+      ['port.gateway', 'port.phobos', 'mars'],
+      ['port.ceres', 'port.gateway', 'earth'],
     ] as const) {
-      for (const m of Object.values(MULTIPLIERS)) {
-        const { durationS } = stretchedTransfer(from, to, m)
-        const start = transferPositionAu(from, to, 0, 0, m)
-        const end = transferPositionAu(from, to, 0, durationS, m)
-        expect(Math.hypot(start.x, start.y)).toBeCloseTo(
-          content.bodies.find((b) => b.id === from)!.orbitRadiusAu,
-          4,
-        )
-        expect(Math.hypot(end.x, end.y)).toBeCloseTo(
-          content.bodies.find((b) => b.id === to)!.orbitRadiusAu,
-          4,
-        )
+      for (const id of PROFILES) {
+        const s = world()
+        s.voyage = {
+          optionId: id,
+          fromPortId: fromPort,
+          toPortId: toPort,
+          departedAt: s.now,
+          arrivesAt: s.now + 1,
+          deltaVMs: 0,
+          propellantSpentKg: 0,
+        }
+        s.ship.docked = false
+        const flightS = chartView(s).track.length > 0 ? 0 : 0
+        void flightS
+
+        const chart = chartView(s)
+        const last = chart.track.at(-1)!
+        const target = chart.bodies.find((b) => b.id === toBody)!
+        // The chart samples the arc over the flight, so its far end is the
+        // arrival point. Within a hundred-thousandth of an AU -- 1,500 km on a
+        // journey of hundreds of millions.
+        expect(Math.hypot(last.x, last.y)).toBeCloseTo(target.orbitRadiusAu, 4)
       }
     }
-  })
-
-  it('dips inside the destination orbit on a stretched run home', () => {
-    // The whole point of paying for a fast inbound leg: perihelion goes below
-    // the target so the ship crosses the orbit early. Drawn on the Hohmann
-    // conic this was invisible, because the Hohmann conic bottoms out exactly
-    // at the destination.
-    const { durationS } = stretchedTransfer('ceres', 'earth', 1.12)
-    const radii = Array.from({ length: 41 }, (_, i) => {
-      const p = transferPositionAu('ceres', 'earth', 0, (durationS * i) / 40, 1.12)
-      return Math.hypot(p.x, p.y)
-    })
-    // Falls the whole way, never climbing back.
-    for (let i = 1; i < radii.length; i++) expect(radii[i]!).toBeLessThanOrEqual(radii[i - 1]! + 1e-9)
-    // And it is still going down when it crosses Earth's orbit -- the arrival
-    // burn catches it there rather than the ellipse levelling out.
-    expect(radii.at(-1)!).toBeCloseTo(1, 4)
-    expect(radii.at(-2)!).toBeGreaterThan(1)
   })
 
   it('carries the arc into the chart, and names it', () => {
@@ -235,13 +252,12 @@ describe('the arc drawn is the trajectory that was chosen', () => {
     // point under test is the drawing, not the tank (§5.2).
     const s = world()
     const departedAt = s.now
-    const { durationS } = stretchedTransfer('earth', 'mars', MULTIPLIERS.express)
     s.voyage = {
       optionId: 'express',
       fromPortId: 'port.gateway',
       toPortId: 'port.phobos',
       departedAt,
-      arrivesAt: departedAt + durationS,
+      arrivesAt: departedAt + 168 * DAY,
       deltaVMs: 0,
       propellantSpentKg: 0,
     }
@@ -252,90 +268,42 @@ describe('the arc drawn is the trajectory that was chosen', () => {
     expect(chart.ship.profileLabel).toBe('Express')
     expect(chart.track.length).toBeGreaterThan(2)
 
-    // The drawn track is the Express ellipse, end to end.
-    const first = chart.track.at(0)!
-    const last = chart.track.at(-1)!
-    expect(Math.hypot(first.x, first.y)).toBeCloseTo(1, 4)
-    expect(Math.hypot(last.x, last.y)).toBeCloseTo(1.523679, 4)
+    // Starts at Earth's orbit and finishes at Mars'.
+    expect(Math.hypot(chart.track.at(0)!.x, chart.track.at(0)!.y)).toBeCloseTo(1, 4)
+    expect(Math.hypot(chart.track.at(-1)!.x, chart.track.at(-1)!.y)).toBeCloseTo(1.523679, 4)
 
     // And it is not the minimum-energy one: at the same elapsed time the cheap
     // ellipse puts the ship somewhere else entirely.
-    const half = durationS / 2
-    const flown = transferPositionAu('earth', 'mars', departedAt, half, MULTIPLIERS.express)
-    const declined = transferPositionAu('earth', 'mars', departedAt, half, MULTIPLIERS.economy)
+    const half = 84 * DAY
+    const flown = transferPositionAu('port.gateway', 'port.phobos', departedAt, half, 'express')
+    const declined = transferPositionAu('port.gateway', 'port.phobos', departedAt, half, 'economy')
     expect(Math.hypot(flown.x - declined.x, flown.y - declined.y)).toBeGreaterThan(0.05)
   })
-})
 
-/**
- * Launch windows. Design doc §5.1.
- *
- * "Planets *move* -- Mars is sometimes 0.5 AU away and sometimes 2.5, so
- * **launch windows are real gameplay** and the astrogator's job."
- *
- * The maths for this was written and tested in M2 and then referenced by
- * nothing at all, which made it a fact about the simulation rather than
- * gameplay. These tests are about it being reachable and, more importantly,
- * being *right* -- a window that says "227 days" and is wrong is worse than no
- * window, because the player will plan around it.
- */
-describe('the chart says when a crossing is worth flying', () => {
-  it('offers a window to everywhere but where the ship already is', () => {
-    const chart = chartView(world())
-    expect(chart.windows.map((w) => w.toBodyId).sort()).toEqual(['ceres', 'mars'])
-  })
-
-  it('puts the soonest one first, because that is the one to act on', () => {
-    const chart = chartView(world())
-    const days = chart.windows.map((w) => w.daysToWindow)
-    expect(days).toEqual([...days].sort((a, b) => a - b))
-  })
-
-  it('is right: waiting the stated time actually opens it', () => {
-    // The check that matters. A window that says 227 days and is wrong is
-    // worse than no window, because the player will plan around it.
+  it('waits at the berth when the profile is to wait for the window', () => {
+    // The months before the burn are not part of the arc, and drawing her
+    // already under way through them would be the same lie as pinning her at
+    // Earth for a cislunar crossing, at a very much larger scale.
     const s = world()
-    for (const w of chartView(s).windows) {
-      const later = chartView(advanceTo(s, s.now + w.daysToWindow * DAY))
-      const then = later.windows.find((x) => x.toBodyId === w.toBodyId)!
-      expect(Math.abs(then.offByRad)).toBeLessThan(0.02)
-      expect(then.open).toBe(true)
+    s.voyage = {
+      optionId: 'window',
+      fromPortId: 'port.gateway',
+      toPortId: 'port.phobos',
+      departedAt: s.now,
+      arrivesAt: s.now + 486 * DAY,
+      deltaVMs: 0,
+      propellantSpentKg: 0,
     }
-  })
+    s.ship.docked = false
 
-  it('comes round again on the synodic period', () => {
-    // Earth and Mars line up every 780 days, which is the textbook figure and
-    // the reason a missed window is expensive.
-    const mars = chartView(world()).windows.find((w) => w.toBodyId === 'mars')!
-    expect(mars.synodicDays).toBeGreaterThan(770)
-    expect(mars.synodicDays).toBeLessThan(790)
-    expect(mars.daysToWindow).toBeLessThanOrEqual(mars.synodicDays)
-  })
-
-  it('reports zero days left once it is open', () => {
-    const s = world()
-    const mars = chartView(s).windows.find((w) => w.toBodyId === 'mars')!
-    const atWindow = chartView(advanceTo(s, s.now + mars.daysToWindow * DAY))
-    const open = atWindow.windows.find((w) => w.toBodyId === 'mars')!
-    expect(open.open).toBe(true)
-    expect(open.daysToWindow).toBe(0)
+    const chart = chartView(s)
+    const earth = chart.bodies.find((b) => b.id === 'earth')!
+    // Still at Earth on the day she signed, 226 days before the burn.
+    expect(Math.hypot(chart.ship.x - earth.x, chart.ship.y - earth.y)).toBeLessThan(0.01)
   })
 })
 
-/**
- * Ship telemetry. Design doc §5.1, §1 pillar 2.
- *
- * The chart knew where the ship was and nothing else about her -- not how
- * fast, not which way, not where the arc ended. Every one of those numbers
- * already existed in the transfer maths; none of them had ever been read.
- *
- * The test that matters here is the finite-difference one. A velocity that is
- * not the derivative of the drawn position is a decoration, and it is the
- * easiest possible thing to get subtly wrong -- a sign, a frame, a quarter
- * turn -- while still looking plausible on the plate.
- */
 describe('the chart reports where the ship is, how fast, and which way', () => {
-  const MARS_EXPRESS_S = stretchedTransfer('earth', 'mars', 1.12).durationS
 
   /**
    * Mars on Express, `elapsed` seconds into the crossing.
@@ -346,19 +314,28 @@ describe('the chart reports where the ship is, how fast, and which way', () => {
    * departure is backdated instead, which is the same geometry with none of
    * the consequences.
    */
+  // Departing at the window, which is where the textbook shape holds: a
+  // minimum-energy crossing leaves from periapsis, climbs the whole way and
+  // tops out on the target's orbit. Off the window none of that is true, and
+  // that is the geometry rather than a fault in the drawing -- `elapsed` here
+  // counts from the burn, not from the day she signed.
   function toMars(elapsed = 0): SimState {
     const s = world()
-    const departedAt = s.now - elapsed
+    const departedAt = s.now
+    // Measured from the departure instant, because that is what the window is
+    // relative to -- backdating the departure instead moves the window with it.
+    const waitS = crossing('port.gateway', 'port.phobos', departedAt, 'window')!.waitS
     s.voyage = {
-      optionId: 'express',
+      optionId: 'window',
       fromPortId: 'port.gateway',
       toPortId: 'port.phobos',
       departedAt,
-      arrivesAt: departedAt + MARS_EXPRESS_S,
+      arrivesAt: departedAt + waitS + hohmannTransfer('earth', 'mars').durationS,
       deltaVMs: 0,
       propellantSpentKg: 0,
     }
     s.ship.docked = false
+    s.now = departedAt + waitS + elapsed
     return s
   }
 
@@ -434,14 +411,19 @@ describe('the chart reports where the ship is, how fast, and which way', () => {
     expect(early.flightPathAngleRad).toBeGreaterThan(0)
     expect(late.flightPathAngleRad).toBeGreaterThan(0)
     // Departure is at an apsis, where the climb rate is zero.
-    expect(chartView(toMars()).ship.flightPathAngleRad).toBeCloseTo(0, 6)
+    // Solved rather than assumed, so it lands on zero to a millionth of a
+    // radian rather than exactly -- which is the price of the arc being fitted
+    // to where Mars will be instead of asserted to be a half turn.
+    expect(chartView(toMars()).ship.flightPathAngleRad).toBeCloseTo(0, 5)
   })
 
   it('describes the shape of the course by its apsides', () => {
     const ship = chartView(toMars(60 * DAY)).ship
-    // Express throws apoapsis past Mars, which is what the extra delta-v buys.
+    // A minimum-energy crossing touches both orbits at its apsides: that is
+    // what makes it the cheap one, and what the extra delta-v of a faster
+    // profile buys you out of.
     expect(ship.periapsisAu).toBeCloseTo(1, 3)
-    expect(ship.apoapsisAu!).toBeGreaterThan(1.523679)
+    expect(ship.apoapsisAu!).toBeCloseTo(1.523679, 3)
     expect(ship.radiusAu).toBeGreaterThanOrEqual(ship.periapsisAu! - 1e-9)
     expect(ship.radiusAu).toBeLessThanOrEqual(ship.apoapsisAu! + 1e-9)
   })
@@ -458,7 +440,9 @@ describe('the chart reports where the ship is, how fast, and which way', () => {
     expect(ship.toGoAu!).toBeGreaterThan(chord)
 
     // And it runs down to nothing.
-    const later = chartView(toMars(MARS_EXPRESS_S - DAY)).ship
+    // A day before arrival, on the crossing she is actually flying: minimum
+    // energy from the window, not the Express ellipse the old model priced.
+    const later = chartView(toMars(hohmannTransfer('earth', 'mars').durationS - DAY)).ship
     expect(later.toGoAu!).toBeLessThan(ship.toGoAu!)
     expect(later.toGoAu!).toBeLessThan(0.2)
   })

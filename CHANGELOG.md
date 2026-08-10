@@ -9,6 +9,62 @@ means here.
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-08-10
+
+A minor: crossings between worlds are solved for the geometry they actually
+have, so a launch window costs what a launch window costs.
+
+### Added
+
+- **Lambert's problem, in place of a Hohmann formula.** A Hohmann transfer
+  answers "what is the cheapest way between two circular orbits" — and it
+  answers it for a departure at exactly the right moment. The game priced every
+  crossing that way and let you leave whenever you liked, so the two halves
+  disagreed: the chart drew an arc ending half a turn from where the ship left,
+  the target was wherever its own orbit had put it, and the two were the same
+  point only by luck.
+
+  The honest question is Lambert's: given where the ship is, where the target
+  will be in T, and T, *what orbit connects them*. The two burns are then the
+  difference between that orbit's velocity and each body's own — which is what a
+  burn is. **The arc now ends on the target**, to under a metre in two hundred
+  and thirty million kilometres.
+
+  Two things took real work. The universal-variable formulation is **singular at
+  exactly 180°**, which is precisely the Hohmann geometry every window is built
+  around; that branch is solved directly. And the half-turn family runs in
+  **opposite directions** outbound and inbound — outbound the Hohmann ellipse is
+  the fastest half turn there is (259 days, then 512, then 1331 as it stretches),
+  inbound it is the slowest (259 down toward 114, because departing past
+  apoapsis means falling). Assuming one direction for both reported an ordinary
+  Mars-to-Earth crossing as impossible.
+
+  Pinned by the test that matters: where a Hohmann is the right answer, Lambert
+  reproduces it to **under a metre per second on 5.6 km/s**, both directions.
+
+- **"Wait for the window" is a departure you can choose.** Leaving Earth for
+  Mars at game time zero honestly costs **19.07 km/s** against 5.59 at the
+  window. That is not a surcharge — it is beyond every hull in the game,
+  including the Albatross that exists to reach Mars. A correct number with
+  nowhere to wait would simply have read as "Mars is broken".
+
+  So the astrogator offers the departure the geometry wants, and says how long
+  until then: 226.7 days for Mars from a standing start, 202.1 for Ceres. The
+  ship sits at her berth through it and the chart draws her there — the same
+  coast an in-well crossing takes for ninety minutes, at a very much larger
+  scale. The window is found by **search** rather than by the phase-angle
+  formula, because a search is still right when the planets get real ellipses.
+
+### Changed
+
+- **Profiles are chosen by time, and the price falls out.** Minimum energy,
+  Standard and Express are now 1.00, 0.85 and 0.65 of the Hohmann flight time
+  for that pair. That is the right way round: the ellipse connecting two moving
+  bodies in a stated time has exactly one answer, whereas stretching a
+  semi-major axis chose a *shape* and left the arrival to land where it landed.
+  Near a window slower really is cheaper; far from one the ordering can invert,
+  and every option carries its own delta-v for the desk to read.
+
 ## [0.14.0] — 2026-08-10
 
 A minor: every berth is somewhere, and a crossing between two of them has to

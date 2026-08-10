@@ -21,13 +21,13 @@ import { pushLog } from './log.js'
 import { beginResupply, endResupply, resupplying } from './resupply.js'
 import { reconcileArrival } from './reconcile.js'
 import {
-  AU,
   G0,
   MU_SUN,
   burnSplit,
   hohmannTransfer,
   phasingWaitS,
   portAngleAt,
+  synodicPeriodDays,
   propellantForDeltaV,
   speedOnEllipse,
   stretchedBetween,
@@ -109,9 +109,16 @@ export interface TransferOption {
  * choice is.
  */
 const PROFILES = [
-  { id: 'economy', label: 'Minimum energy', multiplier: 1, timeFraction: 1 },
-  { id: 'standard', label: 'Standard transfer', multiplier: 1.04, timeFraction: 0.85 },
-  { id: 'express', label: 'Express', multiplier: 1.12, timeFraction: 0.65 },
+  { id: 'economy', label: 'Minimum energy', multiplier: 1, timeFraction: 1, waitForWindow: false },
+  { id: 'standard', label: 'Standard transfer', multiplier: 1.04, timeFraction: 0.85, waitForWindow: false },
+  { id: 'express', label: 'Express', multiplier: 1.12, timeFraction: 0.65, waitForWindow: false },
+  // The one that makes a window a decision rather than a refusal. Leaving
+  // Earth for Mars at the wrong moment honestly costs 19.1 km/s against 5.6 at
+  // the window, which is not a surcharge -- it is beyond every hull in the
+  // game. Without somewhere to *wait*, the correct number would simply read as
+  // "Mars is broken", so the astrogator offers the departure the geometry
+  // wants and says how long it is until then.
+  { id: 'window', label: 'Wait for the window', multiplier: 1, timeFraction: 1, waitForWindow: true },
 ] as const
 
 export type TransferProfile = (typeof PROFILES)[number]
@@ -129,6 +136,58 @@ export function transferProfile(optionId: string): TransferProfile {
   return PROFILES.find((p) => p.id === optionId) ?? PROFILES[0]
 }
 
+
+/**
+ * When the next cheap departure is, seconds from now. Design doc §5.1.
+ *
+ * A search rather than a formula, because that is what the question honestly
+ * is: sample one synodic period, take the cheapest departure, then close on it.
+ * The classical phase-angle formula gives the same answer for circular coplanar
+ * orbits and stops being right the moment anything is eccentric, so the search
+ * is what will still be true when the planets get their real ellipses.
+ *
+ * Coarse then fine, with fixed step counts, so it costs the same every time and
+ * cannot wander (§7.2).
+ */
+export function nextWindowS(
+  fromBodyId: string,
+  toBodyId: string,
+  from: GameTime,
+  flightS: number,
+): number {
+  const synodicS = synodicPeriodDays(fromBodyId, toBodyId) * DAY
+  if (!Number.isFinite(synodicS) || synodicS <= 0) return 0
+
+  const costAt = (offset: number): number => {
+    const leg = interplanetaryLeg(fromBodyId, toBodyId, from + offset, flightS)
+    return leg ? leg.deltaVMs : Number.POSITIVE_INFINITY
+  }
+
+  const SAMPLES = 48
+  let bestOffset = 0
+  let bestCost = Number.POSITIVE_INFINITY
+  for (let i = 0; i <= SAMPLES; i++) {
+    const offset = (synodicS * i) / SAMPLES
+    const cost = costAt(offset)
+    if (cost < bestCost) {
+      bestCost = cost
+      bestOffset = offset
+    }
+  }
+
+  // Close on it between the neighbours either side, which is where the minimum
+  // has to be if the sampling caught it at all.
+  const step = synodicS / SAMPLES
+  let lo = Math.max(0, bestOffset - step)
+  let hi = bestOffset + step
+  for (let i = 0; i < 40; i++) {
+    const a = lo + (hi - lo) / 3
+    const b = hi - (hi - lo) / 3
+    if (costAt(a) < costAt(b)) hi = b
+    else lo = a
+  }
+  return (lo + hi) / 2
+}
 
 /**
  * One crossing, solved. Design doc §5.2.
@@ -191,15 +250,22 @@ export function crossing(
   // forbidden -- it is priced, which is what §5.1 means by launch windows being
   // real gameplay.
   const flightS = hohmannTransfer(from.bodyId, to.bodyId).durationS * profile.timeFraction
-  const leg = interplanetaryLeg(from.bodyId, to.bodyId, departAt, flightS)
+  // Waiting is a departure like any other: the ship sits at her berth until the
+  // geometry is worth flying, exactly as she does for the ninety minutes an
+  // in-well crossing needs. The only difference is the scale of it -- months
+  // rather than minutes -- which is why this one is a choice and that one is not.
+  const waitS = profile.waitForWindow
+    ? nextWindowS(from.bodyId, to.bodyId, departAt, flightS)
+    : 0
+  const leg = interplanetaryLeg(from.bodyId, to.bodyId, departAt + waitS, flightS)
   if (!leg) return undefined
   return {
     deltaVMs: leg.deltaVMs,
     departureDeltaVMs: leg.departureDeltaVMs,
     arrivalDeltaVMs: leg.arrivalDeltaVMs,
-    waitS: 0,
+    waitS,
     flightS,
-    durationS: flightS,
+    durationS: waitS + flightS,
     orbit: leg.orbit,
   }
 }
@@ -397,7 +463,7 @@ export function voyageView(state: SimState): VoyageView | undefined {
   const from = getPort(v.fromPortId)
   const to = getPort(v.toPortId)
   const sameBody = from.bodyId === to.bodyId
-  const profile = transferProfile(v.optionId)
+
 
   // Recomputed rather than stored. The trajectory is a pure function of where
   // the ship left, where it is going and which profile was chosen -- all of

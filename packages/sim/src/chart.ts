@@ -34,7 +34,6 @@
 import { content, getBody, getPort } from '@solsyn/data'
 import {
   AU,
-  MU_SUN,
   bodyAngleAt,
   bodyPositionAt,
   bodyVelocityAt,
@@ -44,7 +43,6 @@ import {
   portPositionAt,
   portVelocityAt,
   stretchedBetween,
-  stretchedTransfer,
   synodicPeriodDays,
   transferStateAt,
   type Vec2,
@@ -342,7 +340,29 @@ function arcAt(
   const solved = crossing(fromPortId, toPortId, departedAt, optionId)
   const orbit = solved?.orbit
   if (!orbit) return undefined
-  const state = orbitStateAt(orbit, elapsed)
+  // She is at her berth until the departure burn. On an in-well crossing that
+  // is ninety minutes; waiting for an interplanetary window it is months, and
+  // drawing her already under way through it would be the same lie at a much
+  // larger scale.
+  if (elapsed < solved.waitS) {
+    // Still alongside, waiting for the geometry. She is where her world is, not
+    // where the ellipse begins -- that point is months away and so is she.
+    const helio = bodyPositionAt(getPort(fromPortId).bodyId, departedAt + elapsed)
+    const v = bodyVelocityAt(getPort(fromPortId).bodyId, departedAt + elapsed)
+    return {
+      orbit,
+      state: {
+        position: helio,
+        velocity: v,
+        radiusM: Math.hypot(helio.x, helio.y),
+        speedMs: Math.hypot(v.x, v.y),
+        flightPathAngleRad: 0,
+      },
+      position: { x: helio.x / AU, y: helio.y / AU },
+      velocity: v,
+    }
+  }
+  const state = orbitStateAt(orbit, elapsed - solved.waitS)
   return {
     orbit,
     state,
@@ -466,14 +486,22 @@ export function chartView(state: SimState): ChartView {
       const at = (elapsed: number) =>
         arcAt(voyage.fromPortId, voyage.toPortId, voyage.departedAt, elapsed, voyage.optionId)
 
+      const solved = crossing(voyage.fromPortId, voyage.toPortId, voyage.departedAt, voyage.optionId)
+      const waitS = solved?.waitS ?? 0
+      const flightS = solved?.flightS ?? total
       const now = at(t - voyage.departedAt)
       const steps = 48
-      track = now ? Array.from({ length: steps + 1 }, (_, i) => at((total * i) / steps)!.position) : []
+      // Sampled over the flight, not the voyage: the months spent waiting for
+      // the window are not a part of the arc.
+      track = now
+        ? Array.from({ length: steps + 1 }, (_, i) => at(waitS + (flightS * i) / steps)!.position)
+        : []
 
       // What is left to fly, along the arc rather than across the chord. The
       // polyline is the same one being drawn, so the number and the picture
       // are measurements of one object.
-      const remaining = track.filter((_, i) => (i / steps) >= fraction)
+      const flown = Math.min(1, Math.max(0, (t - voyage.departedAt - waitS) / flightS))
+      const remaining = track.filter((_, i) => i / steps >= flown)
       const path = now ? [now.position, ...remaining] : remaining
       let toGoAu = 0
       for (let i = 1; i < path.length; i++) {
