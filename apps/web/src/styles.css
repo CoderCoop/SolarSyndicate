@@ -1826,10 +1826,6 @@ button {
  * through aphelion and one whipping through perihelion are the same dot on a
  * static chart, and the difference between them is most of what a transfer is.
  */
-.chart__velocity line {
-  stroke: var(--cyan);
-  stroke-width: 1.1;
-}
 
 .chart__arrowhead {
   fill: var(--cyan);

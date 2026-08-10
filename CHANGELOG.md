@@ -9,6 +9,21 @@ means here.
 
 ## [Unreleased]
 
+## [0.16.2] — 2026-08-10
+
+### Changed
+
+- **The velocity needle is gone from the chart.** It was a second drawing of
+  something the ship's glyph already says — she is turned to her heading — and
+  its length encoded a speed nobody reads off a stub when the figure is printed
+  underneath. On a plate that now carries a graticule, a ruler, an arc, orbit
+  rings and berth marks, it was one more line to look past.
+
+  Her heading is still drawn, in the glyph, still taken *through the projection*
+  so it agrees with the arc it is tangent to. The speed is still stated as a
+  number in the readout, which is what a player planning a burn actually wants.
+
+
 ## [0.16.1] — 2026-08-10
 
 ### Fixed
