@@ -9,6 +9,42 @@ means here.
 
 ## [Unreleased]
 
+## [0.13.2] — 2026-08-09
+
+### Fixed
+
+- **Changing frame on the chart moved the ship.** Every way of doing it, and by
+  a lot.
+
+  Pressing **Route** from the system plate put her in the middle of the plate
+  wherever she had been drawn on it — berthed at Gateway that is a jump of 68
+  plate units, half the radius — so one press both changed the projection and
+  moved the only thing on it you were watching. Crossing into a world's own
+  frame was worse: the heliocentric view has her at Earth's centre for the whole
+  cislunar crossing and the local one has her out on her arc, so a single wheel
+  notch across the boundary threw her about **42 plate units**, a third of the
+  way across, in either direction.
+
+  The frames are now **aligned on the ship**. She is the only object drawn in
+  all three, and she is the subject, so she is what holds still: change frame
+  and the world rearranges around her rather than the other way about. This
+  covers the level buttons, the pinch and wheel across the boundary, and
+  dragging off the system plate.
+
+  They cannot be made to agree about everything, and it would be a lie if they
+  were: the sim does not track where Luna is in its month, so the local plate's
+  bearing against the stars is not claimed and the heliocentric plate cannot
+  resolve a 0.0026 AU offset whose direction it does not know. Something has to
+  move — this makes it the neighbourhood rather than the ship.
+
+  Going *out* to the system plate is the one exception, and it has to be: that
+  projection is the sun at the centre with a square-root radius and no camera at
+  all, so there is nothing to solve for.
+
+  Three checks measure her plate position either side of a frame change — by
+  button, by wheel across the boundary, and off the system plate — and hold it
+  to within six plate units.
+
 ## [0.13.1] — 2026-08-09
 
 ### Fixed
