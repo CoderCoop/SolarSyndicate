@@ -14,13 +14,15 @@
  * Nothing here can refuse the player anything. Abandoning a run costs credits,
  * never the ship (TR-21).
  */
-import { contractsFrom, getContract, type Allowance, type MissionType } from '@solsyn/data'
+import { contractsFrom, getContract, getPort, type Allowance, type MissionType } from '@solsyn/data'
 import { adjustStanding, guildForContract, STANDING_DELTA } from './guild.js'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
+import { hohmannTransfer } from './orbits.js'
 import { levelAt } from './resources.js'
 import { DAY, type GameTime } from './time.js'
 import { RESOURCE_KEYS, type SimState } from './types.js'
+import { nextWindowS } from './voyage.js'
 
 /** Consumables an allowance covers. Battery, heat and CO2 are not stores. */
 export const ALLOWANCE_KEYS = ['water', 'o2', 'food', 'propellant', 'spares'] as const
@@ -63,6 +65,16 @@ export interface BoardEntry {
   deadlineDays: number
   allowance: Allowance
   blurb: string
+  /**
+   * Days until the crossing this run wants is worth flying. Zero when it is
+   * open now, which is every in-well hop and any world at its window.
+   *
+   * A run to Mars from the wrong side of the sun is not unavailable, it is
+   * *later* -- and hiding it would take the one decision §5.1 calls the
+   * astrogator's job off the board entirely. Showing it with the wait on it
+   * turns "you cannot go" into "you can go in seven months", which is a plan.
+   */
+  windowDays: number
 }
 
 /**
@@ -71,7 +83,20 @@ export interface BoardEntry {
  */
 export function contractBoard(state: SimState): BoardEntry[] {
   if (state.contract) return []
-  return contractsFrom(state.ship.portId).map((c) => ({ ...c }))
+  return contractsFrom(state.ship.portId).map((c) => ({
+    ...c,
+    windowDays: windowDaysFor(c.fromPortId, c.toPortId, state.now),
+  }))
+}
+
+/** How long until this crossing's geometry is worth flying, in days. */
+function windowDaysFor(fromPortId: string, toPortId: string, at: GameTime): number {
+  const from = getPort(fromPortId)
+  const to = getPort(toPortId)
+  // Two berths around one world are always available: the wait is ninety
+  // minutes and it is already inside the crossing.
+  if (from.bodyId === to.bodyId) return 0
+  return nextWindowS(from.bodyId, to.bodyId, at, hohmannTransfer(from.bodyId, to.bodyId).durationS) / DAY
 }
 
 export interface ActiveContractView extends BoardEntry {
@@ -88,6 +113,8 @@ export function activeContract(state: SimState): ActiveContractView | undefined 
   const daysRemaining = (held.dueAt - state.now) / DAY
   return {
     ...def,
+    // Zero once she is committed: the window is behind her, or she is in it.
+    windowDays: 0,
     acceptedAt: held.acceptedAt,
     dueAt: held.dueAt,
     daysRemaining,

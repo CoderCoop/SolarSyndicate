@@ -166,12 +166,25 @@ function Offer({ offer, onAccept }: { offer: BoardEntry; onAccept: (id: string) 
 
       <Allowance allowance={offer.allowance} />
 
+      {/* Shown rather than hidden. A run to Mars from the wrong side of the sun
+          is not unavailable, it is *later*, and taking it off the board would
+          take the one decision §5.1 calls the astrogator's job with it. The
+          deadline runs from launch, so signing is booking a future trip -- and
+          walking away before the burn costs only the stated penalty. */}
+      {offer.windowDays >= 1 && (
+        <p className="offer__window">
+          Window opens in <strong>{Math.round(offer.windowDays)} days</strong>. Signing books
+          the trip; the {offer.deadlineDays}-day deadline runs from launch, and you can walk
+          away before the burn.
+        </p>
+      )}
+
       <button
         type="button"
         className="button button--primary offer__accept"
         onClick={() => onAccept(offer.id)}
       >
-        Accept the run
+        {offer.windowDays >= 1 ? 'Book the run' : 'Accept the run'}
       </button>
     </article>
   )
@@ -203,9 +216,20 @@ function Astrogator({
             </div>
 
             <ul className="option__figures">
+              {/* Named separately from the crossing, because they are separate
+                  things to agree to: a window months out is a booking, and the
+                  deadline does not start until the engine lights. Folding the
+                  wait into "under way" would hide 227 days inside a five-day
+                  figure, which is the fake choice TR-3b forbids. */}
+              {o.waitDays >= 1 && (
+                <li className="option__wait">
+                  <span>Launches in</span>
+                  <strong>{Math.round(o.waitDays)} days</strong>
+                </li>
+              )}
               <li>
                 <span>Under way</span>
-                <strong>{formatDuration(o.durationS)}</strong>
+                <strong>{formatDuration(o.flightDays * 86400)}</strong>
               </li>
               <li>
                 <span>Propellant</span>

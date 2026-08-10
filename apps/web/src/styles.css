@@ -5424,3 +5424,22 @@ button {
   stroke-width: 0.5;
   opacity: 0.45;
 }
+
+/*
+ * A run whose window is months out. Marked rather than hidden: "you can go in
+ * seven months" is a plan, and "you cannot go" is a dead end.
+ */
+.offer__window {
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-dim);
+  background: var(--bg-sunken);
+  border-left: 2px solid var(--cyan);
+  border-radius: 4px;
+}
+
+.option__wait strong {
+  color: var(--cyan);
+}
