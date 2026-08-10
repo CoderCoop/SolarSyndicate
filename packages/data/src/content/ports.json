@@ -12,6 +12,7 @@
     },
     "escapeDeltaVMs": 3200,
     "orbitRadiusKm": 6778,
+    "phaseAtEpochRad": 0.42,
     "blurb": "The Local's home berth, four hundred kilometres up. Everything is available and everything is expensive."
   },
   {
@@ -27,6 +28,7 @@
     },
     "escapeDeltaVMs": 1870,
     "orbitRadiusKm": 384400,
+    "phaseAtEpochRad": 2.71,
     "moon": "Luna",
     "blurb": "Lunar orbit. Cheaper to leave than Earth, and the only yard in the inner system that will look at a Kestrel without laughing.",
     "sellsHullIds": [
@@ -46,6 +48,7 @@
     },
     "escapeDeltaVMs": 830,
     "orbitRadiusKm": 9376,
+    "phaseAtEpochRad": 5.02,
     "moon": "Phobos",
     "blurb": "A hollowed-out moon with a docking spine bolted through it. Thin margins, thinner air."
   },
@@ -62,6 +65,7 @@
     },
     "escapeDeltaVMs": 510,
     "orbitRadiusKm": 1150,
+    "phaseAtEpochRad": 1.36,
     "blurb": "The Belt's crossroads. Half the hulls in dock are older than the crews flying them."
   }
 ]

@@ -17,6 +17,7 @@ import {
   chartView,
   createWorld,
   hohmannTransfer,
+  portPeriodS,
   stretchedTransfer,
   transferOptions,
   transferPositionAu,
@@ -72,12 +73,16 @@ describe('the chart shows the system as it is', () => {
 })
 
 describe('a berthed ship is at its port', () => {
-  it('sits on the body it is docked at', () => {
+  it('sits at its berth, which is near the body rather than on it', () => {
+    // Gateway is 6,778 km up: 4.53e-5 AU, invisible on a solar-system plate and
+    // very much not zero once the chart can zoom to a berth. Placing her at the
+    // body's centre is what made the heliocentric frame and the world's own
+    // frame disagree about where she was.
     const chart = chartView(world())
     expect(chart.ship.atPortId).toBe('port.gateway')
     const earth = chart.bodies.find((b) => b.id === 'earth')!
-    expect(chart.ship.x).toBeCloseTo(earth.x, 9)
-    expect(chart.ship.y).toBeCloseTo(earth.y, 9)
+    const off = Math.hypot(chart.ship.x - earth.x, chart.ship.y - earth.y)
+    expect(off).toBeCloseTo((6778 * 1000) / 1.495978707e11, 12)
   })
 
   it('draws no track when it is not going anywhere', () => {
@@ -124,13 +129,18 @@ describe('a ship under way is on its actual trajectory', () => {
   })
 
   it('never leaves the neighbourhood on a hop inside one well', () => {
-    // Gateway to Tranquillity is Earth to Earth. At solar-system scale the
-    // ship has not moved, and drawing it halfway to nowhere would be a lie.
+    // Gateway to Tranquillity is Earth to Earth: she stays inside 384,400 km of
+    // it, which is 0.0026 AU and nothing at all next to a crossing to Mars. She
+    // is no longer *pinned* to the centre, though -- her offset from Earth is a
+    // known vector now, and it is the same one the world's own frame draws.
     const s = underWay()
     const chart = chartView(s)
     expect(chart.ship.local).toBe(true)
     const earth = chart.bodies.find((b) => b.id === 'earth')!
-    expect(chart.ship.x).toBeCloseTo(earth.x, 9)
+    const off = Math.hypot(chart.ship.x - earth.x, chart.ship.y - earth.y)
+    expect(off).toBeLessThan((384400 * 1000) / 1.495978707e11)
+    const local = chart.local!
+    expect(off).toBeCloseTo(Math.hypot(local.ship.x, local.ship.y), 12)
     expect(chart.track).toHaveLength(0)
   })
 
@@ -367,14 +377,23 @@ describe('the chart reports where the ship is, how fast, and which way', () => {
     }
   })
 
-  it('gives a berthed ship her port\'s orbital velocity, not zero', () => {
-    // She is alongside, and alongside is doing 29.8 km/s. Reporting zero would
-    // be quoting a frame the chart is not drawn in.
+  it('adds her berth\'s orbital velocity to the world\'s, not just one of them', () => {
+    // She is alongside, and alongside is doing 29.8 km/s round the sun *and*
+    // 7.67 km/s round the Earth. Both are real and they add, so her heliocentric
+    // speed is somewhere between 22.1 and 37.5 depending on where in the
+    // ninety-two minutes she is -- reporting either component alone quotes a
+    // frame the chart is not drawn in.
     const ship = chartView(world()).ship
-    expect(ship.speedMs / 1000).toBeCloseTo(29.78, 1)
-    // Circular orbit: all of it across the radius, none along it.
-    expect(ship.flightPathAngleRad).toBe(0)
-    expect(ship.heading.x * ship.x + ship.heading.y * ship.y).toBeCloseTo(0, 6)
+    const gateway = Math.sqrt(398600441800000 / (6778 * 1000)) / 1000
+    expect(gateway).toBeCloseTo(7.67, 2)
+    expect(ship.speedMs / 1000).toBeGreaterThan(29.78 - gateway - 0.01)
+    expect(ship.speedMs / 1000).toBeLessThan(29.78 + gateway + 0.01)
+    // And it really does swing across that range over one orbit, rather than
+    // sitting at the world's own figure.
+    const speeds = [0, 1200, 2400, 3600, 4800].map(
+      (dt) => chartView(advanceTo(world(), dt)).ship.speedMs / 1000,
+    )
+    expect(Math.max(...speeds) - Math.min(...speeds)).toBeGreaterThan(5)
     expect(Math.hypot(ship.heading.x, ship.heading.y)).toBeCloseTo(1, 9)
   })
 
@@ -454,13 +473,14 @@ describe('the chart reports where the ship is, how fast, and which way', () => {
     expect(chart.extentAu).toBeGreaterThan(chart.ship.apoapsisAu!)
   })
 
-  it('reports the body\'s own motion on a hop inside one well', () => {
-    // Gateway to Tranquillity does not move at solar-system scale, so the
-    // heliocentric telemetry is Earth's -- which is the truth of it, not a
-    // placeholder.
+  it('reports the world\'s motion plus her own on a hop inside one well', () => {
+    // Earth's 29.8 km/s with her orbit about Earth added, the same way the
+    // berthed case adds it. Bounded by the fastest she can be going about the
+    // Earth on this crossing, which is her speed at Gateway's radius.
     const ship = chartView(underWay()).ship
     expect(ship.local).toBe(true)
-    expect(ship.speedMs / 1000).toBeCloseTo(29.78, 1)
+    const fastest = Math.sqrt(398600441800000 / (6778 * 1000)) / 1000
+    expect(Math.abs(ship.speedMs / 1000 - 29.78)).toBeLessThan(fastest + 0.01)
     expect(ship.toGoAu).toBeUndefined()
   })
 })
@@ -631,10 +651,39 @@ describe('the chart can draw the world the ship is at, close up', () => {
     expect(chartView(underWay()).ship.local).toBe(true)
   })
 
-  it('says its angles are the transfer own reference, not a modelled sky', () => {
-    // The sim does not track where Luna is in its month. Inventing a phase
-    // would be a number the player could check and find made up, so the flag
-    // is on the data rather than in a comment nobody reads.
-    expect(chartView(world()).local!.phaseIsRelative).toBe(true)
+  it('puts every berth at a real bearing, derived rather than declared', () => {
+    // This plate used to draw departure at zero and the destination opposite,
+    // and said so: the angles between things were true, their bearing was not
+    // claimed. Ports carry an epoch phase now and their periods follow from the
+    // body's mu, so the bearing is a position -- which is what lets this frame
+    // and the heliocentric one agree about where the ship is.
+    const local = chartView(world()).local!
+    const gateway = local.ports.find((p) => p.id === 'port.gateway')!
+    expect(Math.atan2(gateway.at.y, gateway.at.x)).toBeCloseTo(0.42, 9)
+
+    // And it goes round: Gateway's period is 92.6 minutes, so half of that puts
+    // it on the far side of the Earth.
+    const half = chartView(advanceTo(world(), 0.5 * portPeriodS('port.gateway'))).local!
+    const then = half.ports.find((p) => p.id === 'port.gateway')!
+    expect(then.at.x).toBeCloseTo(-gateway.at.x, 9)
+    expect(then.at.y).toBeCloseTo(-gateway.at.y, 9)
+  })
+
+  it('derives that period from the body it orbits, not from a stated number', () => {
+    // Kepler's third law on the same mu the crossing between two of this body's
+    // ports is priced with. A stated period could disagree with that mu -- and
+    // the half per cent that separates 27.45 days from Luna's observed 27.32 is
+    // exactly the kind of disagreement that would put her where the transfer
+    // maths does not think she is.
+    const earthMu = 398600441800000
+    for (const [id, radiusKm] of [
+      ['port.gateway', 6778],
+      ['port.tranquillity', 384400],
+    ] as const) {
+      const kepler = 2 * Math.PI * Math.sqrt((radiusKm * 1000) ** 3 / earthMu)
+      expect(portPeriodS(id)).toBeCloseTo(kepler, 6)
+    }
+    expect(portPeriodS('port.gateway') / 60).toBeCloseTo(92.6, 1)
+    expect(portPeriodS('port.tranquillity') / DAY).toBeCloseTo(27.45, 2)
   })
 })

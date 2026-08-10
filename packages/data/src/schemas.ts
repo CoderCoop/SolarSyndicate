@@ -548,6 +548,20 @@ export const PortDef = z.object({
    */
   orbitRadiusKm: z.number().positive(),
   /**
+   * Where on that ring it sits at game time zero, radians.
+   *
+   * The *only* free number in a port's orbit: the period follows from the
+   * radius and the body's µ by Kepler's third law, and deriving it rather than
+   * stating it is what keeps the drawn position and the priced crossing the
+   * same object. A stated period that disagreed with µ by half a per cent
+   * would put Luna somewhere the transfer maths does not think it is.
+   *
+   * Chosen rather than observed, as the bodies' epoch phases are: the game
+   * starts in 2200 and nothing here claims to be an ephemeris. What is claimed
+   * is that from that instant onward every position follows.
+   */
+  phaseAtEpochRad: z.number(),
+  /**
    * The moon this port is stationed at, when it is not orbiting the primary
    * directly. Tranquillity's bodyId is `earth` because that is the gravity
    * well and the heliocentric orbit it shares — but it is *at Luna*, and a

@@ -25,6 +25,7 @@ import {
   G0,
   MU_SUN,
   burnSplit,
+  phasingWaitS,
   propellantForDeltaV,
   speedOnEllipse,
   stretchedBetween,
@@ -148,7 +149,13 @@ export function transferOptions(state: SimState): TransferOption[] {
     const propellantKg = propellantForDeltaV(wet, deltaVMs, ENGINE_ISP_S)
     const spare = available - PROPELLANT_RESERVE_KG
     const feasible = propellantKg <= spare
-    const durationS = leg.durationS
+    // Two ports around one body have real positions now, so the crossing is
+    // only available when the far end will be where the ellipse finishes. The
+    // coast that buys that geometry is part of the crossing rather than a
+    // decision: it is bounded by the synodic period of the two orbits, which
+    // here is never more than about an hour and a half (§5.1).
+    const durationS =
+      phasingWaitS(from.id, to.id, state.now, profile.multiplier) + leg.durationS
     const onTime = state.now + durationS <= held.dueAt
 
     const shortfall = propellantKg - spare
@@ -310,10 +317,13 @@ export function voyageView(state: SimState): VoyageView | undefined {
     : stretchedTransfer(from.bodyId, to.bodyId, profile.multiplier)
 
   const a = leg.semiMajorAxisM
+  // The coast before the departure burn, recomputed from the same inputs the
+  // duration was priced with. She is still at her berth's radius through it.
+  const waitS = phasingWaitS(from.id, to.id, v.departedAt, profile.multiplier)
   // Where she is on that ellipse right now. The transfer carries which apsis
   // she left from, so an inbound leg starts at the slow end rather than being
   // reported at periapsis speed the moment she casts off.
-  const { radiusM: r } = transferStateAt(leg, mu, elapsed)
+  const { radiusM: r } = transferStateAt(leg, mu, Math.max(0, elapsed - waitS))
 
   const hull = getHull(state.ship.hullId)
   const split = burnSplit(mu, r1, r2, a)

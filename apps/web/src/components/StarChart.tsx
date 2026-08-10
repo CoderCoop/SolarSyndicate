@@ -447,13 +447,14 @@ function viewFor(camera: Camera, chart: ChartView): View {
  * and something that jumps when you change the magnification does not read as
  * true.
  *
- * The frames cannot be made to agree about *everything* — they disagree by
- * construction, and honestly: the sim does not track where Luna is in its
- * month, so the local plate's bearing against the stars is not claimed and the
- * heliocentric one cannot resolve a 0.0026 AU offset it does not know the
- * direction of. What it can do is agree about **her**. She is the only object
- * drawn in all three, and she is the subject, so she is what holds still: the
- * world rearranges around her rather than the other way about.
+ * They agree about her exactly now that the berths have real bearings — the
+ * heliocentric plate places her at her world plus her orbit about it, which is
+ * the same point the world's own plate draws. This still holds her still rather
+ * than trusting that, because the two projections disagree about everything
+ * *else* by construction: a square-root radius is not a linear one, and no
+ * arithmetic makes the sun and Earth both stay put across that change. She is
+ * the only object drawn in all three, and she is the subject, so she is what
+ * the change of frame is pinned on.
  *
  * Going *out* to the system plate is the exception, and it has to be. That
  * projection is sun-at-the-centre with a square-root radius and no camera at
@@ -727,7 +728,11 @@ export function StarChart({ chart }: { chart: ChartView }) {
   // is a commitment, and drawing them the same made the most useful thing on
   // the plate -- how much of this is left -- something to estimate by eye.
   const arc = local ? local.track : chart.track
-  const cut = Math.round((ship.fractionComplete ?? 0) * (arc.length - 1))
+  // The local arc is split on the *flight*, not the voyage: a crossing between
+  // two berths opens with a coast in the parking orbit until the far end will
+  // be where the ellipse finishes, and counting that as flown would draw the
+  // arc part-flown before the engine had lit.
+  const cut = Math.round((local ? local.flownFraction : (ship.fractionComplete ?? 0)) * (arc.length - 1))
   const flownPath = pathFor(arc.slice(0, cut + 1), view)
   const aheadPath = pathFor(arc.slice(Math.max(0, cut)), view)
 
@@ -1081,9 +1086,11 @@ export function StarChart({ chart }: { chart: ChartView }) {
             Close in on <strong>{local.bodyName}</strong>, drawn to a true, even scale — the
             planet is the same size as the orbits around it, which is why Gateway's ring sits
             almost against its limb and Tranquillity's is fifty-seven times further out. The
-            angles between things here are the transfer's own: the sim does not track where
-            Luna is in its month, and inventing a bearing would be a number you could check
-            and find made up.
+            bearings here are real: every berth carries an epoch phase and its period
+            follows from the body's gravity, so Gateway comes round in 92.6 minutes and
+            Tranquillity — which is to say Luna — in 27.45 days. That is what lets this plate
+            and the heliocentric one put the ship on the same point rather than each being
+            right in its own frame.
           </>
         ) : close ? (
           <>

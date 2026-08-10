@@ -51,6 +51,124 @@ export function distanceBetweenBodiesAt(a: string, b: string, t: GameTime): numb
 }
 
 /**
+ * Where a port is, about the body it orbits. Design doc §5.1, §5.2.
+ *
+ * A port used to be a radius and nothing else — a ring with no position on it —
+ * so the chart drew departure at zero and the destination opposite, and said in
+ * a comment that the angles were the drawing's own. That was honest and it was
+ * also the reason the two frames could not agree: heliocentrically the ship sat
+ * at Earth's centre for five days while the world's own frame had her out on an
+ * arc, and nothing could reconcile them because one of the two had no bearing
+ * to reconcile *to*.
+ *
+ * **The period is derived, not stated.** Kepler's third law about the body's
+ * real µ — the same µ the crossing between two of its ports is priced with —
+ * so the drawn position and the priced transfer are the same object. Luna comes
+ * out at 27.46 days against an observed 27.32, the half per cent being the
+ * two-body approximation that ignores her own mass; a stated 27.32 would look
+ * more accurate and would put her where the transfer maths does not think she
+ * is, which is the worse error of the two.
+ */
+export function circularPeriodS(mu: number, radiusM: number): number {
+  return 2 * Math.PI * Math.sqrt(radiusM ** 3 / mu)
+}
+
+/** Orbital period of a port about its body, seconds. */
+export function portPeriodS(portId: string): number {
+  const port = getPort(portId)
+  return circularPeriodS(getBody(port.bodyId).muM3S2, port.orbitRadiusKm * 1000)
+}
+
+/** How fast it goes round, radians per second. */
+export function portRateRadS(portId: string): number {
+  return (2 * Math.PI) / portPeriodS(portId)
+}
+
+/** Angular position of a port about its body at `t`, radians. */
+export function portAngleAt(portId: string, t: GameTime): number {
+  return getPort(portId).phaseAtEpochRad + portRateRadS(portId) * t
+}
+
+/** Position of a port *relative to its body*, metres. */
+export function portPositionAt(portId: string, t: GameTime): Vec2 {
+  const r = getPort(portId).orbitRadiusKm * 1000
+  const angle = portAngleAt(portId, t)
+  return { x: r * Math.cos(angle), y: r * Math.sin(angle) }
+}
+
+/** Its velocity about the body, m/s — prograde, a quarter turn ahead. */
+export function portVelocityAt(portId: string, t: GameTime): Vec2 {
+  const port = getPort(portId)
+  const r = port.orbitRadiusKm * 1000
+  const speed = Math.sqrt(getBody(port.bodyId).muM3S2 / r)
+  const angle = portAngleAt(portId, t)
+  return { x: -speed * Math.sin(angle), y: speed * Math.cos(angle) }
+}
+
+/** Signed angle wrapped to (-pi, pi]. */
+function wrapPi(radians: number): number {
+  const a = ((radians + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI)
+  return a - Math.PI
+}
+
+/**
+ * How long the ship coasts in her parking orbit before the departure burn.
+ *
+ * Once the ports have real positions, a crossing between two of them stops
+ * being available at any instant: the ellipse sweeps a fixed angle in a fixed
+ * time, so the target has to *already* be where the far end will be. Departing
+ * on the player's whim and arriving wherever the ellipse happened to finish
+ * would draw a ship sailing past an empty ring, which is precisely the kind of
+ * picture §1 pillar 2 exists to forbid.
+ *
+ * The wait is bounded by the synodic period of the two orbits, and in this
+ * system that is small — Gateway goes round in 92.5 minutes, so leaving for
+ * Luna is never more than about an hour and a half away. That is why it is
+ * absorbed into the crossing rather than offered as a decision: a launch window
+ * you can always meet inside two hours is not gameplay, it is arithmetic. The
+ * interplanetary ones, which run to months, are (§5.1) and are reported as
+ * windows rather than waited out silently.
+ *
+ * Closed form: both angles are linear in time, so the miss closes at a constant
+ * rate and the first departure that works is one division.
+ */
+export function phasingWaitS(
+  fromPortId: string,
+  toPortId: string,
+  at: GameTime,
+  semiMajorMultiplier: number,
+): number {
+  const from = getPort(fromPortId)
+  const to = getPort(toPortId)
+  // Between bodies the geometry is the launch window proper, and waiting it out
+  // without saying so would hide months inside a crossing.
+  if (from.bodyId !== to.bodyId || from.id === to.id) return 0
+
+  const mu = getBody(from.bodyId).muM3S2
+  const leg = stretchedBetween(
+    mu,
+    from.orbitRadiusKm * 1000,
+    to.orbitRadiusKm * 1000,
+    semiMajorMultiplier,
+  )
+  // How far round the ellipse carries her. A minimum-energy leg sweeps half a
+  // turn; a stretched one reaches the target orbit before its far apsis and
+  // sweeps less, which moves the window.
+  const sweep = transferStateAt(leg, mu, leg.durationS).sweptRad
+
+  const drift = portRateRadS(toPortId) - portRateRadS(fromPortId)
+  if (drift === 0) return 0
+
+  // Where the target will be when the ship gets there, against where she will
+  // be. Zero means go now.
+  const miss = wrapPi(
+    portAngleAt(toPortId, at + leg.durationS) - (portAngleAt(fromPortId, at) + sweep),
+  )
+  const synodicS = (2 * Math.PI) / Math.abs(drift)
+  return (((-miss / drift) % synodicS) + synodicS) % synodicS
+}
+
+/**
  * Distance between two ports. Ports sharing a body are co-located at this
  * scale: Luna is a rounding error next to an astronomical unit, and pretending
  * otherwise would imply a precision the rest of the model does not have.
