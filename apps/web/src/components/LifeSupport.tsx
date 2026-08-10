@@ -18,6 +18,7 @@ import {
   type LifeStatus,
 } from '@solsyn/sim'
 import { DAY, HOUR } from '@solsyn/sim'
+import { GaugeRow } from './Gauges.js'
 
 function Days({ days }: { days: number }) {
   if (!Number.isFinite(days)) return <span className="gauge-row__horizon">holding</span>
@@ -105,65 +106,16 @@ function Supply({ channel }: { channel?: FlowChannel }) {
 }
 
 /**
- * The track, with its ranges on it. Design doc §3.2.
+ * One gauge on this tab: the shared row, with this tab's breakdown under it.
  *
- * A coloured bar says whether the reading is all right *now*. The ranges say
- * how much room is left before it stops being — which is the difference
- * between a warning light and an instrument, and it is what lets a player
- * decide whether to act this watch or next week.
- *
- * A store's bands move as consumption does, and that is worth watching rather
- * than a defect: the same 300 kg of water is comfortable with four aboard and
- * thin with eight, and a fixed mark would say the same thing in both.
+ * The row and its banded track live in `Gauges.tsx` — they were built here and
+ * moved out when the ship's own numbers wanted the same instrument. What is
+ * still local is the only part that is not general: the in-and-out breakdown,
+ * which exists because every gauge here has a flow channel behind it.
  */
-function Track({ gauge, label }: { gauge: Gauge; label: string }) {
-  let from = 0
-  const zones = gauge.zones.map((z) => {
-    const band = { ...z, from }
-    from = z.until
-    return band
-  })
-
-  return (
-    <div
-      className="gauge-row__bar"
-      role="meter"
-      aria-label={label}
-      aria-valuenow={Math.round(gauge.fill * 100)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-    >
-      {zones.map((z) => (
-        <span
-          key={`${z.status}-${z.from}`}
-          className={`gauge-row__zone gauge-row__zone--${z.status}`}
-          style={{ left: `${z.from * 100}%`, width: `${(z.until - z.from) * 100}%` }}
-        />
-      ))}
-      {gauge.kind === 'store' && (
-        <div
-          className="gauge-row__fill"
-          style={{ width: `${Math.max(0, Math.min(100, gauge.fill * 100))}%` }}
-        />
-      )}
-      {/* The needle. The fill says how full, the mark says exactly where —
-          which is the only part that can be read against a boundary. */}
-      <span
-        className="gauge-row__needle"
-        style={{ left: `${Math.max(0, Math.min(100, gauge.fill * 100))}%` }}
-      />
-    </div>
-  )
-}
-
 function Row({
-  label,
-  value,
-  detail,
-  status = 'nominal',
-  gauge,
-  horizon,
   channel,
+  ...row
 }: {
   label: string
   value: string
@@ -174,18 +126,9 @@ function Row({
   channel?: FlowChannel
 }) {
   return (
-    <li className={`gauge-row gauge-row--${status}`}>
-      <div className="gauge-row__head">
-        <span className="gauge-row__label">{label}</span>
-        <span className="gauge-row__value">{value}</span>
-      </div>
-      {gauge && <Track gauge={gauge} label={label} />}
-      <div className="gauge-row__foot">
-        {detail && <span className="gauge-row__detail">{detail}</span>}
-        {horizon}
-      </div>
+    <GaugeRow {...row}>
       <Supply channel={channel} />
-    </li>
+    </GaugeRow>
   )
 }
 

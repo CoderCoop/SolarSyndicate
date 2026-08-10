@@ -11,23 +11,26 @@ import {
   type GameTime,
   type LifeSupportView,
   type PowerView,
+  type ShipVitalsView,
   type Whereabouts,
 } from '@solsyn/sim'
+import { Track } from './Gauges.js'
 
 export function StatusBar({
   now,
   power,
+  vitals,
   life,
   brokenCount,
   where,
 }: {
   now: GameTime
   power: PowerView
+  vitals: ShipVitalsView
   life: LifeSupportView
   brokenCount: number
   where: Whereabouts
 }) {
-  const pct = Math.round(power.batteryFraction * 100)
   const deficit = power.netKw < 0
 
   let margin = 'Battery holding'
@@ -55,16 +58,12 @@ export function StatusBar({
         </span>
       </div>
 
-      <div className="gauge" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-        <div
-          className={`gauge__fill ${deficit ? 'is-draining' : 'is-charging'}`}
-          style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
-        />
-        <div className="gauge__ticks" aria-hidden="true">
-          {[25, 50, 75].map((t) => (
-            <span key={t} style={{ left: `${t}%` }} />
-          ))}
-        </div>
+      {/* The same banded track the gauges elsewhere use, rather than a bar
+          with quarter ticks on it. A quarter is not a threshold: it never told
+          anyone whether 25% was comfortable, and on a bank that is what the
+          reading is for. The bands say where it stops being. */}
+      <div className="status__gauge">
+        <Track gauge={vitals.battery} label="Battery" />
       </div>
 
       <div className="status__row status__row--fine">

@@ -12,22 +12,27 @@
  * the failure that a bar drawn from two separate calculations invites.
  */
 import { describe, expect, it } from 'vitest'
-import { STORES } from '@solsyn/data'
+import { STORES, VITALS } from '@solsyn/data'
 import {
   advanceTo,
+  batteryGauge,
   co2Gauge,
+  conditionGauge,
   createWorld,
   lifeSupportView,
+  powerBalanceGauge,
   propellantGauge,
+  shipVitals,
   sparesGauge,
   statusFor,
   storeGauge,
   tempGauge,
   worseStatus,
+  CONDITION_THRESHOLDS,
   type Gauge,
   type LifeStatus,
 } from '../src/index.js'
-import { DAY } from '../src/time.js'
+import { DAY, HOUR } from '../src/time.js'
 
 const world = () => createWorld(20260726, Date.UTC(2200, 0, 1))
 
@@ -211,5 +216,100 @@ describe('the bar and the colour cannot disagree', () => {
     const g = view.gauges.o2
     const zone = (g.zones.find((z) => g.fill <= z.until) ?? g.zones.at(-1)!).status
     expect(zone).toBe('critical')
+  })
+})
+
+describe("the ship's own numbers read the same way", () => {
+  it('bands the bank by its clock, in hours rather than in days', () => {
+    // A battery lives on a scale a store does not: eight hours of discharge is
+    // an emergency, and eight days of water is a comfortable week.
+    // Sized so the clock is the rule doing the talking: at every level below,
+    // the bank still has plenty of its capacity left.
+    const perHour = 8
+    const rate = -perHour / HOUR
+    const capacity = 200
+    expect(batteryGauge(perHour * (VITALS.batteryCriticalHours - 1), capacity, rate).status).toBe(
+      'critical',
+    )
+    expect(batteryGauge(perHour * (VITALS.batteryWatchHours - 1), capacity, rate).status).toBe(
+      'watch',
+    )
+    expect(batteryGauge(perHour * (VITALS.batteryWatchHours + 1), capacity, rate).status).toBe(
+      'nominal',
+    )
+  })
+
+  it('still calls a nearly flat bank a problem when nothing is draining it', () => {
+    // The case the clock alone gets wrong, and the reason there are two rules
+    // on this track: a bank at rest lasts for ever and still has no room to
+    // absorb the next thing anybody switches on.
+    const capacity = 200
+    const flat = capacity * VITALS.batteryCriticalFraction * 0.5
+    expect(batteryGauge(flat, capacity, 0).status).toBe('critical')
+    expect(batteryGauge(capacity * VITALS.batteryWatchFraction * 0.9, capacity, 0).status).toBe(
+      'watch',
+    )
+    expect(batteryGauge(capacity, capacity, 0).status).toBe('nominal')
+  })
+
+  it('drops the clock bands from a bank that is charging, keeping the headroom ones', () => {
+    // The mirror of the store gauge's "no red at all when it is filling" --
+    // except that a bank keeps one red, because the last tenth of it is thin
+    // whichever way the current is running. What goes is the clock.
+    const filling = batteryGauge(150, 200, +3 / HOUR)
+    expect(filling.status).toBe('nominal')
+    expect(filling.zones.map((z) => z.status)).toEqual(['critical', 'watch', 'nominal'])
+    expect(filling.zones[0]!.until).toBeCloseTo(VITALS.batteryCriticalFraction, 6)
+    expect(filling.zones[1]!.until).toBeCloseTo(VITALS.batteryWatchFraction, 6)
+  })
+
+  it('reads the power balance against the ship, not against a fixed number', () => {
+    // 3 kW spare is comfortable on a lifeboat and nothing at all on a
+    // freighter, so the amber mark is a fraction of what she draws.
+    const small = powerBalanceGauge(1, 11, 10)
+    const large = powerBalanceGauge(1, 101, 100)
+    expect(small.status).toBe('nominal')
+    expect(large.status).toBe('watch')
+  })
+
+  it('is red at any deficit, because a deficit is the bank paying', () => {
+    expect(powerBalanceGauge(-0.1, 10, 10.1).status).toBe('critical')
+    expect(powerBalanceGauge(0, 10, 10).status).toBe('watch')
+  })
+
+  it('puts zero in the middle of the balance track and the red below it', () => {
+    // A signed reading, so the track is signed: the needle at dead centre is a
+    // ship in exact balance, and everything left of it is coming out of the bank.
+    const g = powerBalanceGauge(0, 20, 20)
+    expect(g.kind).toBe('hazard')
+    expect(g.fill).toBeCloseTo(0.5, 6)
+    expect(g.zones[0]).toEqual({ until: 0.5, status: 'critical' })
+  })
+
+  it('bands condition on the rungs of the failure ladder', () => {
+    expect(conditionGauge(VITALS.conditionCriticalAt - 1).status).toBe('critical')
+    expect(conditionGauge(VITALS.conditionWatchAt - 1).status).toBe('watch')
+    expect(conditionGauge(VITALS.conditionWatchAt + 1).status).toBe('nominal')
+    // The bands have to be rungs, or the colour is a second opinion about a
+    // model that already exists.
+    expect(CONDITION_THRESHOLDS).toContain(VITALS.conditionWatchAt)
+    expect(CONDITION_THRESHOLDS).toContain(VITALS.conditionCriticalAt)
+  })
+
+  it('publishes all four to the ship view, with the needle in the painted band', () => {
+    const view = shipVitals(world())
+    for (const [key, g] of Object.entries(view)) {
+      if (typeof g !== 'object') continue
+      const gauge = g as Gauge
+      expect(gauge.fill, `${key} needle is off the track`).toBeGreaterThanOrEqual(0)
+      expect(gauge.fill, `${key} needle is off the track`).toBeLessThanOrEqual(1)
+      if (gauge.fill > 0 && gauge.fill < 1) {
+        expect(zoneAtNeedle(gauge), `${key} needle is in the wrong band`).toBe(gauge.status)
+      }
+    }
+    // A fresh ship is in working order and the panel should say so, or the
+    // thresholds are wrong rather than the ship.
+    expect(view.condition.status).toBe('nominal')
+    expect(view.conditionPct).toBeGreaterThan(VITALS.conditionWatchAt)
   })
 })

@@ -721,9 +721,44 @@ export const StoresTuning = z.object({
 })
 export type StoresTuning = z.infer<typeof StoresTuning>
 
+/**
+ * When a *ship* metric stops being comfortable. Design doc §3.2, §3.3.
+ *
+ * The consumables have had bands since `0.12.0` (`StoresTuning` above); the
+ * ship's own numbers — the bank, the balance, the state of the machinery — had
+ * none, so they were read as figures rather than as levels. These are the same
+ * idea applied to them, and they are here rather than in TypeScript for the
+ * same reason every other threshold is: they are balance, and balance is data.
+ *
+ * The battery is banded two ways at once, like oxygen, because it is dangerous
+ * for two unrelated reasons: it empties on a clock, *and* a bank down to its
+ * last tenth has no room left to absorb anything switching on — even if
+ * nothing is draining it at this instant.
+ *
+ * Condition sits on the rungs of the failure ladder in `wear.ts`, so amber is
+ * "the next threshold it crosses can break it" (6%) and red is "the next
+ * threshold probably will" (18% and up). Anywhere else would be a second
+ * opinion about the same model.
+ */
+export const VitalsTuning = z.object({
+  /** Hours of remaining discharge at which the bank goes amber, then red. */
+  batteryWatchHours: z.number().positive(),
+  batteryCriticalHours: z.number().positive(),
+  /** State of charge with no headroom left, whatever the rate is doing. */
+  batteryWatchFraction: z.number().min(0).max(1),
+  batteryCriticalFraction: z.number().min(0).max(1),
+  /** Surplus below this fraction of demand is thin: one more load tips it. */
+  powerMarginWatchFraction: z.number().min(0).max(1),
+  /** Condition below which a part is amber, then red. */
+  conditionWatchAt: z.number().min(0).max(100),
+  conditionCriticalAt: z.number().min(0).max(100),
+})
+export type VitalsTuning = z.infer<typeof VitalsTuning>
+
 export const Tuning = z.object({
   survey: SurveyTuning,
   stores: StoresTuning,
+  vitals: VitalsTuning,
   attendance: AttendanceTuning,
   tune: TuneTuning,
   upkeep: UpkeepTuning,

@@ -9,6 +9,38 @@ means here.
 
 ## [Unreleased]
 
+## [0.17.1] — 2026-08-10
+
+### Changed
+
+- **The ship's own numbers are gauges now, not figures.** The Life tab has
+  answered "is this all right" at a glance since it got its bands; the ship's
+  four headline readings had not. The bank was a bar with quarter ticks on it,
+  and a quarter is not a threshold — it never told anybody whether 25% was
+  comfortable. The balance was a signed figure, and whether **+1.4 kW** is
+  healthy depends entirely on what she draws. The tank was a tonnage. The state
+  of the machinery was not on the Ship tab at all: it lived four taps down, one
+  part at a time, so a ship quietly wearing out looked exactly like a ship in
+  good order.
+
+  All four now read on the **same banded track** the Life tab uses, from the
+  same `gauges.ts`, under the ship's name and above her drawing — and the
+  battery in the status bar is banded with them. One instrument, because a
+  second visual language for the same question would be worse than either.
+
+  The bands are readings of models that already existed, not new opinions.
+  The **bank** is banded two ways at once, like oxygen: by the hours of
+  discharge left in it, and by whether it has room to absorb anything switching
+  on — a bank at rest lasts for ever and can still be down to its last tenth.
+  The **balance** is red at any deficit at all, because a deficit is the ship
+  paying the difference out of that bank and it ends in a brownout; its track is
+  signed and scaled to her own load, so 3 kW spare reads as comfortable on a
+  lifeboat and as nothing on a freighter. **Condition** sits on the rungs of the
+  failure ladder in `wear.ts` — amber where the next threshold a part crosses
+  can break it, red where it probably will.
+
+  The thresholds are in `packages/data` with the rest of the balance.
+
 ## [0.17.0] — 2026-08-10
 
 A minor: the chart is navigated by **frame of reference** — system, planet,
