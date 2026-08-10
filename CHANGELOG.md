@@ -9,6 +9,36 @@ means here.
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-08-10
+
+A minor: the chart is navigated by **frame of reference** — system, planet,
+ship — rather than by a set of scales that happened to change origin on you.
+
+### Changed
+
+- **The three buttons are frames now, and the frame is chosen rather than
+  inferred.** They read **System · Earth · Ship**: the sun's frame with the
+  whole system on one plate, the world's own frame with its berths, and hers,
+  centred on the ship and following her.
+
+  The substantive change is that **zoom no longer changes the frame**. It used
+  to flip to the world's own origin the moment the scale passed a threshold,
+  which made the origin a side effect of the magnification: pinch far enough
+  into a ship-centred view and everything rearranged around Earth, a decision
+  nobody had taken. A frame of reference is the thing you pick first and zoom
+  inside of, so now it is — the scale within a frame is yours to pinch as far as
+  it goes, and the origin stays where you put it.
+
+  The middle button is still named by the planet rather than by the word,
+  because the label is also the answer to what you would see down there. It is
+  disabled between worlds: there is no neighbourhood to be in the frame of when
+  she is a third of an AU from either end.
+
+  Stepping off the system plate is the one zoom that still changes frame,
+  because that plate has no linear scale to keep — and it still lands on her
+  rather than teleporting her, as every change of frame has since `0.13.2`.
+
+
 ## [0.16.2] — 2026-08-10
 
 ### Changed
