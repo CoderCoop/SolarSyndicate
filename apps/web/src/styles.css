@@ -1773,6 +1773,11 @@ button {
 .chart__offplate--mars { --world: #c47a52; }
 .chart__offplate--ceres { --world: #8d94a0; }
 
+/* A berth that will not fit, in the colour berths are drawn in everywhere else
+   on this plate -- so the arrow says what kind of thing it is pointing at
+   before the label is read. */
+.chart__offplate--berth { --world: var(--cyan); }
+
 /* --- one world, close up --- */
 
 /*
