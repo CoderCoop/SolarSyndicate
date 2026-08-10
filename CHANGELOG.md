@@ -9,6 +9,30 @@ means here.
 
 ## [Unreleased]
 
+## [0.16.1] — 2026-08-10
+
+### Fixed
+
+- **The chart stuttered instead of moving.** It was redrawn on the 1 Hz cosmetic
+  tick, which at 720x is **twelve game minutes a frame**. That is invisible for
+  a planet and hopeless for a station: Gateway's orbit is 92.6 minutes, so its
+  berth jumped **forty-seven degrees a step** and read as a fault rather than as
+  a low orbit.
+
+  The chart now draws on a clock that runs between ticks, re-anchored on every
+  tick so it cannot drift from the simulation. **Nothing is interpolated**, and
+  that is the point: every position in this sim is a closed-form function of
+  time, so asking for the position at 03:41:07.35 is asking for the truth at
+  03:41:07.35 rather than for a guess between two samples. Smoothing the drawing
+  by lerping between frames would have been easier and would have put the ship
+  somewhere she is not.
+
+  Only while the chart is up — nothing else aboard changes fast enough to be
+  worth a frame budget — and the solved crossing is remembered, since a
+  trajectory cannot change as the clock runs and a window search is sixty-odd
+  Lambert solves.
+
+
 ## [0.16.0] — 2026-08-10
 
 A minor: a contract against a distant window is a **booking**, and the board
