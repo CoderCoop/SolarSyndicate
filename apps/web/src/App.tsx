@@ -20,6 +20,7 @@ import {
   powerView,
   recentLog,
   roomViews,
+  shipVitals,
   transferOptions,
   voyageView,
   whereabouts,
@@ -195,6 +196,7 @@ export function App() {
   }
 
   const power = powerView(state)
+  const vitals = shipVitals(state)
   const life = lifeSupportView(state)
   const rooms = roomViews(state)
   const crew = crewViews(state)
@@ -239,7 +241,14 @@ export function App() {
 
   return (
     <div className="app">
-      <StatusBar now={state.now} power={power} life={life} brokenCount={brokenCount} where={where} />
+      <StatusBar
+        now={state.now}
+        power={power}
+        vitals={vitals}
+        life={life}
+        brokenCount={brokenCount}
+        where={where}
+      />
 
       {/* Above the install offer and above the tabs: an acute emergency is the
           one thing that should interrupt whatever the player came here to do,
@@ -282,6 +291,7 @@ export function App() {
               rooms={rooms}
               crew={crew}
               power={power}
+              vitals={vitals}
               openRoomId={openRoomId}
               onSelectRoom={setOpenRoom}
               onTogglePart={(partId, enabled) =>

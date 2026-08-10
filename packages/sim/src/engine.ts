@@ -37,8 +37,11 @@ import { attendanceView } from './attendance.js'
 import { abandonContract, acceptContract } from './contracts.js'
 import { PROPELLANT_RESERVE_KG, arrive, depart } from './voyage.js'
 import {
+  batteryGauge,
   co2Gauge,
+  conditionGauge,
   o2Gauge,
+  powerBalanceGauge,
   propellantGauge,
   sparesGauge,
   storeGauge,
@@ -46,7 +49,7 @@ import {
   type Gauge,
   type LifeStatus,
 } from './gauges.js'
-import { purchaseHull } from './shipyard.js'
+import { purchaseHull, surveyShip } from './shipyard.js'
 import { dismissCrew, hireCrew, payWages } from './hiring.js'
 import { OPENING_BALANCE_CR, post } from './ledger.js'
 import { pushLog } from './log.js'
@@ -608,6 +611,62 @@ export function powerView(state: SimState): PowerView {
     secondsToBound,
     boundKind,
     brownout: state.ship.brownout,
+  }
+}
+
+/**
+ * The ship's own vital signs, banded. Design doc §3.2, §3.3.
+ *
+ * The consumables have read as *levels* since the Life tab got its bands: a
+ * colour and a scale, so the reading answers "is this all right" before it
+ * answers "what is it". The ship's four headline numbers did not — the bank was
+ * a bar with no marks on it, the balance a signed figure, the tank a tonnage,
+ * and the state of the machinery nowhere at all outside a part card. Each was a
+ * number to parse, and a number you have to parse is not a glance.
+ *
+ * These are the same four questions in the same language, from the same
+ * `gauges.ts` the Life tab reads. Nothing new is simulated; this only publishes
+ * what the sim already knows in the form the rest of the game states it in.
+ */
+export interface ShipVitalsView {
+  /** The bank, by both its clock and its headroom. */
+  battery: Gauge
+  /** Making or spending, on a track scaled to the ship's own load. */
+  power: Gauge
+  propellant: Gauge
+  /** Mean condition across every installed system — the surveyor's figure. */
+  condition: Gauge
+  propellantKg: number
+  propellantCapacityKg: number
+  /** The reserve the astrogator will not spend, so the panel can say why it is red. */
+  propellantReserveKg: number
+  conditionPct: number
+  brokenCount: number
+}
+
+export function shipVitals(state: SimState): ShipVitalsView {
+  const t = state.now
+  const res = state.ship.resources
+  const hull = getHull(state.ship.hullId)
+  const balance = powerBalance(state, t)
+  // The same walk the yard makes when it prices her (§6.2): one definition of
+  // "how worn is this ship", read here as a gauge and there as money.
+  const survey = surveyShip(state, t)
+
+  return {
+    battery: batteryGauge(levelAt(res.battery, t), res.battery.max, res.battery.rate),
+    power: powerBalanceGauge(balance.netKw, balance.productionKw, balance.demandKw),
+    propellant: propellantGauge(
+      levelAt(res.propellant, t),
+      hull.propellantCapacityKg,
+      PROPELLANT_RESERVE_KG,
+    ),
+    condition: conditionGauge(survey.conditionPct),
+    propellantKg: levelAt(res.propellant, t),
+    propellantCapacityKg: hull.propellantCapacityKg,
+    propellantReserveKg: PROPELLANT_RESERVE_KG,
+    conditionPct: survey.conditionPct,
+    brokenCount: survey.brokenCount,
   }
 }
 

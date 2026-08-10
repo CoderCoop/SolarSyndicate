@@ -1,5 +1,11 @@
 /**
- * Green, amber and red for every gauge on the Life tab. Design doc §3.2, §7.4.
+ * Green, amber and red for every gauge in the game. Design doc §3.2, §7.4.
+ *
+ * Built for the Life tab and now read by the ship's own numbers as well --
+ * the bank, the power balance, the state of the machinery -- because a second
+ * visual language for "is this all right" would be worse than either of them
+ * alone. The bottom of this file is where the ship's gauges are defined; the
+ * machinery above is unchanged and shared.
  *
  * The panel could say what a level *was* and, since 0.11.5, what was pushing it
  * about. It could not say whether the number was **all right** -- and that is
@@ -33,7 +39,7 @@
  * consumption does, which is correct and worth watching: open a second hab
  * module and the red band visibly grows.
  */
-import { STORES } from '@solsyn/data'
+import { STORES, VITALS } from '@solsyn/data'
 import {
   CO2_BANDS,
   COLD_BANDS,
@@ -44,7 +50,7 @@ import {
   thermalExposure,
   type Severity,
 } from './physiology.js'
-import { DAY } from './time.js'
+import { DAY, HOUR } from './time.js'
 
 /** Green, amber, red. */
 export type LifeStatus = 'nominal' | 'watch' | 'critical'
@@ -278,4 +284,92 @@ export function propellantGauge(kg: number, capacity: number, reserveKg: number)
       v <= reserveKg ? 'critical' : v <= watch ? 'watch' : ('nominal' as LifeStatus),
   }
   return bandedGauge(kg, [rule], 0, Math.max(capacity, 1e-9), 'store')
+}
+
+/* ------------------------------------------------------------ the ship's own */
+
+/**
+ * The bank, which is dangerous for two unrelated reasons at once.
+ *
+ * It empties on a clock -- the same idea as a store, in hours rather than days
+ * because that is the scale a battery lives on -- **and** it can be down to its
+ * last tenth with nothing draining it, which is a bank with no room to absorb
+ * the next thing anybody switches on. Neither implies the other: a full ship in
+ * deficit has twenty hours and a nearly flat one on solar has for ever, and
+ * both are worth a colour. Two rules on one track, as with oxygen.
+ *
+ * `ratePerSecond` is signed the way the reservoir is: negative is discharging,
+ * and a bank that is charging has no red at all.
+ */
+export function batteryGauge(kwh: number, capacityKwh: number, ratePerSecond: number): Gauge {
+  const perHour = Math.max(0, -ratePerSecond * HOUR)
+  const horizon: Rule = {
+    breakpoints: [perHour * VITALS.batteryCriticalHours, perHour * VITALS.batteryWatchHours],
+    statusAt: (v) =>
+      v <= perHour * VITALS.batteryCriticalHours
+        ? 'critical'
+        : v <= perHour * VITALS.batteryWatchHours
+          ? 'watch'
+          : ('nominal' as LifeStatus),
+  }
+  const cap = Math.max(capacityKwh, 1e-9)
+  const headroom: Rule = {
+    breakpoints: [cap * VITALS.batteryCriticalFraction, cap * VITALS.batteryWatchFraction],
+    statusAt: (v) =>
+      v <= cap * VITALS.batteryCriticalFraction
+        ? 'critical'
+        : v <= cap * VITALS.batteryWatchFraction
+          ? 'watch'
+          : ('nominal' as LifeStatus),
+  }
+  return bandedGauge(kwh, [horizon, headroom], 0, cap, 'store')
+}
+
+/**
+ * The power balance: a reading, not a quantity, so the track is signed.
+ *
+ * Zero is the only figure on this axis that means anything on its own, so it
+ * is where the red band ends rather than where the track begins -- a deficit
+ * is not a low number, it is the ship paying for the difference out of the
+ * bank, and it ends in a brownout if it is left. Amber is a surplus too thin
+ * to survive anything else being switched on.
+ *
+ * The track runs symmetrically about zero, out to whichever of production and
+ * demand is larger, so the scale is the ship's own size: 3 kW spare reads as
+ * comfortable on a lifeboat and as nothing at all on a freighter, which is
+ * exactly right.
+ */
+export function powerBalanceGauge(netKw: number, productionKw: number, demandKw: number): Gauge {
+  const watchKw = demandKw * VITALS.powerMarginWatchFraction
+  const rule: Rule = {
+    breakpoints: [0, watchKw],
+    statusAt: (v) => (v < 0 ? 'critical' : v < watchKw ? 'watch' : ('nominal' as LifeStatus)),
+  }
+  const span = Math.max(productionKw, demandKw, 1)
+  return bandedGauge(netKw, [rule], -span, span, 'hazard')
+}
+
+/**
+ * Condition, coloured by what the failure ladder does next. Design doc §3.3.
+ *
+ * The bands sit on the rungs in `wear.ts`: a part above the amber mark rolls
+ * against nothing worse than a 6% chance at its next threshold, and one below
+ * the red mark is rolling at 18% and then 34%. So amber reads "the next
+ * threshold it crosses can break this" and red "it probably will" -- which is
+ * a statement about the model rather than a second opinion on top of it.
+ *
+ * Used for one part and for the mean across the ship alike; the question is
+ * the same at both scales.
+ */
+export function conditionGauge(conditionPct: number): Gauge {
+  const rule: Rule = {
+    breakpoints: [VITALS.conditionCriticalAt, VITALS.conditionWatchAt],
+    statusAt: (v) =>
+      v < VITALS.conditionCriticalAt
+        ? 'critical'
+        : v < VITALS.conditionWatchAt
+          ? 'watch'
+          : ('nominal' as LifeStatus),
+  }
+  return bandedGauge(conditionPct, [rule], 0, 100, 'store')
 }

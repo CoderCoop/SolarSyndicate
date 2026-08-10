@@ -177,37 +177,22 @@ button {
   color: var(--amber);
 }
 
-/* gauge */
-
-.gauge {
-  position: relative;
-  height: 8px;
+/*
+ * The battery, on the same banded track as every other gauge aboard.
+ *
+ * It used to be a plain fill with ticks at the quarters, which said how full
+ * the bank was and nothing about whether that was all right -- and a quarter
+ * is not a threshold. The bands are, so the bar answers the question the
+ * status bar exists to answer. Only the margin is set here; the track itself
+ * is `.gauge-row__bar` and is styled once, further down.
+ */
+.status__gauge {
   margin-top: 9px;
-  background: var(--bg-sunken);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  overflow: hidden;
 }
 
-.gauge__fill {
-  height: 100%;
-  transition: width 900ms linear;
-}
-
-.gauge__fill.is-charging {
-  background: linear-gradient(90deg, #2f6f52, var(--green));
-}
-
-.gauge__fill.is-draining {
-  background: linear-gradient(90deg, #8a5a1c, var(--amber));
-}
-
-.gauge__ticks span {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(0, 0, 0, 0.45);
+.status__gauge .gauge-row__bar {
+  height: 8px;
+  margin: 0;
 }
 
 /* --------------------------------------------------------------------- ship */

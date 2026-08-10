@@ -11,8 +11,9 @@
  * writing one new component, not rewriting the app.
  */
 import { useState } from 'react'
-import type { CrewView, PowerView, RoomView } from '@solsyn/sim'
+import type { CrewView, PowerView, RoomView, ShipVitalsView } from '@solsyn/sim'
 import { DeckSchematic } from './DeckSchematic.js'
+import { ShipVitals } from './ShipVitals.js'
 import { StationCard } from './StationCard.js'
 
 export interface ShipViewportProps {
@@ -21,6 +22,7 @@ export interface ShipViewportProps {
   rooms: RoomView[]
   crew: CrewView[]
   power: PowerView
+  vitals: ShipVitalsView
   openRoomId: string | undefined
   onSelectRoom: (roomId: string | undefined) => void
   onTogglePart: (partId: string, enabled: boolean) => void
@@ -133,6 +135,7 @@ export function ShipViewport({
   rooms,
   crew,
   power,
+  vitals,
   openRoomId,
   onSelectRoom,
   onTogglePart,
@@ -156,6 +159,11 @@ export function ShipViewport({
           <p className="ship__class">{className}</p>
         </div>
       </header>
+
+      {/* Who she is, then how she is, then what she is. The drawing says where
+          every machine lives; these four say whether any of it needs you this
+          watch, and they read at a glance rather than as figures to parse. */}
+      <ShipVitals power={power} vitals={vitals} />
 
       <div className="stack">
         {/* The nose. Its base matches the deck stack exactly, so the hull reads

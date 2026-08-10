@@ -34,5 +34,14 @@
     "criticalDays": 7,
     "sparesReserve": 8,
     "propellantWatchMultiple": 3
+  },
+  "vitals": {
+    "batteryWatchHours": 12,
+    "batteryCriticalHours": 3,
+    "batteryWatchFraction": 0.25,
+    "batteryCriticalFraction": 0.1,
+    "powerMarginWatchFraction": 0.1,
+    "conditionWatchAt": 50,
+    "conditionCriticalAt": 25
   }
 }

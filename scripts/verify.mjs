@@ -139,10 +139,38 @@ check('ship clock reads', /^D\d+ \d{2}:\d{2}$/.test(clock ?? ''), clock ?? '')
 const net0 = await page.textContent('.status__net')
 check('starts with a power surplus', net0?.startsWith('+') === true, net0 ?? '')
 
+// --- the ship's own numbers read as levels, not as figures (§3.2) -----------
+const VITALS_PANEL = 'section[aria-label="Ship vitals"]'
+const vitalLabels = await page.$$eval(`${VITALS_PANEL} .gauge-row__label`, (els) =>
+  els.map((e) => e.textContent),
+)
+check(
+  'the Ship tab leads with the four vitals',
+  JSON.stringify(vitalLabels) ===
+    JSON.stringify(['Battery', 'Power balance', 'Propellant', 'Condition']),
+  vitalLabels.join(' / '),
+)
+
+const vitalBars = await page.$$eval(`${VITALS_PANEL} .gauge-row`, (rows) =>
+  rows.map((r) => ({
+    label: r.querySelector('.gauge-row__label')?.textContent,
+    zones: r.querySelectorAll('.gauge-row__zone').length,
+    needle: r.querySelector('.gauge-row__needle') !== null,
+  })),
+)
+check(
+  'each one is banded and carries a needle, like the Life tab',
+  vitalBars.length === 4 && vitalBars.every((v) => v.zones >= 2 && v.needle),
+  vitalBars.map((v) => `${v.label}: ${v.zones} zones`).join(' | '),
+)
+
+const barZones = await page.$$eval('.status__gauge .gauge-row__zone', (els) => els.length)
+check('and so is the battery in the status bar', barZones >= 2, `${barZones} zones`)
+
 await page.screenshot({ path: join(SHOTS, '01-bridge.png'), fullPage: true })
 
 // --- a room opens and reveals its parts -------------------------------------
-await page.click('.deck:nth-child(3) .deck__head') // Life Support
+await tap(page, '.deck:nth-child(3) .deck__head') // Life Support
 await page.waitForSelector('.deck.is-open .parts')
 const partNames = await page.$$eval('.deck.is-open .part__name', (els) => els.map((e) => e.textContent))
 check('room opens to its installed parts', partNames.length === 4, partNames.join(', '))
@@ -153,10 +181,10 @@ check('life-critical parts cannot be switched off (§7.4)', await lockedSwitch?.
 await page.screenshot({ path: join(SHOTS, '02-life-support.png'), fullPage: true })
 
 // --- a command changes the world --------------------------------------------
-await page.click('.deck:nth-child(3) .deck__head') // close
-await page.click('.deck:nth-child(7) .deck__head') // Engines
+await tap(page, '.deck:nth-child(3) .deck__head') // close
+await tap(page, '.deck:nth-child(7) .deck__head') // Engines
 await page.waitForSelector('.deck.is-open .parts')
-await page.click('.deck.is-open .part .switch')
+await tap(page, '.deck.is-open .part .switch')
 await page.waitForTimeout(300)
 
 // Relative, not a magic number: with M1 the reactor is worn, so the exact
@@ -208,12 +236,20 @@ await page.screenshot({ path: join(SHOTS, '03b-log.png'), fullPage: true })
 await page.click('.tabs__btn:has-text("Ship")')
 await page.waitForSelector('.ship')
 
+// The vitals say what the deficit means, in colour: a ship paying for the
+// difference out of the bank is red on the balance, whatever the figure is.
+const balanceRow = await page.$eval(
+  `${VITALS_PANEL} .gauge-row:has-text("Power balance")`,
+  (r) => r.className,
+)
+check('a deficit paints the balance red', /gauge-row--critical/.test(balanceRow), balanceRow)
+
 await page.screenshot({ path: join(SHOTS, '03-deficit.png'), fullPage: true })
 
 // --- M1: condition, work orders, crew ---------------------------------------
 console.log('\n  -- M1: the living ship --')
 
-await page.click('.deck:nth-child(3) .deck__head') // Life Support
+await tap(page, '.deck:nth-child(3) .deck__head') // Life Support
 await page.waitForSelector('.deck.is-open .parts')
 
 const conditions = await page.$$eval('.deck.is-open .condition__value', (els) =>
