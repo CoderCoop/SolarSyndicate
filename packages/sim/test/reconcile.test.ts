@@ -22,7 +22,6 @@ import {
   lastSettlement,
   transferOptions,
 } from '../src/index.js'
-import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
 const T0 = Date.UTC(2200, 0, 1)
@@ -39,8 +38,16 @@ const STARTING_LEVELS = (() => {
 })()
 const world = () => createWorld(20260726, T0)
 
-/** Book the Luna run and fly it on the cheapest flyable trajectory. */
-function fly(from: SimState = world(), optionPick: 'cheapest' | 'fastest' = 'cheapest'): SimState {
+/**
+ * Book the Luna run and fly it competently -- which since `0.18.0` means the
+ * quickest flyable trajectory, not the cheapest.
+ *
+ * The deadline is 4.5 days and the minimum-energy crossing takes 4.98, so the
+ * cheap option now arrives late and loses 40% of the fee for the sake of 567 kg
+ * of propellant. "Competently" has to mean the one that gets paid; the late
+ * path is flown deliberately, below, by asking for the cheapest.
+ */
+function fly(from: SimState = world(), optionPick: 'cheapest' | 'fastest' = 'fastest'): SimState {
   let s = applyCommand(from, {
     at: from.now,
     command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
@@ -239,21 +246,17 @@ describe('being late costs money, never the ship', () => {
   })
 
   it('pays less when it arrives late, and says so', () => {
-    // Sitting in dock no longer makes a run late: the deadline runs from launch,
+    // Sitting in dock does not make a run late: the deadline runs from launch,
     // because a contract taken against a window months out is a booking rather
     // than a delivery already ticking. What is late is a *crossing* that
-    // overruns, so that is what this builds -- the deadline pulled in behind
-    // the arrival she is already flying.
-    let s = world()
-    s = applyCommand(s, {
-      at: s.now,
-      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
-    })
-    s = advanceTo(s, 14 * DAY)
-    const option = transferOptions(s).filter((o) => o.feasible).sort((a, b) => a.deltaVMs - b.deltaVMs)[0]!
-    s = applyCommand(s, { at: s.now, command: { kind: 'DEPART', optionId: option.id } })
-    s.contract!.dueAt = s.voyage!.arrivesAt - DAY
-    s = advanceTo(s, s.voyage!.arrivesAt + 60)
+    // overruns -- and since `0.18.0` that is a thing a player can actually do,
+    // by taking the cheap trajectory on a deadline the cheap trajectory misses.
+    //
+    // This used to reach in and pull `dueAt` back behind the arrival, because
+    // there was no honest way to be late: every contract's cheapest crossing
+    // beat its deadline by days. Nothing is forced now. She flies the option
+    // the astrogator marks "Deadline: Missed", and it is.
+    const s = fly(world(), 'cheapest')
 
     const settlement = lastSettlement(s)!
     expect(settlement.late).toBe(true)

@@ -9,7 +9,7 @@
     "payCr": 74000,
     "abandonCr": 9000,
     "cargoKg": 4200,
-    "deadlineDays": 12,
+    "deadlineDays": 4.5,
     "allowance": {
       "water": 22,
       "o2": 5,
@@ -29,7 +29,7 @@
     "payCr": 61000,
     "abandonCr": 8000,
     "cargoKg": 3600,
-    "deadlineDays": 12,
+    "deadlineDays": 6,
     "allowance": {
       "water": 22,
       "o2": 5,
@@ -49,7 +49,7 @@
     "payCr": 386000,
     "abandonCr": 52000,
     "cargoKg": 9800,
-    "deadlineDays": 300,
+    "deadlineDays": 270,
     "allowance": {
       "water": 880,
       "o2": 155,
@@ -69,7 +69,7 @@
     "payCr": 298000,
     "abandonCr": 42000,
     "cargoKg": 6400,
-    "deadlineDays": 300,
+    "deadlineDays": 270,
     "allowance": {
       "water": 880,
       "o2": 155,
@@ -89,7 +89,7 @@
     "payCr": 612000,
     "abandonCr": 96000,
     "cargoKg": 6400,
-    "deadlineDays": 540,
+    "deadlineDays": 500,
     "allowance": {
       "water": 1605,
       "o2": 285,
@@ -109,7 +109,7 @@
     "payCr": 548000,
     "abandonCr": 84000,
     "cargoKg": 15600,
-    "deadlineDays": 540,
+    "deadlineDays": 500,
     "allowance": {
       "water": 1605,
       "o2": 285,
@@ -129,7 +129,7 @@
     "payCr": 214000,
     "abandonCr": 31000,
     "cargoKg": 5100,
-    "deadlineDays": 650,
+    "deadlineDays": 600,
     "allowance": {
       "water": 1950,
       "o2": 345,

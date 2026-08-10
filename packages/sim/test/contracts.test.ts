@@ -12,7 +12,7 @@
  * budget" is a question asked when choosing, not discovered on arrival.
  */
 import { describe, expect, it } from 'vitest'
-import { content, getPort } from '@solsyn/data'
+import { content, getBody, getPort } from '@solsyn/data'
 import {
   advanceTo,
   applyCommand,
@@ -21,6 +21,7 @@ import {
   createWorld,
   hohmannTransfer,
   ledgerView,
+  stretchedBetween,
 } from '../src/index.js'
 import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
@@ -30,6 +31,53 @@ const world = () => createWorld(20260726, T0)
 
 const accept = (s: SimState, id: string): SimState =>
   applyCommand(s, { at: s.now, command: { kind: 'ACCEPT_CONTRACT', contractId: id } })
+
+/**
+ * How long the crossing takes on the cheapest trajectory, in days.
+ *
+ * Two geometries, because two kinds of crossing: between worlds it is the
+ * Hohmann transfer between their orbits, and inside one gravity well it is the
+ * transfer between the two berths' radii about that world.
+ */
+function slowCrossingDays(fromPortId: string, toPortId: string): number {
+  const from = getPort(fromPortId)
+  const to = getPort(toPortId)
+  if (from.bodyId !== to.bodyId) return hohmannTransfer(from.bodyId, to.bodyId).durationS / DAY
+  return (
+    stretchedBetween(
+      getBody(from.bodyId).muM3S2,
+      from.orbitRadiusKm * 1000,
+      to.orbitRadiusKm * 1000,
+      1,
+    ).durationS / DAY
+  )
+}
+
+/**
+ * And on the quickest one the astrogator will offer.
+ *
+ * The stretched ellipse only shortens a crossing that climbs: raising apoapsis
+ * gets you to a higher orbit sooner and does nothing at all coming back down,
+ * which is why the outbound cislunar leg has a real choice of trajectory and
+ * the return leg does not.
+ */
+function quickCrossingDays(fromPortId: string, toPortId: string): number {
+  const from = getPort(fromPortId)
+  const to = getPort(toPortId)
+  const slow = slowCrossingDays(fromPortId, toPortId)
+  if (from.bodyId !== to.bodyId) return slow
+  const quick =
+    stretchedBetween(
+      getBody(from.bodyId).muM3S2,
+      from.orbitRadiusKm * 1000,
+      to.orbitRadiusKm * 1000,
+      FASTEST_MULTIPLIER,
+    ).durationS / DAY
+  return Math.min(slow, quick)
+}
+
+/** The most stretched ellipse on offer -- Express, from `voyage.ts`'s profiles. */
+const FASTEST_MULTIPLIER = 1.12
 
 const abandon = (s: SimState): SimState =>
   applyCommand(s, { at: s.now, command: { kind: 'ABANDON_CONTRACT' } })
@@ -97,23 +145,43 @@ describe('the allowance is stated before you accept', () => {
     // deadline let a fast ship bank a large food credit for flying quickly --
     // which rewards speed rather than efficiency, and swamped the signal the
     // whole mechanic exists to send.
+    //
+    // Measured against the crossing itself rather than against the deadline,
+    // which is what it always meant. The deadline was a usable proxy only
+    // while every deadline was longer than its crossing; now that the cislunar
+    // one is deliberately shorter than the cheap trajectory, the proxy would
+    // have demanded a food allowance too small to make the trip on.
     for (const c of content.contracts) {
-      const deadlineCrewDays = 4 * c.deadlineDays
-      expect(c.allowance.food).toBeLessThan(1.8 * deadlineCrewDays)
+      const crewDays = 4 * slowCrossingDays(c.fromPortId, c.toPortId)
+      expect(c.allowance.food).toBeGreaterThan(0.85 * 1.8 * crewDays)
+      expect(c.allowance.food).toBeLessThan(1.2 * 1.8 * crewDays)
     }
   })
 
-  it('sets a deadline the physics can actually meet', () => {
+  it('sets a deadline something can actually meet (TR-3b)', () => {
     // The invariant that would have caught a 96-day deadline on a crossing
     // that takes 259: a contract nobody can deliver is a trap, and TR-3b
     // forbids offering one.
+    //
+    // "Something", not "the cheap option". A deadline is allowed to be shorter
+    // than the minimum-energy crossing -- that is the whole of what makes the
+    // trajectory a choice -- but never shorter than the quickest trajectory
+    // that exists, or the penalty is one nobody can avoid.
     for (const c of content.contracts) {
-      const from = getPort(c.fromPortId)
-      const to = getPort(c.toPortId)
-      if (from.bodyId === to.bodyId) continue
-      const crossing = hohmannTransfer(from.bodyId, to.bodyId).durationS / DAY
-      expect(c.deadlineDays).toBeGreaterThan(crossing)
+      expect(c.deadlineDays).toBeGreaterThan(quickCrossingDays(c.fromPortId, c.toPortId))
     }
+  })
+
+  it('leaves at least one run where the trajectory decides whether it is late', () => {
+    // The point of the whole deadline mechanic, and it was unreachable until
+    // `0.18.0`: every contract's cheap crossing fitted its deadline with days
+    // to spare, so TR-19's late payment was code nothing could run.
+    const decided = content.contracts.filter(
+      (c) =>
+        quickCrossingDays(c.fromPortId, c.toPortId) < c.deadlineDays &&
+        slowCrossingDays(c.fromPortId, c.toPortId) > c.deadlineDays,
+    )
+    expect(decided.length).toBeGreaterThan(0)
   })
 
   it('still budgets enough to live on', () => {

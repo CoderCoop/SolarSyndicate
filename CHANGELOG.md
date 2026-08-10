@@ -9,6 +9,53 @@ means here.
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-08-10
+
+A minor: **lateness can happen again**, so the trajectory you pick is a
+decision with a price rather than a preference.
+
+### Changed
+
+- **The deadlines are the crossings now, not round numbers with a fortnight of
+  slack in them.** Twelve days against a five-day cislunar run; three hundred
+  against a crossing that takes 259. Since `0.16.0` the deadline has measured
+  the *flight* rather than wall-clock time, which means it can only ever be
+  missed by flying too slowly — and with that much slack in it, nothing could.
+  TR-19's late payment was code the game could not reach.
+
+  | Contract | Was | Now | Cheapest crossing |
+  |---|---|---|---|
+  | Yard parts to Tranquillity | 12 | **4.5** | 4.98 |
+  | Yard castings back to Gateway | 12 | **6** | 4.98 |
+  | Survey gear to Phobos | 300 | **270** | 258.9 |
+  | Survey returns to Gateway | 300 | **270** | 258.9 |
+  | Medical consignment to Ceres | 540 | **500** | 471.9 |
+  | Refined ore to Gateway | 540 | **500** | 471.9 |
+  | Relief stores to Phobos | 650 | **600** | 573.6 |
+
+  The Tranquillity run is the one that becomes a decision. Minimum energy takes
+  4.98 days and misses; Standard takes 3.97 and Express 3.49, and both make it
+  for 567 kg more propellant against a 22.7 t allowance. Arriving late pays 60%
+  of 74,000 cr, so the cheap trajectory costs 29,600 cr to save half a tonne of
+  hydrogen. The astrogator has said **Deadline: Met** or **Missed** on every
+  option since M2; this is the first build where it ever says Missed.
+
+  Nothing is a trap. A deadline may be shorter than the *cheap* crossing —
+  that is what makes the trajectory matter — but never shorter than the
+  quickest one that exists, and a test now pins that for every contract.
+
+### Known
+
+- **Only the outbound cislunar leg has a choice to make.** The stretched
+  ellipse shortens a crossing that climbs and does nothing at all coming back
+  down, so Tranquillity → Gateway has one flight time however you fly it; and
+  between worlds only *Wait for the window* is ever affordable, because Express
+  does not wait and leaving at the wrong phase costs 35 km/s. So six of the
+  seven contracts have exactly one feasible flight time, and their deadlines
+  can only be honest, not interesting. Making the window and the fast profiles
+  compose — *wait for the window, then fly it hard* — is what would turn the
+  interplanetary runs into the same decision, and it is a change of its own.
+
 ## [0.17.5] — 2026-08-10
 
 ### Changed
