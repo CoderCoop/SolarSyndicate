@@ -200,11 +200,6 @@ button {
   margin-top: 6px;
 }
 
-.status__row--dim {
-  color: var(--ink-faint);
-  margin-top: 2px;
-}
-
 .status__clock {
   font-size: 20px;
   font-weight: 600;
@@ -232,21 +227,62 @@ button {
 }
 
 /*
- * The battery, on the same banded track as every other gauge aboard.
+ * Every metric the ship has, small. Design §3.2, §1 pillar 1.
  *
- * It used to be a plain fill with ticks at the quarters, which said how full
- * the bank was and nothing about whether that was all right -- and a quarter
- * is not a threshold. The bands are, so the bar answers the question the
- * status bar exists to answer. Only the margin is set here; the track itself
- * is `.gauge-row__bar` and is styled once, further down.
+ * The bar carried one banded gauge -- the bank -- which meant triage from here
+ * was "the battery is fine, now go and check the other nine on two other
+ * tabs". They all come from the same `gauges.ts`, so they can all be here, and
+ * the question a standing readout exists to answer is not "what is the water
+ * level" but "is any of it wrong": one amber cell in ten answers that in the
+ * time it takes to look, and the tab that owns the metric has the figure.
+ *
+ * `auto-fit` rather than a fixed count: five across on a phone and ten on
+ * anything wider, without a breakpoint deciding it. 58px is the width the
+ * longest label -- SPARES -- needs at this size.
  */
-.status__gauge {
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+  gap: 7px 8px;
   margin-top: 9px;
 }
 
-.status__gauge .gauge-row__bar {
-  height: 8px;
+.strip__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.strip__label {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The name takes the colour when the reading has left the green, so a cell can
+   be found by its label rather than only by squinting at a 5px bar. */
+.strip__cell--watch .strip__label {
+  color: var(--amber);
+}
+.strip__cell--critical .strip__label {
+  color: var(--red);
+}
+
+.strip .gauge-row__bar {
+  height: 5px;
   margin: 0;
+}
+
+/* At this height the needle's shadow is most of it; keep the mark and drop the
+   halo, or ten of them read as ten grey smudges. */
+.strip .gauge-row__needle {
+  width: 2px;
+  margin-left: -1px;
+  box-shadow: none;
 }
 
 /* --------------------------------------------------------------------- ship */

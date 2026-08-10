@@ -9,6 +9,36 @@ means here.
 
 ## [Unreleased]
 
+## [0.17.5] — 2026-08-10
+
+### Changed
+
+- **The standing readout carries a gauge for every metric, not just the bank.**
+  Ten of them — battery, power balance, propellant, condition, CO₂,
+  temperature, oxygen, water, food, spares — each a labelled band of the same
+  track the Life and Ship tabs read.
+
+  The bar had exactly one gauge since `0.17.1`, which made triage from it
+  "the battery is fine, now go and check the other nine on two other tabs".
+  The question a standing readout exists to answer is not *what is the water
+  level* — that belongs on the tab that owns the metric, with its horizon and
+  its breakdown — it is **is any of it wrong**, and one amber cell in ten
+  answers that in the time it takes to look. The label takes the colour too, so
+  a cell is found by its name rather than by squinting at a five-pixel bar.
+
+  Five across on a phone and ten on anything wider, without a breakpoint
+  deciding it.
+
+### Removed
+
+- **The `1,584 ppm · 21.0 °C` line, and the thermal margin beside it.** Two of
+  the ten metrics, picked because they were the two that could hurt somebody
+  and given a figure apiece up here for want of anywhere better. They are
+  banded in the strip now, which says the same thing about all ten in less
+  room; the thermal margin is on the Life tab, beside the gauge it explains.
+  The readout is *shorter* than it was before the strip, which matters when it
+  is frozen at the top of every screen.
+
 ## [0.17.4] — 2026-08-10
 
 ### Fixed

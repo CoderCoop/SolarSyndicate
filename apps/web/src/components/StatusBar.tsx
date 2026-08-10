@@ -17,6 +17,7 @@ import {
   formatDuration,
   formatShipClock,
   type GameTime,
+  type Gauge,
   type LedgerView,
   type LifeSupportView,
   type PowerView,
@@ -82,6 +83,27 @@ function Figure({ label, value, tone }: { label: string; value: string; tone?: s
   )
 }
 
+/**
+ * One metric, small. Design doc §3.2.
+ *
+ * The same banded track the Life tab and the Ship tab read, at the size a
+ * standing readout can afford ten of. A name and a bar and nothing else: the
+ * figure belongs on the tab that owns the metric, and what this has to answer
+ * is only "is any of it wrong", from wherever the player happens to be.
+ *
+ * Short names because there are ten of them across a phone. They are the
+ * abbreviations already used aboard rather than truncations — the full name
+ * goes to the meter's accessible label, so nothing is lost to a screen reader.
+ */
+function Mini({ label, name, gauge }: { label: string; name: string; gauge: Gauge }) {
+  return (
+    <div className={`strip__cell strip__cell--${gauge.status}`}>
+      <span className="strip__label">{label}</span>
+      <Track gauge={gauge} label={name} />
+    </div>
+  )
+}
+
 export function StatusBar({
   now,
   power,
@@ -106,6 +128,21 @@ export function StatusBar({
   if (power.boundKind === 'empty') margin = `${formatDuration(power.secondsToBound)} to empty`
   else if (power.boundKind === 'full') margin = `${formatDuration(power.secondsToBound)} to full`
   else if (power.batteryFraction >= 0.999) margin = 'Batteries full'
+
+  // Ship first, then life, each in the order it goes wrong. Propellant is on
+  // both views and is one metric, so it is stated once, from the ship's.
+  const metrics: { label: string; name: string; gauge: Gauge }[] = [
+    { label: 'BATT', name: 'Battery', gauge: vitals.battery },
+    { label: 'PWR', name: 'Power balance', gauge: vitals.power },
+    { label: 'PROP', name: 'Propellant', gauge: vitals.propellant },
+    { label: 'COND', name: 'Condition', gauge: vitals.condition },
+    { label: 'CO₂', name: 'Cabin CO2', gauge: life.gauges.co2 },
+    { label: 'TEMP', name: 'Cabin temperature', gauge: life.gauges.temp },
+    { label: 'O₂', name: 'Oxygen', gauge: life.gauges.o2 },
+    { label: 'WATER', name: 'Water', gauge: life.gauges.water },
+    { label: 'FOOD', name: 'Food', gauge: life.gauges.food },
+    { label: 'SPARES', name: 'Spares', gauge: life.gauges.spares },
+  ]
 
   const alarms: string[] = []
   if (power.brownout) alarms.push('Brownout — loads shed to hold the critical bus')
@@ -139,12 +176,16 @@ export function StatusBar({
         </span>
       </div>
 
-      {/* The same banded track the gauges elsewhere use, rather than a bar
-          with quarter ticks on it. A quarter is not a threshold: it never told
-          anyone whether 25% was comfortable, and on a bank that is what the
-          reading is for. The bands say where it stops being. */}
-      <div className="status__gauge">
-        <Track gauge={vitals.battery} label="Battery" />
+      {/* Every metric the ship has, at a glance. Design doc §3.2, §1 pillar 1.
+          The bar carried one gauge -- the bank -- so triage meant "the battery
+          is fine, now go and check the other nine on two other tabs". They are
+          all banded from the same `gauges.ts`, so they can all be here: the
+          question a standing readout answers is "is any of it wrong", and one
+          amber cell out of ten answers it in the time it takes to look. */}
+      <div className="strip" aria-label="Ship and life metrics">
+        {metrics.map((m) => (
+          <Mini key={m.name} label={m.label} name={m.name} gauge={m.gauge} />
+        ))}
       </div>
 
       <div className="status__row status__row--fine">
@@ -181,16 +222,13 @@ export function StatusBar({
         )}
       </div>
 
-      <div className="status__row status__row--fine status__row--dim">
-        <span>
-          {Math.round(life.co2Ppm).toLocaleString()} ppm · {life.temperatureC.toFixed(1)} °C
-        </span>
-        <span>
-          {life.heatMarginKw >= 0
-            ? `${life.heatMarginKw.toFixed(0)} kW thermal margin`
-            : `${(-life.heatMarginKw).toFixed(0)} kW over thermal`}
-        </span>
-      </div>
+      {/* The ppm-and-degrees line that used to sit here is gone with the
+          strip's arrival. It was two of the ten metrics, picked because they
+          were the two that could hurt somebody and given a figure apiece up
+          here for want of anywhere better; CO₂ and TEMP are banded in the
+          strip now, which says the same thing in less room and about all ten.
+          The thermal margin the line also carried is on the Life tab, beside
+          the gauge it explains. */}
 
       {alarms.length > 0 && (
         <ul className="status__alarms">
