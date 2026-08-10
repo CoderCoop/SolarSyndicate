@@ -9,6 +9,37 @@ means here.
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-08-10
+
+A minor: a contract against a distant window is a **booking**, and the board
+says so.
+
+### Changed
+
+- **The deadline runs from launch, not from signing.** Taking the Phobos survey
+  when its window is 227 days out used to start a 300-day clock immediately,
+  which made an honestly-flown crossing late by construction — the wait ate two
+  thirds of the deadline before the engine lit. What a deadline measures now is
+  the **crossing**: sign, wait for the geometry, and the 300 days start when she
+  burns.
+
+  This is what makes the fourth departure option usable rather than theoretical.
+  It also means sitting in dock no longer makes a run late; what is late is a
+  crossing that overruns.
+
+- **A run whose window is months out is shown, marked and explained.** Hiding it
+  would take the one decision §5.1 calls the astrogator's job off the board
+  altogether. The offer states when the window opens, that signing books the
+  trip, that the deadline runs from launch, and that walking away before the
+  burn costs only the stated penalty (TR-21) — so "you cannot go" becomes "you
+  can go in seven months", which is a plan.
+
+- **The wait is named separately from the crossing.** An option that quietly
+  takes 227 days longer than the one above it is the fake choice TR-3b forbids,
+  however honest its delta-v — so the astrogator lists "Launches in 227 days"
+  above "Under way 259 days" rather than folding them into one figure.
+
+
 ## [0.15.0] — 2026-08-10
 
 A minor: crossings between worlds are solved for the geometry they actually

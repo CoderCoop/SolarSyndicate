@@ -239,7 +239,11 @@ describe('being late costs money, never the ship', () => {
   })
 
   it('pays less when it arrives late, and says so', () => {
-    // Accept, then sit in dock past the deadline before flying.
+    // Sitting in dock no longer makes a run late: the deadline runs from launch,
+    // because a contract taken against a window months out is a booking rather
+    // than a delivery already ticking. What is late is a *crossing* that
+    // overruns, so that is what this builds -- the deadline pulled in behind
+    // the arrival she is already flying.
     let s = world()
     s = applyCommand(s, {
       at: s.now,
@@ -248,6 +252,7 @@ describe('being late costs money, never the ship', () => {
     s = advanceTo(s, 14 * DAY)
     const option = transferOptions(s).filter((o) => o.feasible).sort((a, b) => a.deltaVMs - b.deltaVMs)[0]!
     s = applyCommand(s, { at: s.now, command: { kind: 'DEPART', optionId: option.id } })
+    s.contract!.dueAt = s.voyage!.arrivesAt - DAY
     s = advanceTo(s, s.voyage!.arrivesAt + 60)
 
     const settlement = lastSettlement(s)!

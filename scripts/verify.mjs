@@ -1148,8 +1148,30 @@ await page.screenshot({ path: join(SHOTS, '13-astrogator.png'), fullPage: true }
 // of food and a third of the propellant it would need.
 await tap(page, '.panel:has(.allowance) .button--quiet')
 await page.waitForSelector('.offer')
+const windowNote = await page.textContent('.offer__window').catch(() => null)
+check(
+  'a run whose window is months out is offered, marked, and explained',
+  /Window opens in \d+ days/.test(windowNote ?? '') &&
+    /deadline runs from launch/.test(windowNote ?? ''),
+  (windowNote ?? 'no note').replace(/\s+/g, ' ').trim(),
+)
+
 await tap(page, '.offer:has-text("Phobos") .offer__accept')
 await page.waitForSelector('.options')
+
+// --- a window is a booking, not a refusal (§5.1, TR-21) --------------------
+//
+// The Phobos run wants a window 227 days out. Taking it off the board would
+// take the one decision §5.1 calls the astrogator's job with it, so it is shown
+// with the wait on it -- and the deadline runs from launch, which is what makes
+// signing for a trip seven months away a booking rather than a delivery already
+// ticking down.
+const waitRow = await page.$$eval('.option__wait strong', (els) => els.map((e) => e.textContent))
+check(
+  'and the wait is named separately from the crossing, not folded into it',
+  waitRow.length > 0 && /\d+ days/.test(waitRow[0] ?? ''),
+  waitRow.join(' · '),
+)
 
 const blocked = await page.$$('.option.is-blocked')
 check('an unflyable option is shown, not dropped (TR-3b)', blocked.length > 0, `${blocked.length} blocked`)

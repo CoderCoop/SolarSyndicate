@@ -87,6 +87,17 @@ export interface TransferOption {
   why?: string
   /** Does it land inside the contract's deadline? */
   onTime: boolean
+  /**
+   * Days spent at the berth before the engine lights.
+   *
+   * Signing for a crossing whose window is months away is signing up for a
+   * *future trip*, and the desk has to be told that in as many words -- an
+   * option that quietly takes 227 days longer than the one above it is the
+   * fake choice TR-3b forbids, however honest its delta-v.
+   */
+  waitDays: number
+  /** Time actually under way, days. The figure the deadline is measured on. */
+  flightDays: number
 }
 
 /**
@@ -309,6 +320,8 @@ export function transferOptions(state: SimState): TransferOption[] {
         feasible: false,
         why: 'No orbit joins the two worlds over this crossing time.',
         onTime: false,
+        waitDays: 0,
+        flightDays: 0,
       }
     }
 
@@ -316,17 +329,30 @@ export function transferOptions(state: SimState): TransferOption[] {
     const propellantKg = propellantForDeltaV(wet, deltaVMs, ENGINE_ISP_S)
     const feasible = propellantKg <= spare
     const durationS = solved.durationS
-    const onTime = state.now + durationS <= held.dueAt
+    // The deadline runs from launch, not from signing: a contract taken against
+    // a window six months out is a booking, and charging the wait against the
+    // delivery would make every honest crossing late by construction. So what
+    // has to fit is the flight.
+    const onTime = solved.flightS <= def.deadlineDays * DAY
 
     const shortfall = propellantKg - spare
     return {
       id: profile.id,
       label: profile.label,
-      summary: summarise(profile.label, deltaVMs, durationS, onTime, held.dueAt, state.now),
+      summary: summarise(
+        profile.label,
+        deltaVMs,
+        solved.flightS,
+        onTime,
+        state.now + solved.waitS + def.deadlineDays * DAY,
+        state.now + solved.waitS,
+      ),
       deltaVMs,
       durationS,
       propellantKg,
       feasible,
+      waitDays: solved.waitS / DAY,
+      flightDays: solved.flightS / DAY,
       ...(feasible
         ? {}
         : {
@@ -370,6 +396,11 @@ export function depart(state: SimState, optionId: string, at: GameTime): boolean
   const propellant = state.ship.resources.propellant
   settle(propellant, at)
   propellant.value = Math.max(0, propellant.value - option.propellantKg)
+
+  // The deadline runs from launch. Signing for a crossing whose window is
+  // months out books a future trip, and the clock on delivery starts when the
+  // engine lights (TR-21: a desk can always walk away before then).
+  held.dueAt = at + option.waitDays * DAY + def.deadlineDays * DAY
 
   state.voyage = {
     optionId: option.id,
