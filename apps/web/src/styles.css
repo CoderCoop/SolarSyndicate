@@ -140,6 +140,60 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * What the desk is worth, above what the ship is doing. Design §1, §6.1.
+ *
+ * The balance lived under the ledger it heads, on one panel of one tab, which
+ * put the figure every decision in the game is priced against three taps from
+ * most of the decisions. It is the first line of the readout now.
+ *
+ * Two cells rather than one, because there is a second standing figure to
+ * state and it does not exist yet: guild influence is simulated and surfaced
+ * nowhere. `auto-fit` means one figure fills the row without a hole beside it
+ * and two split it evenly, so adding the second is a component and no CSS.
+ */
+.purse {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.purse__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* Right-aligned once there are two of them, so the pair reads as a pair
+   rather than as a line that ran out. */
+.purse__cell:nth-child(2) {
+  text-align: right;
+}
+
+.purse__figure {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+/* Overdrawn is a state, not a block (TR-21) -- so it is coloured, and nothing
+   about it stops. */
+.purse__figure.is-overdrawn {
+  color: var(--red);
+}
+
+.purse__label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
 .status__row--fine {
   font-size: 12px;
   color: var(--ink-dim);

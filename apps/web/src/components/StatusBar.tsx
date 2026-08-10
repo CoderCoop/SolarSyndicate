@@ -1,15 +1,23 @@
 /**
- * The always-visible readout. Design doc §3.2, §1 pillar 1.
+ * The always-visible readout. Design doc §3.2, §1, §6.1.
  *
  * "Systems are legible: you can trace why the O2 margin is thin." With five
  * networks running, the bar's job is triage: what time is it aboard, is the
  * ship making or losing power, and is anything about to need me.
+ *
+ * And, since 0.17.3, what the desk is worth. §1 makes the player an
+ * institution rather than a pilot, and an institution's headline figure is its
+ * balance -- which was on one panel of one tab, under the ledger it heads, so
+ * the number every decision in the game is priced against was three taps from
+ * most of the decisions.
  */
 import { useEffect, useRef } from 'react'
 import {
+  formatCredits,
   formatDuration,
   formatShipClock,
   type GameTime,
+  type LedgerView,
   type LifeSupportView,
   type PowerView,
   type ShipVitalsView,
@@ -52,11 +60,34 @@ function usePublishedHeight() {
   return ref
 }
 
+/**
+ * One standing figure about the desk, with its name under it.
+ *
+ * There are two of these to state and only one of them exists yet. Standing
+ * with the guilds is simulated -- `guildViews`, `adjustStanding`, a band and a
+ * sentence per guild since M3 -- and is not surfaced anywhere a player can see
+ * it while deciding anything, so the second cell is the shape it will take:
+ * beside the money, at the same weight, because "what will they let me fly"
+ * and "what can I afford to fly" are the same size of question (§6.1).
+ *
+ * Laid out so one figure sits alone without a hole beside it and two split the
+ * row evenly, which is why this is a component and not two hardcoded spans.
+ */
+function Figure({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="purse__cell">
+      <span className={`purse__figure ${tone ?? ''}`}>{value}</span>
+      <span className="purse__label">{label}</span>
+    </div>
+  )
+}
+
 export function StatusBar({
   now,
   power,
   vitals,
   life,
+  ledger,
   brokenCount,
   where,
 }: {
@@ -64,6 +95,7 @@ export function StatusBar({
   power: PowerView
   vitals: ShipVitalsView
   life: LifeSupportView
+  ledger: LedgerView
   brokenCount: number
   where: Whereabouts
 }) {
@@ -85,6 +117,18 @@ export function StatusBar({
 
   return (
     <header ref={ref} className={`status ${alarms.length > 0 ? 'is-alarm' : ''}`}>
+      {/* The desk, above the ship. Everything below this line is what the
+          Ariadne is doing; this is what the business is worth, and it is the
+          figure the rest of it is spent against. */}
+      <div className="purse">
+        <Figure
+          label="On the books"
+          value={formatCredits(ledger.credits)}
+          tone={ledger.overdrawn ? 'is-overdrawn' : ''}
+        />
+        {/* Guild influence goes here, at the same weight (§6.1). */}
+      </div>
+
       <div className="status__row">
         <span className="status__clock" title="Ship time">
           {formatShipClock(now)}

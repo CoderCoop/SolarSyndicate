@@ -9,6 +9,41 @@ means here.
 
 ## [Unreleased]
 
+## [0.17.3] — 2026-08-10
+
+### Changed
+
+- **The balance is on every screen now.** §1 makes the player an institution
+  rather than a pilot, and an institution's headline figure is what it is
+  worth — but the balance lived on one panel of one tab, under the ledger it
+  heads. So the number every decision in the game is priced against was three
+  taps from most of the decisions: whether to service a part, whether to hire,
+  whether a run is worth flying.
+
+  It is the first line of the readout at the top of the screen, above anything
+  about the ship, and it freezes there with the tab strip. Overdrawn is
+  coloured and nothing else — a shortfall is a state and never a block
+  (TR-21).
+
+  The books keep their copy: it is the running total the ledger below it adds
+  up to, and a ledger without one reads as a list of transactions belonging to
+  nobody.
+
+- **Money is formatted in one place.** `formatCredits` moves into
+  `packages/sim`, because a balance that reads `−1,204 cr` on one screen and
+  `-1204 cr` on another is two different numbers as far as a reader is
+  concerned.
+
+### Design
+
+- **The readout is built for two standing figures, and states one.** Guild
+  influence is simulated — standing with all four guilds, moving on delivery,
+  lateness and abandonment since M3 — and appears nowhere a player can see it
+  while deciding anything. The second cell is the shape it will take: beside
+  the money, at the same weight, because "what will they let me fly" and "what
+  can I afford to fly" are the same size of question (§6.1). One figure fills
+  the row without a hole beside it; two split it evenly.
+
 ## [0.17.2] — 2026-08-10
 
 ### Fixed

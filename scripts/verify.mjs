@@ -1199,6 +1199,15 @@ check('and the types are not all the same word', new Set(types).size > 1, [...ne
 const balance = await page.textContent('.books__balance')
 check('the books show a balance', /cr$/.test(balance?.trim() ?? ''), balance?.trim() ?? '')
 
+// And the readout shows the same figure, from every screen. The balance is
+// what every decision in the game is priced against, and it used to live under
+// the ledger it heads -- three taps from most of those decisions.
+check(
+  'the standing readout carries the same balance as the books',
+  (await page.textContent('.purse__figure'))?.trim() === balance?.trim(),
+  `${(await page.textContent('.purse__figure'))?.trim()} vs ${balance?.trim()}`,
+)
+
 await page.screenshot({ path: join(SHOTS, '12-board.png'), fullPage: true })
 
 await tap(page, '.offer:first-child .offer__accept')
@@ -1286,6 +1295,12 @@ check(
   'abandoning a run puts the board back and charges for it (TR-21)',
   (await page.textContent('.books__balance')) !== balanceBefore,
   `${balanceBefore?.trim()} -> ${(await page.textContent('.books__balance'))?.trim()}`,
+)
+check(
+  'and the readout charges with them, rather than going stale',
+  (await page.textContent('.purse__figure'))?.trim() ===
+    (await page.textContent('.books__balance'))?.trim(),
+  (await page.textContent('.purse__figure'))?.trim() ?? '',
 )
 
 // --- the yard: the Kestrel's replacement (§5.2, §10.2) ----------------------
