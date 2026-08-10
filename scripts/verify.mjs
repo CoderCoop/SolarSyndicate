@@ -164,8 +164,26 @@ check(
   vitalBars.map((v) => `${v.label}: ${v.zones} zones`).join(' | '),
 )
 
-const barZones = await page.$$eval('.status__gauge .gauge-row__zone', (els) => els.length)
-check('and so is the battery in the status bar', barZones >= 2, `${barZones} zones`)
+// And the standing readout carries one of these per metric, ship and life
+// alike -- the question it exists to answer is "is any of it wrong", which a
+// single gauge for the bank could not answer about the other nine.
+const strip = await page.$$eval('.strip__cell', (cells) =>
+  cells.map((c) => ({
+    label: c.querySelector('.strip__label')?.textContent,
+    zones: c.querySelectorAll('.gauge-row__zone').length,
+    needle: c.querySelector('.gauge-row__needle') !== null,
+  })),
+)
+check(
+  'the status bar carries a gauge for every ship and life metric',
+  strip.length === 10 && strip.every((c) => c.zones >= 1 && c.needle),
+  strip.map((c) => c.label).join(' · '),
+)
+check(
+  'and they are banded, not bare bars',
+  strip.filter((c) => c.zones >= 2).length >= 8,
+  strip.map((c) => `${c.label}:${c.zones}`).join(' '),
+)
 
 await page.screenshot({ path: join(SHOTS, '01-bridge.png'), fullPage: true })
 
