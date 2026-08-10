@@ -25,13 +25,16 @@ import {
   G0,
   MU_SUN,
   burnSplit,
+  hohmannTransfer,
   phasingWaitS,
+  portAngleAt,
   propellantForDeltaV,
   speedOnEllipse,
   stretchedBetween,
-  stretchedTransfer,
   transferStateAt,
+  type Transfer,
 } from './orbits.js'
+import { interplanetaryLeg, orbitStateAt, type TransferOrbit } from './lambert.js'
 import { levelAt, settle } from './resources.js'
 import { DAY, formatDuration, type GameTime } from './time.js'
 import type { SimState } from './types.js'
@@ -86,11 +89,29 @@ export interface TransferOption {
   onTime: boolean
 }
 
-/** The trajectories the astrogator works up. Slower is always cheaper. */
+/**
+ * The trajectories the astrogator works up. Design doc §5.2, spec TR-3b.
+ *
+ * A crossing between two worlds is now chosen by **how long it takes**, and the
+ * price falls out of the geometry. That is the right way round: the ellipse
+ * that connects two moving bodies in a stated time is Lambert's problem and has
+ * exactly one answer, whereas stretching a semi-major axis by a multiplier
+ * chose a *shape* and left the arrival to land wherever it landed.
+ *
+ * `timeFraction` is of the Hohmann time between the two orbits, which is a
+ * constant per pair and so gives every crossing the same three choices. Near a
+ * window slower really is cheaper; far from one the ordering can invert, and
+ * saying so in a comment is cheaper than pretending otherwise -- every option
+ * carries its own delta-v and the desk can read them.
+ *
+ * `multiplier` still governs crossings *inside* one gravity well, where the two
+ * berths are on fixed rings and stretching the ellipse is exactly what the
+ * choice is.
+ */
 const PROFILES = [
-  { id: 'economy', label: 'Minimum energy', multiplier: 1 },
-  { id: 'standard', label: 'Standard transfer', multiplier: 1.04 },
-  { id: 'express', label: 'Express', multiplier: 1.12 },
+  { id: 'economy', label: 'Minimum energy', multiplier: 1, timeFraction: 1 },
+  { id: 'standard', label: 'Standard transfer', multiplier: 1.04, timeFraction: 0.85 },
+  { id: 'express', label: 'Express', multiplier: 1.12, timeFraction: 0.65 },
 ] as const
 
 export type TransferProfile = (typeof PROFILES)[number]
@@ -106,6 +127,81 @@ export type TransferProfile = (typeof PROFILES)[number]
  */
 export function transferProfile(optionId: string): TransferProfile {
   return PROFILES.find((p) => p.id === optionId) ?? PROFILES[0]
+}
+
+
+/**
+ * One crossing, solved. Design doc §5.2.
+ *
+ * The single place a trajectory is worked out, so the astrogator's price, the
+ * telemetry readout and the arc on the chart are three readings of one object
+ * rather than three calculations that agree until one is changed. Returns
+ * undefined when the geometry has no such orbit at all -- which is information
+ * (TR-3b), not a reason to substitute something plausible.
+ */
+export interface Crossing {
+  /** Delta-v of the transfer itself, m/s. Excludes escaping either well. */
+  deltaVMs: number
+  departureDeltaVMs: number
+  arrivalDeltaVMs: number
+  /** Coast in the parking orbit before the burn. In-well crossings only. */
+  waitS: number
+  /** Time under the transfer. */
+  flightS: number
+  /** Both together, which is what the contract's deadline is measured against. */
+  durationS: number
+  /** The heliocentric ellipse, for a crossing between worlds. */
+  orbit?: TransferOrbit
+  /** The in-well ellipse, for a crossing between two berths at one world. */
+  well?: { leg: Transfer; mu: number; r1: number; r2: number; departureAngleRad: number }
+}
+
+export function crossing(
+  fromPortId: string,
+  toPortId: string,
+  departAt: GameTime,
+  optionId: string,
+): Crossing | undefined {
+  const from = getPort(fromPortId)
+  const to = getPort(toPortId)
+  const profile = transferProfile(optionId)
+
+  if (from.bodyId === to.bodyId) {
+    // Two berths around one world. The ellipse is chosen by shape, because both
+    // ends sit on fixed rings and the wait for the geometry is minutes.
+    const mu = getBody(from.bodyId).muM3S2
+    const r1 = from.orbitRadiusKm * 1000
+    const r2 = to.orbitRadiusKm * 1000
+    const leg = stretchedBetween(mu, r1, r2, profile.multiplier)
+    const waitS = phasingWaitS(from.id, to.id, departAt, profile.multiplier)
+    const split = burnSplit(mu, r1, r2, leg.semiMajorAxisM)
+    return {
+      deltaVMs: leg.deltaVMs,
+      departureDeltaVMs: split.departureMs,
+      arrivalDeltaVMs: split.arrivalMs,
+      waitS,
+      flightS: leg.durationS,
+      durationS: waitS + leg.durationS,
+      well: { leg, mu, r1, r2, departureAngleRad: portAngleAt(from.id, departAt + waitS) },
+    }
+  }
+
+  // Between worlds: the ellipse that connects where she is to where the target
+  // will be, in the time this profile buys. Leaving off the window is not
+  // forbidden -- it is priced, which is what §5.1 means by launch windows being
+  // real gameplay.
+  const flightS = hohmannTransfer(from.bodyId, to.bodyId).durationS * profile.timeFraction
+  const leg = interplanetaryLeg(from.bodyId, to.bodyId, departAt, flightS)
+  if (!leg) return undefined
+  return {
+    deltaVMs: leg.deltaVMs,
+    departureDeltaVMs: leg.departureDeltaVMs,
+    arrivalDeltaVMs: leg.arrivalDeltaVMs,
+    waitS: 0,
+    flightS,
+    durationS: flightS,
+    orbit: leg.orbit,
+  }
 }
 
 /**
@@ -130,32 +226,30 @@ export function transferOptions(state: SimState): TransferOption[] {
   const wellDeltaV = sameBody ? 0 : from.escapeDeltaVMs + to.escapeDeltaVMs
 
   return PROFILES.map((profile) => {
-    // Two ports around one body is the same problem as two planets around the
-    // sun -- only the primary changes. Solving it with the same vis-viva and
-    // Kepler maths is what finally removed the hand-set five-day, 1.59 km/s
-    // Luna hop that sat next to honestly derived interplanetary legs for two
-    // milestones. The honest figure is 3.91 km/s, and the tank was sized to
-    // afford it rather than the price being bent to fit the tank (§5.2).
-    const leg = sameBody
-      ? stretchedBetween(
-          getBody(from.bodyId).muM3S2,
-          from.orbitRadiusKm * 1000,
-          to.orbitRadiusKm * 1000,
-          profile.multiplier,
-        )
-      : stretchedTransfer(from.bodyId, to.bodyId, profile.multiplier)
-
-    const deltaVMs = wellDeltaV + leg.deltaVMs
-    const propellantKg = propellantForDeltaV(wet, deltaVMs, ENGINE_ISP_S)
+    const solved = crossing(from.id, to.id, state.now, profile.id)
     const spare = available - PROPELLANT_RESERVE_KG
+
+    if (!solved) {
+      // No orbit connects the two in that time. Shown rather than dropped, with
+      // the reason, because "there is no such trajectory" is a fact about the
+      // solar system the player is entitled to (TR-3b).
+      return {
+        id: profile.id,
+        label: profile.label,
+        summary: `${profile.label}: no trajectory connects the two in that time.`,
+        deltaVMs: 0,
+        durationS: 0,
+        propellantKg: 0,
+        feasible: false,
+        why: 'No orbit joins the two worlds over this crossing time.',
+        onTime: false,
+      }
+    }
+
+    const deltaVMs = wellDeltaV + solved.deltaVMs
+    const propellantKg = propellantForDeltaV(wet, deltaVMs, ENGINE_ISP_S)
     const feasible = propellantKg <= spare
-    // Two ports around one body have real positions now, so the crossing is
-    // only available when the far end will be where the ellipse finishes. The
-    // coast that buys that geometry is part of the crossing rather than a
-    // decision: it is bounded by the synodic period of the two orbits, which
-    // here is never more than about an hour and a half (§5.1).
-    const durationS =
-      phasingWaitS(from.id, to.id, state.now, profile.multiplier) + leg.durationS
+    const durationS = solved.durationS
     const onTime = state.now + durationS <= held.dueAt
 
     const shortfall = propellantKg - spare
@@ -309,29 +403,32 @@ export function voyageView(state: SimState): VoyageView | undefined {
   // the ship left, where it is going and which profile was chosen -- all of
   // which the voyage already records -- so putting the geometry in the save
   // would only be a second copy of it to keep in step.
+  const solved = crossing(from.id, to.id, v.departedAt, v.optionId)
   const mu = sameBody ? getBody(from.bodyId).muM3S2 : MU_SUN
-  const r1 = sameBody ? from.orbitRadiusKm * 1000 : getBody(from.bodyId).orbitRadiusAu * AU
-  const r2 = sameBody ? to.orbitRadiusKm * 1000 : getBody(to.bodyId).orbitRadiusAu * AU
-  const leg = sameBody
-    ? stretchedBetween(mu, r1, r2, profile.multiplier)
-    : stretchedTransfer(from.bodyId, to.bodyId, profile.multiplier)
 
-  const a = leg.semiMajorAxisM
-  // The coast before the departure burn, recomputed from the same inputs the
-  // duration was priced with. She is still at her berth's radius through it.
-  const waitS = phasingWaitS(from.id, to.id, v.departedAt, profile.multiplier)
-  // Where she is on that ellipse right now. The transfer carries which apsis
-  // she left from, so an inbound leg starts at the slow end rather than being
-  // reported at periapsis speed the moment she casts off.
-  const { radiusM: r } = transferStateAt(leg, mu, Math.max(0, elapsed - waitS))
+  // Where she is on that ellipse right now. Between worlds the ellipse is the
+  // Lambert solution; in a well it is the stretched one, and the transfer
+  // carries which apsis she left from so an inbound leg starts at the slow end
+  // rather than being reported at periapsis speed the moment she casts off.
+  const flown = Math.max(0, elapsed - (solved?.waitS ?? 0))
+  const a = solved?.orbit
+    ? solved.orbit.semiMajorAxisM
+    : (solved?.well?.leg.semiMajorAxisM ?? 1)
+  const r = solved?.orbit
+    ? orbitStateAt(solved.orbit, flown).radiusM
+    : solved?.well
+      ? transferStateAt(solved.well.leg, mu, flown).radiusM
+      : (from.orbitRadiusKm * 1000)
 
   const hull = getHull(state.ship.hullId)
-  const split = burnSplit(mu, r1, r2, a)
   const wet = wetMassKg(state, state.now)
   const massFlowKgS = (hull.thrustKn * 1000) / (hull.ispS * G0)
 
   const burns: Burn[] = (['departure', 'arrival'] as const).map((kind) => {
-    const deltaVMs = kind === 'departure' ? split.departureMs : split.arrivalMs
+    const deltaVMs =
+      kind === 'departure'
+        ? (solved?.departureDeltaVMs ?? 0)
+        : (solved?.arrivalDeltaVMs ?? 0)
     const propellantKg = propellantForDeltaV(wet, deltaVMs, hull.ispS)
     return {
       kind,
