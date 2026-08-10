@@ -169,6 +169,58 @@ check('and so is the battery in the status bar', barZones >= 2, `${barZones} zon
 
 await page.screenshot({ path: join(SHOTS, '01-bridge.png'), fullPage: true })
 
+// --- the tab bar is frozen, not merely sticky -------------------------------
+//
+// It has claimed `position: sticky` since M1 and never behaved like it: stuck
+// at the same `top: 0` as the status bar, which paints over it. So the strip
+// left the screen on the way down a cross-section, and changing section meant
+// scrolling all the way back up. Three things have to hold, and only the first
+// of them did: the strip is on screen, it is *below* the readout rather than
+// under it, and a tap at its centre reaches the tab rather than the bar above.
+await page.evaluate(() => globalThis.scrollTo(0, 1200))
+await page.waitForTimeout(200)
+/* eslint-disable no-undef */
+const frozen = await page.evaluate(() => {
+  const tabs = document.querySelector('.tabs').getBoundingClientRect()
+  const status = document.querySelector('.status').getBoundingClientRect()
+  const btn = document.querySelector('.tabs__btn').getBoundingClientRect()
+  const hit = document.elementFromPoint(btn.left + btn.width / 2, btn.top + btn.height / 2)
+  return {
+    scrolled: Math.round(globalThis.scrollY),
+    tabsTop: Math.round(tabs.top),
+    statusBottom: Math.round(status.bottom),
+    reachable: hit?.closest('.tabs') !== null,
+  }
+})
+/* eslint-enable no-undef */
+check(
+  'the tab bar stays on screen down a scrolled cross-section',
+  frozen.scrolled > 600 && frozen.tabsTop >= 0,
+  `scrolled ${frozen.scrolled}px, strip at ${frozen.tabsTop}`,
+)
+check(
+  'and freezes below the status bar rather than beneath it',
+  Math.abs(frozen.tabsTop - frozen.statusBottom) <= 1,
+  `strip at ${frozen.tabsTop}, readout ends at ${frozen.statusBottom}`,
+)
+check('so a tap at a tab reaches the tab, not the readout over it', frozen.reachable)
+
+await tap(page, '.tabs__btn:has-text("Log")')
+await page.waitForSelector('.log__list')
+check('and changing section works without scrolling back up first', await page.isVisible('.log__list'))
+// And lands at the top of it. A section reached from the bottom of a
+// cross-section would otherwise open a thousand pixels into a screen the
+// player has never seen, which reads as a broken tab rather than as a
+// preserved scroll position.
+check(
+  'a section opens at its top, not where the last one was left',
+  (await page.evaluate(() => globalThis.scrollY)) === 0,
+  `${await page.evaluate(() => globalThis.scrollY)}px down`,
+)
+await tap(page, '.tabs__btn:has-text("Ship")')
+await page.waitForSelector('.ship')
+await page.waitForTimeout(200)
+
 // --- a room opens and reveals its parts -------------------------------------
 await tap(page, '.deck:nth-child(3) .deck__head') // Life Support
 await page.waitForSelector('.deck.is-open .parts')

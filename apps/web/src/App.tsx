@@ -150,6 +150,17 @@ export function App() {
     return () => window.clearInterval(id)
   }, [tick])
 
+  useEffect(() => {
+    // A new section starts at its top. This only became a question when the
+    // tab strip froze: before, the strip left the screen on the way down, so
+    // reaching it meant scrolling back up and every section opened at its head
+    // by accident. Now a tab can be tapped from the bottom of a cross-section,
+    // and without this the Chart would open scrolled a thousand pixels into a
+    // screen the player has never seen -- which reads as a broken tab rather
+    // than as a preserved scroll position.
+    window.scrollTo(0, 0)
+  }, [tab])
+
   // And a smooth clock for the one screen that shows things moving fast enough
   // for 1 Hz to stutter. Only while the chart is up: nothing else on the ship
   // changes quickly enough to be worth a frame budget.
