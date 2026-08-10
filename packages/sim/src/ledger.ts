@@ -44,6 +44,20 @@ export interface LedgerView {
   overdrawn: boolean
 }
 
+/**
+ * A balance in words, rounded to the credit.
+ *
+ * Here rather than in a component because two screens state money now -- the
+ * books, and the standing readout at the top of every screen -- and a balance
+ * that reads `−1,204 cr` in one place and `-1204 cr` in the other is two
+ * different numbers as far as a reader is concerned. The minus is a real minus
+ * sign (U+2212), which lines up with digits where a hyphen does not.
+ */
+export function formatCredits(value: number): string {
+  const rounded = Math.round(value)
+  return `${rounded < 0 ? '−' : ''}${Math.abs(rounded).toLocaleString()} cr`
+}
+
 export function ledgerView(state: SimState): LedgerView {
   return {
     credits: state.credits,

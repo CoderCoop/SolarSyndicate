@@ -257,6 +257,7 @@ export function App() {
         power={power}
         vitals={vitals}
         life={life}
+        ledger={ledger}
         brokenCount={brokenCount}
         where={where}
       />

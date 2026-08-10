@@ -22,6 +22,7 @@
  */
 import { getPort } from '@solsyn/data'
 import {
+  formatCredits as credits,
   formatDuration,
   type ActiveContractView,
   type BoardEntry,
@@ -48,11 +49,6 @@ const STORE_LABEL: Record<string, string> = {
   food: 'Food',
   propellant: 'Propellant',
   spares: 'Spares',
-}
-
-function credits(value: number): string {
-  const rounded = Math.round(value)
-  return `${rounded < 0 ? '−' : ''}${Math.abs(rounded).toLocaleString()} cr`
 }
 
 function portName(id: string): string {
@@ -89,7 +85,7 @@ function Books({ ledger }: { ledger: LedgerView }) {
               <span className="books__reason">{e.reason}</span>
               <span className={`books__amount ${e.credits < 0 ? 'is-debit' : 'is-credit'}`}>
                 {e.credits >= 0 ? '+' : ''}
-                {credits(e.credits).replace('−', '−')}
+                {credits(e.credits)}
               </span>
             </li>
           ))}
