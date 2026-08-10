@@ -9,6 +9,69 @@ means here.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-08-10
+
+A minor: every berth is somewhere, and a crossing between two of them has to
+wait for its geometry.
+
+### Added
+
+- **Ports have real positions, and their periods are derived rather than
+  stated.** A port used to be a radius and nothing else — a ring with no
+  position on it — so the chart drew departure at zero, the destination
+  opposite, and said in a comment that the bearings were the drawing's own. Each
+  port now carries an epoch phase, the one genuinely free number in a circular
+  orbit; the period follows from the radius and the body's µ by Kepler's third
+  law.
+
+  Deriving it is the point. It is the *same* µ the crossing between two of that
+  body's ports is priced with, so the drawn position and the priced transfer are
+  one object. Luna comes out at 27.45 days against an observed 27.32 — the half
+  per cent is the two-body approximation ignoring her own mass — and a stated
+  27.32 would look more accurate while putting her where the transfer maths does
+  not think she is.
+
+  | | radius | period |
+  |---|---|---|
+  | Gateway Station | 6,778 km | 92.6 min |
+  | Tranquillity Yards (Luna) | 384,400 km | 27.45 d |
+  | Phobos Yard | 9,376 km | 7.66 h |
+  | Ceres Local | 1,150 km | 8.60 h |
+
+  None of this is stored. Positions have always been closed-form functions of
+  game time, so the save format is untouched, `SIM_STATE_VERSION` stays at 12,
+  and offline catch-up is still bit-identical.
+
+- **A crossing between two berths waits for its window.** With real positions
+  the ellipse can no longer be started whenever you like: it sweeps a fixed
+  angle in a fixed time, so the far end has to already be where it will finish.
+  The ship coasts in her parking orbit until it is, and the chart shows her
+  sitting at her berth while she does.
+
+  The wait is bounded by the synodic period of the two orbits, which around
+  Earth is about ninety minutes — so it is absorbed into the crossing rather
+  than offered as a decision. A launch window you can always meet inside two
+  hours is arithmetic, not gameplay. The interplanetary ones, which run to
+  months, are gameplay (§5.1) and are still reported as windows rather than
+  waited out silently.
+
+### Changed
+
+- **The two frames now agree about where the ship is, exactly.** `0.13.2` held
+  her still across a change of frame by moving the camera, because the
+  heliocentric plate had her at Earth's centre for the whole cislunar crossing
+  and could not resolve a 0.0026 AU offset whose direction nothing modelled.
+  That direction is a known vector now, so the heliocentric plate places her at
+  her world *plus* her orbit about it — the same point the world's own plate
+  draws. The alignment is a fact about the model rather than a compensation.
+
+- **A berthed ship reports the whole of her motion.** Alongside Gateway she is
+  doing Earth's 29.78 km/s round the sun *and* 7.67 km/s round the Earth. Both
+  are real and they add, so the readout now swings between 22.1 and 37.5 over
+  the ninety-two minutes instead of sitting at a flat 29.8. Reporting nought
+  quoted a frame the plate is not drawn in; reporting only the world's motion
+  quoted half of one that it is.
+
 ## [0.13.2] — 2026-08-09
 
 ### Fixed

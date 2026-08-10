@@ -682,9 +682,15 @@ check(
 )
 check(
   'a berthed ship is moving with her berth, not standing still (§5.1)',
-  // 29.8 km/s round the sun. Reporting nought would be quoting a frame the
-  // plate is not drawn in.
-  /^Velocity29\.[0-9]+ km\/s/.test(telem[0] ?? ''),
+  // Earth's 29.78 km/s round the sun *and* Gateway's 7.67 round the Earth. Both
+  // are real and they add, so the honest figure is somewhere in between --
+  // 22.1 at the bottom of the ninety-two minutes and 37.5 at the top. Reporting
+  // nought quotes a frame the plate is not drawn in; reporting a flat 29.8
+  // quotes only half of one that it is.
+  (() => {
+    const kms = Number((telem[0] ?? '').match(/Velocity([\d.]+) km\/s/)?.[1])
+    return kms > 22.0 && kms < 37.5
+  })(),
   telem[0] ?? '',
 )
 check('and the heading needle is drawn from her', await page.isVisible('.chart__velocity line'))
@@ -2157,6 +2163,51 @@ check(
   'and the ship visibly crosses it, rather than sitting on the planet',
   Math.hypot(nowAt[0] - wasAt[0], nowAt[1] - wasAt[1]) > 20,
   `moved ${Math.round(Math.hypot(nowAt[0] - wasAt[0], nowAt[1] - wasAt[1]))} plate units`,
+)
+
+// --- the berths are somewhere, and she goes to meet one (§5.1, pillar 2) ---
+//
+// Every port carries an epoch phase and its period follows from the body's mu,
+// so Gateway comes round in 92.6 minutes and Tranquillity -- which is to say
+// Luna -- in 27.45 days. The plate used to draw departure at zero and the
+// destination opposite, and said the bearings were the drawing's own. Once they
+// are real the crossing is only available when the far end will be where the
+// ellipse finishes, so the ship coasts at her berth until it is. The arc ends
+// where Luna *will be*, which is why it does not end on the berth mark drawn
+// now -- that the two coincide to a ten-billionth of a degree is held by a unit
+// test; what is worth watching here is that they close.
+const berthAt = async (name) =>
+  v1.$eval(`.chart__local-port:has(text:text-matches("${name}")) .chart__local-berth`, (el) => [
+    Number(el.getAttribute('cx')),
+    Number(el.getAttribute('cy')),
+  ])
+const bodyCentre = await v1.$eval('.chart__local-body', (el) => [
+  Number(el.getAttribute('cx')),
+  Number(el.getAttribute('cy')),
+])
+const bearingOf = (p) => Math.atan2(p[1] - bodyCentre[1], p[0] - bodyCentre[0])
+
+const gatewayWas = bearingOf(await berthAt('Gateway'))
+const gapTo = async (name) => {
+  const [bx, by] = await berthAt(name)
+  const [sx, sy] = await shipAt()
+  return Math.hypot(bx - sx, by - sy)
+}
+const gapWas = await gapTo('Tranquillity')
+await voyageCtx.clock.fastForward('00:04:00')
+await v1.waitForTimeout(900)
+const gatewayNow = bearingOf(await berthAt('Gateway'))
+const gapNow = await gapTo('Tranquillity')
+
+check(
+  'a berth is a position on its ring rather than a fixed mark',
+  Math.abs(Math.atan2(Math.sin(gatewayNow - gatewayWas), Math.cos(gatewayNow - gatewayWas))) > 0.2,
+  `Gateway swung ${((gatewayNow - gatewayWas) * 180 / Math.PI).toFixed(0)} degrees`,
+)
+check(
+  'and the ship is closing on the berth she is booked into, not on its ring',
+  gapNow < gapWas,
+  `${gapWas.toFixed(0)} → ${gapNow.toFixed(0)} plate units to Tranquillity`,
 )
 
 const localCaption = await v1.textContent('.chart__caption')

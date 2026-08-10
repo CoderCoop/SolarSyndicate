@@ -39,6 +39,10 @@ import {
   bodyPositionAt,
   bodyVelocityAt,
   phaseAngleForTransfer,
+  phasingWaitS,
+  portAngleAt,
+  portPositionAt,
+  portVelocityAt,
   stretchedBetween,
   stretchedTransfer,
   synodicPeriodDays,
@@ -184,6 +188,15 @@ export interface ChartLocal {
   bodyRadiusAu: number
   /** Where the ship is, relative to the body. */
   ship: Vec2
+  /**
+   * And how fast she is going *about that body*, m/s.
+   *
+   * 7.7 km/s alongside Gateway, 1.0 in lunar orbit, and whatever vis-viva says
+   * in between. Kept here because it is the piece the heliocentric plate has to
+   * add to the body's own motion to report her true speed round the sun —
+   * deriving it twice is how the two would come to disagree.
+   */
+  shipVelocityMs: Vec2
   /** Her arc around it, sampled. Empty unless she is crossing between berths. */
   track: Vec2[]
   ports: {
@@ -197,15 +210,23 @@ export interface ChartLocal {
   /** How far out this frame has to reach, AU. */
   extentAu: number
   /**
-   * Longitudes here are the *transfer's* own reference, not a modelled one.
+   * How much of the *flight* is behind her, 0 to 1.
    *
-   * The sim does not track where Luna is in its month, and inventing a phase
-   * would be a number the player could check and find made up. Departure is
-   * drawn at zero and everything else follows from the ellipse, so the angles
-   * between the things on this plate are true even though their bearing
-   * against the stars is not claimed.
+   * Not the fraction of the voyage: a crossing between two berths now opens
+   * with a coast in the parking orbit until the far end will be where the
+   * ellipse finishes, and counting that as flown would draw the arc part-flown
+   * before the engine had lit.
    */
-  phaseIsRelative: true
+  flownFraction: number
+  /**
+   * Seconds of that coast still to run, zero once she has burned.
+   *
+   * Bounded by the synodic period of the two orbits, which around Earth is
+   * about ninety minutes -- small enough to be part of the crossing rather
+   * than a decision, big enough that a chart showing her sitting at her berth
+   * ought to say why.
+   */
+  phasingS: number
 }
 
 export interface ChartView {
@@ -341,6 +362,11 @@ function longitudeOf(p: Vec2): number {
   return (deg + 360) % 360
 }
 
+/** Vector sum. */
+function add(a: Vec2, b: Vec2): Vec2 {
+  return { x: a.x + b.x, y: a.y + b.y }
+}
+
 function unit(v: Vec2): Vec2 {
   const m = Math.hypot(v.x, v.y)
   return m < 1e-9 ? { x: 0, y: 0 } : { x: v.x / m, y: v.y / m }
@@ -390,8 +416,12 @@ export function chartView(state: SimState): ChartView {
 
   if (!voyage) {
     const home = getPort(state.ship.portId)
-    const at = bodyPositionAt(home.bodyId, t)
-    const v = bodyVelocityAt(home.bodyId, t)
+    // Body plus berth. Her orbit about the world is a real position now, so
+    // adding it is what makes the heliocentric plate and the world's own plate
+    // put her at the *same place* rather than each being right in its own
+    // frame -- which is what "aligned" ought to have meant all along.
+    const at = add(bodyPositionAt(home.bodyId, t), portPositionAt(home.id, t))
+    const v = add(bodyVelocityAt(home.bodyId, t), portVelocityAt(home.id, t))
     ship = {
       x: at.x / AU,
       y: at.y / AU,
@@ -399,8 +429,10 @@ export function chartView(state: SimState): ChartView {
       local: false,
       radiusAu: Math.hypot(at.x, at.y) / AU,
       longitudeDeg: longitudeOf(at),
-      // She is alongside, and alongside is doing 29.8 km/s. The frame the
-      // chart is drawn in is the frame it has to report.
+      // She is alongside, and alongside is doing 29.8 km/s round the sun and
+      // 7.7 km/s round the Earth -- the two add, and which way they add depends
+      // on where in the ninety-two minutes she is. The frame the chart is drawn
+      // in is the frame it has to report, all of it.
       speedMs: Math.hypot(v.x, v.y),
       heading: unit(v),
       flightPathAngleRad: 0,
@@ -413,11 +445,18 @@ export function chartView(state: SimState): ChartView {
     const profile = transferProfile(voyage.optionId)
 
     if (fromBody === toBody) {
-      // A hop inside one gravity well. At this scale the ship has not moved,
-      // and pretending otherwise would put it somewhere it is not -- so the
-      // heliocentric telemetry is the body's, which is the truth of it.
-      const at = bodyPositionAt(fromBody, t)
-      const bv = bodyVelocityAt(fromBody, t)
+      // A hop inside one gravity well. The plate used to pin her at the body's
+      // centre and say so honestly -- at solar-system scale she has not moved
+      // -- but the berths have real positions now, so her offset is a known
+      // vector rather than a direction nobody could name. Adding it is what
+      // puts this plate and the world's own plate on the same point.
+      const world = localView(state)
+      const off = world ? { x: world.ship.x * AU, y: world.ship.y * AU } : { x: 0, y: 0 }
+      const at = add(bodyPositionAt(fromBody, t), off)
+      const bv = add(
+        bodyVelocityAt(fromBody, t),
+        world?.shipVelocityMs ?? { x: 0, y: 0 },
+      )
       ship = {
         x: at.x / AU,
         y: at.y / AU,
@@ -535,40 +574,63 @@ function localView(state: SimState): ChartLocal | undefined {
   const inSystem = voyage ? getPort(voyage.toPortId).bodyId === here.bodyId : false
   const r1 = here.orbitRadiusKm * KM
 
-  // Where each berth sits. Departure at zero; a destination reached by a
-  // half-turn sits opposite, which is what a Hohmann between two coplanar
-  // orbits actually does.
-  const angleOf = (portId: string) => (portId === here.id ? 0 : Math.PI)
+  // Where each berth actually is, now. Every port carries an epoch phase and
+  // its period follows from the body's mu, so this is a position rather than a
+  // convention -- which is what lets this plate and the heliocentric one agree
+  // about where the ship is instead of each being right in its own frame.
   const placed = ports.map((p) => {
-    const radius = getPort(p.id).orbitRadiusKm * KM
-    const a = angleOf(p.id)
+    const at = portPositionAt(p.id, t)
     return {
       ...p,
-      orbitRadiusAu: radius,
-      at: { x: radius * Math.cos(a), y: radius * Math.sin(a) },
+      orbitRadiusAu: getPort(p.id).orbitRadiusKm * KM,
+      at: { x: (at.x / 1000) * KM, y: (at.y / 1000) * KM },
     }
   })
 
   let shipAt: Vec2 = placed.find((p) => p.id === here.id)?.at ?? { x: r1, y: 0 }
+  let shipVelocityMs: Vec2 = portVelocityAt(here.id, t)
   let track: Vec2[] = []
+  let flownFraction = 0
+  let phasingS = 0
 
   if (inSystem && voyage) {
     const to = getPort(voyage.toPortId)
+    const multiplier = transferProfile(voyage.optionId).multiplier
     const leg = stretchedBetween(
       body.muM3S2,
       here.orbitRadiusKm * 1000,
       to.orbitRadiusKm * 1000,
-      transferProfile(voyage.optionId).multiplier,
+      multiplier,
     )
-    const total = voyage.arrivesAt - voyage.departedAt
+    // She coasts at her berth until the geometry works, then burns. The wait is
+    // recomputed from the departure instant rather than stored, the way the
+    // rest of the trajectory is.
+    const waitS = phasingWaitS(here.id, to.id, voyage.departedAt, multiplier)
+    const burnAt = voyage.departedAt + waitS
+    phasingS = Math.max(0, burnAt - t)
+    // The ellipse is oriented by where she is when she lights the engine, so
+    // the far end lands on the target rather than merely on the target's ring.
+    const departureAngle = portAngleAt(here.id, burnAt)
     const at = (elapsed: number): Vec2 => {
       const st = transferStateAt(leg, body.muM3S2, elapsed)
-      const angle = st.sweptRad
+      const angle = departureAngle + st.sweptRad
       return { x: ((st.radiusM / 1000) * KM) * Math.cos(angle), y: ((st.radiusM / 1000) * KM) * Math.sin(angle) }
     }
-    shipAt = at(t - voyage.departedAt)
+    const flown = t - burnAt
+    shipAt = flown <= 0 ? portPositionAtAu(here.id, t) : at(flown)
+    if (flown > 0) {
+      // Radial along the radius vector, transverse a quarter turn ahead of it,
+      // both straight off the same transfer state the position came from.
+      const st = transferStateAt(leg, body.muM3S2, flown)
+      const angle = departureAngle + st.sweptRad
+      shipVelocityMs = {
+        x: st.radialMs * Math.cos(angle) - st.transverseMs * Math.sin(angle),
+        y: st.radialMs * Math.sin(angle) + st.transverseMs * Math.cos(angle),
+      }
+    }
+    flownFraction = Math.min(1, Math.max(0, flown / leg.durationS))
     const steps = 48
-    track = Array.from({ length: steps + 1 }, (_, i) => at((total * i) / steps))
+    track = Array.from({ length: steps + 1 }, (_, i) => at((leg.durationS * i) / steps))
   }
 
   const extentAu = Math.max(
@@ -582,11 +644,19 @@ function localView(state: SimState): ChartLocal | undefined {
     bodyName: body.name,
     bodyRadiusAu: body.radiusKm * KM,
     ship: shipAt,
+    shipVelocityMs,
     track,
     ports: placed,
     extentAu: extentAu * 1.25,
-    phaseIsRelative: true,
+    flownFraction,
+    phasingS,
   }
+}
+
+/** A port's offset from its body, in AU rather than metres. */
+function portPositionAtAu(portId: string, t: GameTime): Vec2 {
+  const at = portPositionAt(portId, t)
+  return { x: (at.x / 1000) * KM, y: (at.y / 1000) * KM }
 }
 
 /** Every body with a port on it, innermost first. */
