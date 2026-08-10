@@ -2192,8 +2192,33 @@ await v1.waitForSelector('.offer')
 await tap(v1, '.offer:first-child .offer__accept')
 await v1.waitForSelector('.option__go')
 
-// Cheapest flyable trajectory: the first option that is not blocked.
-await tap(v1, '.option:not(.is-blocked) .option__go')
+// --- the trajectory decides whether the run is late (TR-19) ----------------
+//
+// The deadline used to be twelve days against a five-day crossing, so every
+// option on this panel said "Deadline: Met" and the late payment was code
+// nothing could reach. It is 4.5 days now: the minimum-energy crossing misses
+// it and the stretched ones make it, which is the whole of what makes the
+// astrogator's panel a decision rather than a list.
+const timings = await v1.$$eval('.option:not(.is-blocked)', (rows) =>
+  rows.map((r) => ({
+    label: r.querySelector('.option__label')?.textContent?.trim(),
+    late: r.classList.contains('is-late'),
+  })),
+)
+check(
+  'the astrogator offers one trajectory that misses the deadline and one that makes it',
+  timings.some((t) => t.late) && timings.some((t) => !t.late),
+  timings.map((t) => `${t.label}: ${t.late ? 'missed' : 'met'}`).join(' · '),
+)
+check(
+  'and the cheap one is the one that misses it',
+  timings[0]?.late === true,
+  `${timings[0]?.label} ${timings[0]?.late ? 'missed' : 'met'}`,
+)
+
+// So fly one that makes it. The late path is flown by the sim's own tests,
+// where the settlement can be read line by line rather than inferred.
+await tap(v1, '.option:not(.is-blocked):not(.is-late) .option__go')
 await v1.waitForSelector('.voyage__track')
 // The fill is zero-width at t=0, so ask the meter what it reads rather than
 // whether a bar of no width happens to be visible.
