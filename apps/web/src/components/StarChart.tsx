@@ -33,11 +33,14 @@
  *
  * And now the three questions a navigator asks about their own vessel:
  * **where am I, how fast, and which way**. The dot has always been in the right
- * place and it said nothing else. It now carries a heading needle scaled to
- * speed, an arc split into what has been flown and what has not, a marked
- * intercept, and a graticule to read longitude against — with the figures
- * repeated underneath, because an arrow is a direction and a player planning a
- * burn wants a number.
+ * place and it said nothing else. It now carries her heading in the glyph and
+ * an arc split into what has been flown and what has not, a marked intercept,
+ * and a graticule to read longitude against — with the figures underneath,
+ * because a picture is a direction and a player planning a burn wants a number.
+ *
+ * The velocity needle that used to stick out of her is gone. It was a second
+ * drawing of something the glyph already says, scaled by a speed nobody reads
+ * off a stub, and on a crowded plate it was one more line to look past.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { ChartBody, ChartLocal, ChartView, ChartWindow } from '@solsyn/sim'
@@ -59,15 +62,6 @@ const PLATE = CENTRE - MARGIN
  */
 const GRATICULE_STEP_DEG = 30
 
-/**
- * Earth's orbital speed, m/s, as the needle's reference length.
- *
- * Scaling the arrow rather than fixing it means a ship crawling near apoapsis
- * has a visibly shorter needle than one whipping through perihelion, which is
- * the single most counter-intuitive fact about orbital transfer and the one a
- * static arrow would have hidden.
- */
-const REFERENCE_SPEED_MS = 29784
 
 /**
  * Plate widths a player can pick, in AU across the whole plate.
@@ -736,17 +730,16 @@ export function StarChart({ chart }: { chart: ChartView }) {
   const flownPath = pathFor(arc.slice(0, cut + 1), view)
   const aheadPath = pathFor(arc.slice(Math.max(0, cut)), view)
 
-  // The needle's bearing is taken *through the projection*, by stepping a short
-  // way along the true velocity and projecting both ends. The square-root
-  // radial scale bends direction as well as distance, so a needle drawn at the
-  // true bearing sits visibly off the arc it is supposed to be tangent to. The
-  // honest angle is still stated as a number in the readout below; on the plate
-  // the arrow has to agree with the plate. (In a close view the two coincide,
+  // Her bearing is taken *through the projection*, by stepping a short way
+  // along the true velocity and projecting both ends. The square-root radial
+  // scale bends direction as well as distance, so a glyph turned to the true
+  // bearing sits visibly off the arc it is supposed to be tangent to. The honest
+  // angle is still stated as a number in the readout below; on the plate the
+  // picture has to agree with the plate. (In a close view the two coincide,
   // which is rather the point of a close view.)
   const step = 0.004 * view.reachAu
   const [aheadX, aheadY] = view.to(ship.x + ship.heading.x * step, ship.y + ship.heading.y * step)
   const headingDeg = (Math.atan2(aheadY - shipY, aheadX - shipX) * 180) / Math.PI
-  const needle = 10 + 16 * Math.min(1.6, ship.speedMs / REFERENCE_SPEED_MS)
 
   // Which worlds land on the plate, and which have to be pointed at instead.
   const placed = chart.bodies.map((b) => {
@@ -818,16 +811,6 @@ export function StarChart({ chart }: { chart: ChartView }) {
             <stop offset="0" className="sun-core" />
             <stop offset="1" className="sun-edge" />
           </radialGradient>
-          <marker
-            id="chart-arrow"
-            markerWidth="5"
-            markerHeight="5"
-            refX="4"
-            refY="2.5"
-            orient="auto"
-          >
-            <path className="chart__arrowhead" d="M0 0 L5 2.5 L0 5 Z" />
-          </marker>
           {/* An orbit seen from close up is a circle hundreds of plate-widths
               across. Clipping is what lets the same code draw it in both
               views rather than special-casing the near one. */}
@@ -1019,16 +1002,10 @@ export function StarChart({ chart }: { chart: ChartView }) {
             <Offplate key={p.body.id} body={p.body} x={p.x} y={p.y} />
           ))}
 
-        {/* The ship, turned to her heading, with a needle whose length is her
-            speed. The glyph used to point up whatever she was doing. */}
+        {/* The ship, turned to her heading. The glyph used to point up whatever
+            she was doing. */}
         <g className={`chart__ship ${ship.atPortId ? 'is-berthed' : 'is-under-way'}`}>
           <circle className="chart__ship-halo" cx={shipX} cy={shipY} r="9" />
-          <g
-            className="chart__velocity"
-            transform={`translate(${shipX} ${shipY}) rotate(${headingDeg})`}
-          >
-            <line x1="9" y1="0" x2={needle} y2="0" markerEnd="url(#chart-arrow)" />
-          </g>
           <path
             className="chart__ship-mark"
             transform={`translate(${shipX} ${shipY}) rotate(${headingDeg + 90})`}
@@ -1110,8 +1087,8 @@ export function StarChart({ chart }: { chart: ChartView }) {
             same scale so you can see by how much.
           </>
         )}{' '}
-        The faint arc off each world is where it will be in {chart.leadDays} days; the needle
-        off the ship is her heading, drawn longer the faster she is going.
+        The faint arc off each world is where it will be in {chart.leadDays} days, and
+        the ship's glyph is turned to her heading.
       </p>
     </section>
   )

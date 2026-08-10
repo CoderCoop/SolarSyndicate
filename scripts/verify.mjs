@@ -693,7 +693,14 @@ check(
   })(),
   telem[0] ?? '',
 )
-check('and the heading needle is drawn from her', await page.isVisible('.chart__velocity line'))
+// The needle that used to stick out of her is gone: a second drawing of what
+// the glyph already says, scaled by a speed nobody reads off a stub.
+check(
+  'her heading is in the glyph rather than in a second arrow beside it',
+  (await page.$$('.chart__velocity')).length === 0 &&
+    /rotate\(-?\d/.test((await page.getAttribute('.chart__ship-mark', 'transform')) ?? ''),
+  (await page.getAttribute('.chart__ship-mark', 'transform')) ?? '',
+)
 
 // --- the chart zooms in, to a true scale (§5.1) ----------------------------
 //
