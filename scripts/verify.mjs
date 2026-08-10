@@ -976,6 +976,63 @@ check(
   offplate.join(' · '),
 )
 
+// --- a change of scale does not change what exists (§5.1) -------------------
+//
+// The berths only ever existed in the world's own frame, so pinching into the
+// ship's frame lost them: a plate two million kilometres across -- five times
+// the distance to Luna, and drawing it -- had Tranquillity nowhere on it. And
+// the world's own frame pointed at nothing heliocentric, so stepping into it
+// quietly deleted the rest of the solar system. Same failure, both directions.
+//
+// The rule is not "everything is always drawn". It is that nothing is *lost*:
+// a thing is either on the plate, or pointed at from the rim, or too close to
+// the world it orbits for this scale to separate the two -- in which case the
+// world's own label names it.
+const textsOf = async (sel) =>
+  page.$$eval(sel, (els) => els.map((e) => e.textContent?.trim()))
+const plateBox = await (await page.$('.chart')).boundingBox()
+
+await page.click('.zoomer__btn:text-is("Ship")')
+await page.waitForSelector('.chart__grid')
+// Down to a cislunar plate, zooming on the ship so she stays under the pointer.
+for (let i = 0; i < 12; i++) {
+  const t = await page.getAttribute('.chart__ship-mark', 'transform')
+  const [sx, sy] = t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1, 3).map(Number)
+  // The plate's viewBox is 300 wide by 316 tall, so the element's own centre is
+  // not the plate's -- zooming at the wrong point walks the ship off the edge.
+  await page.mouse.move(
+    plateBox.x + (sx / 300) * plateBox.width,
+    plateBox.y + (sy / 316) * plateBox.height,
+  )
+  await page.mouse.wheel(0, -120)
+  await page.waitForTimeout(60)
+}
+const cislunar = ((await page.textContent('.zoomer__scale')) ?? '').trim()
+const shipFrameBerths = await textsOf('.chart__local-port text')
+check(
+  "zooming the ship's frame to a cislunar plate brings the berths with it",
+  /M km across$/.test(cislunar) && shipFrameBerths.some((b) => /Luna/.test(b ?? '')),
+  `${cislunar} — ${shipFrameBerths.join(' · ') || 'nothing drawn'}`,
+)
+check(
+  'and nothing on it is still calling a measured gap "here"',
+  !(await textsOf('.chart__range')).includes('here'),
+  (await textsOf('.chart__range')).join(' · ') || 'none',
+)
+
+await page.click('.zoomer__btn:text-is("Earth")')
+await page.waitForSelector('.chart__local')
+const strangers = await textsOf('.chart__offplate text')
+check(
+  "and the world's own frame points at the system it is part of",
+  strangers.includes('Mars') && strangers.includes('Ceres'),
+  strangers.join(' · ') || 'nothing pointed at',
+)
+check(
+  'including which way the sun is, on the plate where that decides a berth’s day',
+  await page.isVisible('.chart__sunward'),
+)
+
 // --- the zoom is continuous, and the wheel is the chart's (§5.1, §8.1) -----
 //
 // Two failures that read as one symptom: stepping off the system plate from a
@@ -2189,8 +2246,8 @@ check(
 // that looked broken. Keep zooming and the plate lands in Earth's own frame.
 await tap(v1, '.tabs__btn:has-text("Chart")')
 await v1.waitForSelector('.chart')
-const plateBox = await (await v1.$('.chart')).boundingBox()
-const overPlate = { x: plateBox.x + plateBox.width / 2, y: plateBox.y + plateBox.height / 2 }
+const v1PlateBox = await (await v1.$('.chart')).boundingBox()
+const overPlate = { x: v1PlateBox.x + v1PlateBox.width / 2, y: v1PlateBox.y + v1PlateBox.height / 2 }
 await v1.mouse.move(overPlate.x, overPlate.y)
 // One press, not a couple of dozen notches. The frame is chosen rather than
 // stumbled into: zooming inside the ship's frame stays in the ship's frame

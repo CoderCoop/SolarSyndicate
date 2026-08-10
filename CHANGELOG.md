@@ -9,6 +9,43 @@ means here.
 
 ## [Unreleased]
 
+## [0.17.4] — 2026-08-10
+
+### Fixed
+
+- **Changing frame or scale no longer changes what exists.** Two halves of one
+  fault, in opposite directions.
+
+  **The ship's frame had no berths.** They were drawn only in the world's own
+  frame, so pinching into the frame whose entire job is *exactly where* lost
+  them: a plate two million kilometres across — five times the distance to
+  Luna, and drawing it to scale — had Tranquillity nowhere on it at all. The
+  berths have had true heliocentric positions since `0.16.0` (body plus orbit),
+  so every frame can draw them, and now does.
+
+  **The world's own frame pointed at nothing.** Step into Earth's frame and
+  Mars, Ceres and the sun were simply gone — no marker, no range, no direction.
+  The chevrons that exist precisely so a close view does not lose Mars were
+  suppressed there, because everything heliocentric needed bringing into the
+  body's frame first. It does that now, including the sun, which on the one
+  plate where "which way is sunward" decides what a berth's day looks like was
+  the worst of the three to be missing.
+
+  The rule is not that everything is always drawn. It is that nothing is
+  *lost*: a thing is on the plate, or pointed at from the rim with its range,
+  or too close to the world it orbits for this scale to separate them — in
+  which case the world's own label names it, as it always has. That last case
+  is why Gateway does not clutter a half-AU plate: at that scale it is inside
+  Earth's dot, and claiming a gap the projection cannot show would be its own
+  kind of lie.
+
+- **An arrow pointing off the plate no longer says the thing is "here".**
+  `distance` answers "here" below a thousandth of an AU, which is right at
+  solar-system scale and nonsense on a plate whose ruler is in hundreds of
+  kilometres — the Earth marker read `here` while pointing at a world 6,771 km
+  away and visibly off the edge. Close in, ranges under that threshold are
+  quoted in kilometres, which is the unit the rest of the game uses for them.
+
 ## [0.17.3] — 2026-08-10
 
 ### Changed

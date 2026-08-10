@@ -43,7 +43,7 @@
  * off a stub, and on a crowded plate it was one more line to look past.
  */
 import { useEffect, useRef, useState } from 'react'
-import type { ChartBody, ChartLocal, ChartView, ChartWindow } from '@solsyn/sim'
+import type { ChartLocal, ChartView, ChartWindow } from '@solsyn/sim'
 
 const SIZE = 300
 const CENTRE = SIZE / 2
@@ -756,10 +756,66 @@ export function StarChart({ chart }: { chart: ChartView }) {
   const headingDeg = (Math.atan2(aheadY - shipY, aheadX - shipX) * 180) / Math.PI
 
   // Which worlds land on the plate, and which have to be pointed at instead.
-  const placed = chart.bodies.map((b) => {
-    const [x, y] = view.to(b.x, b.y)
-    return { body: b, x, y, on: onPlateAt(x, y, 2) }
-  })
+  // In the world's own frame the coordinates are about the body, so everything
+  // heliocentric has to be brought into that frame before it can be pointed at
+  // -- which is the whole reason the local plate used to draw nothing but the
+  // berths and leave the rest of the solar system unaccounted for.
+  const homeBody = nearby ? chart.bodies.find((b) => b.id === nearby.bodyId) : undefined
+  const inFrame = (x: number, y: number): [number, number] =>
+    isLocal && homeBody ? view.to(x - homeBody.x, y - homeBody.y) : view.to(x, y)
+
+  const placed = chart.bodies
+    // The world this frame is drawn about is the frame, not an object in it:
+    // `LocalFrame` already draws it to scale at the origin.
+    .filter((b) => !(isLocal && b.id === homeBody?.id))
+    .map((b) => {
+      const [x, y] = inFrame(b.x, b.y)
+      return { body: b, x, y, on: onPlateAt(x, y, 2) }
+    })
+
+  // The star, in this frame's coordinates. Heliocentrically it is the origin;
+  // in a world's own frame it is minus wherever that world is.
+  const sunAt: [number, number] = inFrame(0, 0)
+
+  // And where the berths of her world land. They have true heliocentric
+  // positions -- body plus orbit -- so every frame but the system plate can
+  // draw them; before this they existed only in the world's own frame, and
+  // pinching into the ship's lost Luna at the exact scale it becomes visible.
+  const berthCentre: [number, number] | undefined = nearby
+    ? isLocal
+      ? view.to(0, 0)
+      : homeBody
+        ? view.to(homeBody.x, homeBody.y)
+        : undefined
+    : undefined
+  const berths: PlacedBerth[] =
+    close && nearby && berthCentre
+      ? nearby.ports.map((p) => {
+          // Local coordinates are about the body; heliocentric ones are the
+          // same offset added to where the body is.
+          const at = isLocal ? p.at : { x: homeBody!.x + p.at.x, y: homeBody!.y + p.at.y }
+          const [x, y] = view.to(at.x, at.y)
+          return {
+            id: p.id,
+            // In a heliocentric frame the world is a fixed-size map symbol, so
+            // a berth only earns ink once the scale has actually separated the
+            // two: at half an AU across, Gateway and Tranquillity are both
+            // inside Earth's dot, and drawing them there would be two labels
+            // on one point claiming a gap the plate cannot show. The world's
+            // own frame is the exception -- the berths are its subject, and
+            // Gateway's ring sitting almost against the limb is the picture.
+            resolved: isLocal || Math.hypot(x - berthCentre[0], y - berthCentre[1]) >= 8,
+            label: p.moon ? `${p.name.split(' ')[0] ?? p.name} (${p.moon})` : (p.name.split(' ')[0] ?? p.name),
+            // Measured about the body, where both the berth and the ship have
+            // an offset -- the one subtraction that is the same number in
+            // either frame.
+            distanceAu: Math.hypot(p.at.x - nearby.ship.x, p.at.y - nearby.ship.y),
+            x,
+            y,
+            on: onPlateAt(x, y, 2),
+          }
+        })
+      : []
 
   return (
     <section className="panel" aria-label="Star chart">
@@ -875,11 +931,18 @@ export function StarChart({ chart }: { chart: ChartView }) {
             *is* even, which is the whole difference between the two views. */}
         {close && <Grid view={view} />}
 
-        {/* The world's own frame: the planet to scale, and a ring for each
-            berth around it. Everything heliocentric is off in here -- the sun
-            is a hundred thousand plate-widths away and its orbits are
-            straight lines. */}
+        {/* The world's own frame: the planet, drawn to scale. Everything
+            heliocentric is off in here -- the sun is a hundred thousand
+            plate-widths away and its orbits are straight lines. */}
         {local && <LocalFrame local={local} view={view} />}
+
+        {/* Her world's berths, in whichever frame this is. Drawn in the ship's
+            frame as well as the world's own, because a plate two million
+            kilometres across that does not show Luna is losing the only two
+            places on it the ship can tie up at. */}
+        {berthCentre && berths.length > 0 && (
+          <Berths berths={berths.filter((p) => p.on && p.resolved)} centre={berthCentre} />
+        )}
 
         {/* Orbits, innermost first, with the direction everything travels. */}
         <g clipPath="url(#chart-plate)">
@@ -896,7 +959,9 @@ export function StarChart({ chart }: { chart: ChartView }) {
         </g>
 
         {/* Where each world will be in a season. A body is a moving target and
-            the arc has to be aimed at where it is going, not where it is. */}
+            the arc has to be aimed at where it is going, not where it is.
+            Never in the world's own frame: ninety days of Earth's orbit is
+            eight hundred thousand plate-widths of it. */}
         <g clipPath="url(#chart-plate)">
           {!isLocal &&
             placed.map(({ body: b, on }) => {
@@ -924,21 +989,26 @@ export function StarChart({ chart }: { chart: ChartView }) {
         </g>
 
         {/* The star, where it actually falls. Close up it is usually off the
-            plate, and a sunward arrow says which way rather than drawing a
-            sun in the wrong place. */}
-        {isLocal ? null : onPlateAt(view.sun[0], view.sun[1]) ? (
+            plate, and a sunward arrow says which way rather than drawing a sun
+            in the wrong place.
+            In the world's own frame `view.sun` is the *body* -- that frame's
+            origin -- so the star is at minus the body's heliocentric position,
+            and it gets an arrow like everything else that will not fit. It used
+            to get nothing at all, which left the one plate where "which way is
+            sunward" decides what a berth's day looks like unable to say. */}
+        {onPlateAt(sunAt[0], sunAt[1]) ? (
           <>
             <circle
               className="chart__glare"
-              cx={view.sun[0]}
-              cy={view.sun[1]}
+              cx={sunAt[0]}
+              cy={sunAt[1]}
               r="13"
               fill="url(#chart-sun-glare)"
             />
-            <circle className="chart__sun" cx={view.sun[0]} cy={view.sun[1]} r="4.5" />
+            <circle className="chart__sun" cx={sunAt[0]} cy={sunAt[1]} r="4.5" />
           </>
         ) : (
-          <Sunward view={view} />
+          <Sunward at={sunAt} />
         )}
 
         {/* The transfer arc, cut at the ship: flown behind, committed ahead.
@@ -999,9 +1069,13 @@ export function StarChart({ chart }: { chart: ChartView }) {
               <text className="chart__name" x={x} y={y - mark.r - 5} textAnchor="middle">
                 {b.name}
               </text>
-              {/* The number the whole moving-planets design exists to produce. */}
+              {/* The number the whole moving-planets design exists to produce.
+                  "here" is the right answer at solar-system scale and the wrong
+                  one on a plate whose ruler is in hundreds of kilometres: close
+                  in, the gap the label calls nothing is the gap the plate is
+                  drawing. */}
               <text className="chart__range" x={x} y={y + mark.r + 9} textAnchor="middle">
-                {distance(b.distanceAu)}
+                {close ? range(b.distanceAu) : distance(b.distanceAu)}
               </text>
               {b.ports.length > 0 && (
                 <text className="chart__ports" x={x} y={y + mark.r + 17} textAnchor="middle">
@@ -1016,12 +1090,36 @@ export function StarChart({ chart }: { chart: ChartView }) {
 
         {/* Somewhere off the edge. A close view that simply loses Mars is
             worse than the wide one it replaced, so what will not fit is
-            pointed at, named, and given its range. */}
-        {placed
-          .filter((p) => !p.on && !isLocal)
-          .map((p) => (
-            <Offplate key={p.body.id} body={p.body} x={p.x} y={p.y} />
-          ))}
+            pointed at, named, and given its range.
+            Every frame, and berths as well as worlds. The world's own frame
+            used to point at nothing, so pinching into Earth quietly deleted
+            the rest of the solar system; the ship's frame drew no berths at
+            all, so it deleted Luna. Both are the same failure -- a change of
+            scale is not supposed to change what exists. */}
+        {[
+          ...placed
+            .filter((p) => !p.on)
+            .map((p) => ({
+              key: p.body.id,
+              name: p.body.name,
+              distanceAu: p.body.distanceAu,
+              tone: WORLD[p.body.id]?.tone ?? 'ceres',
+              x: p.x,
+              y: p.y,
+            })),
+          ...berths
+            .filter((p) => !p.on && p.resolved)
+            .map((p) => ({
+              key: p.id,
+              name: p.label,
+              distanceAu: p.distanceAu,
+              tone: 'berth',
+              x: p.x,
+              y: p.y,
+            })),
+        ].map(({ key, ...marker }) => (
+          <Offplate key={key} {...marker} />
+        ))}
 
         {/* The ship, turned to her heading. The glyph used to point up whatever
             she was doing. */}
@@ -1286,34 +1384,66 @@ function LocalFrame({ local, view }: { local: ChartLocal; view: View }) {
         cy={cy}
         r={bodyR}
       />
-      {local.ports.map((p) => {
-        const [px, py] = view.to(p.at.x, p.at.y)
-        return (
-          <g key={p.id} className="chart__local-port">
-            <circle
-              className="chart__orbit"
-              cx={cx}
-              cy={cy}
-              r={view.orbitR(p.orbitRadiusAu)}
-            />
-            <circle className="chart__local-berth" cx={px} cy={py} r="2.6" />
-            {/* Set outward from the body, along the berth's own side. Two
-                rings that share a centre put their labels on top of each other
-                if both are pulled toward the middle -- and outward is where the
-                empty space is. */}
-            <text
-              x={px + (px < cx ? -5 : 5)}
-              y={py - 6}
-              textAnchor={px < cx ? 'end' : 'start'}
-            >
-              {p.moon ? `${p.name.split(' ')[0]} (${p.moon})` : p.name.split(' ')[0]}
-            </text>
-          </g>
-        )
-      })}
       <text className="chart__local-name" x={cx} y={cy + bodyR + 11} textAnchor="middle">
         {local.bodyName}
       </text>
+    </g>
+  )
+}
+
+/** A berth, wherever it has landed, and how the plate is to say so. */
+interface PlacedBerth {
+  id: string
+  /** "Tranquillity (Luna)" — the moon travels with the port. */
+  label: string
+  /** Distance from the ship, AU, for the chevron when it does not fit. */
+  distanceAu: number
+  /** False when the scale cannot yet separate it from the world it orbits. */
+  resolved: boolean
+  x: number
+  y: number
+  on: boolean
+}
+
+/**
+ * The berths of the world she is at, in whichever frame the plate is drawn in.
+ *
+ * These used to exist only in the world's own frame, which meant the ship
+ * frame lost them: pinch in to a plate two million kilometres across —
+ * comfortably wider than the 384,400 km to Luna — and Tranquillity was simply
+ * not there, on the one view whose whole job is "exactly where". The berths
+ * have true heliocentric positions (body plus orbit) and always did, so the
+ * heliocentric frames can draw them at the scale they become visible at.
+ *
+ * Not on the system plate: at a square-root radius about the sun, a berth and
+ * its world are the same point, and drawing both would claim a separation the
+ * projection cannot show.
+ */
+function Berths({ berths, centre }: { berths: PlacedBerth[]; centre: [number, number] }) {
+  const [cx, cy] = centre
+  return (
+    // Its own group, not the local frame's: `.chart__local` is how the rest of
+    // the app asks "is this plate drawn about a world", and berths are now
+    // drawn in the ship's frame too. They keep the berth classes, because they
+    // are the same objects drawn the same way.
+    <g className="chart__berths" clipPath="url(#chart-plate)">
+      {berths.map((p) => (
+        <g key={p.id} className="chart__local-port">
+          <circle className="chart__orbit" cx={cx} cy={cy} r={Math.hypot(p.x - cx, p.y - cy)} />
+          <circle className="chart__local-berth" cx={p.x} cy={p.y} r="2.6" />
+          {/* Set outward from the body, along the berth's own side. Two rings
+              that share a centre put their labels on top of each other if both
+              are pulled toward the middle -- and outward is where the empty
+              space is. */}
+          <text
+            x={p.x + (p.x < cx ? -5 : 5)}
+            y={p.y - 6}
+            textAnchor={p.x < cx ? 'end' : 'start'}
+          >
+            {p.label}
+          </text>
+        </g>
+      ))}
     </g>
   )
 }
@@ -1385,8 +1515,8 @@ function Grid({ view }: { view: View }) {
  * it on whichever side the rotation happens to leave it -- which, with the sun
  * off to the left, was directly on top of the arrowhead.
  */
-function Sunward({ view }: { view: View }) {
-  const angle = Math.atan2(view.sun[1] - CENTRE, view.sun[0] - CENTRE)
+function Sunward({ at }: { at: [number, number] }) {
+  const angle = Math.atan2(at[1] - CENTRE, at[0] - CENTRE)
   const deg = (angle * 180) / Math.PI
   const [x, y] = [CENTRE + Math.cos(angle) * (PLATE - 6), CENTRE + Math.sin(angle) * (PLATE - 6)]
   // Outside the rim, where nothing else is drawn in a close view -- the
@@ -1405,13 +1535,44 @@ function Sunward({ view }: { view: View }) {
 }
 
 /**
- * A world that will not fit, pointed at from the rim.
+ * A range for something that is *not* on the plate.
+ *
+ * `distance` is right to say "here" for anything under a thousandth of an AU —
+ * at solar-system scale that really is here. A chevron cannot: an arrow
+ * pointing off the edge labelled "here" is a contradiction, and it is what the
+ * Earth marker read close in on a berth 6,771 km away. Under that threshold the
+ * answer is in kilometres, which is the unit the distance is quoted in
+ * everywhere else in the game.
+ */
+function range(au: number): string {
+  if (au < 0.001) return `${Math.round(au * 149597871).toLocaleString()} km`
+  return distance(au)
+}
+
+/**
+ * Anything that will not fit, pointed at from the rim.
  *
  * A close view that simply loses Mars is worse than the wide one it replaced.
- * The chevron sits on the edge in the world's true direction and carries its
+ * The chevron sits on the edge in the thing's true direction and carries its
  * range, so "not on this plate" still answers where and how far.
+ *
+ * Worlds and berths alike. A frame that drops a berth is the same failure as
+ * one that drops a planet, and at a cislunar scale the berth is the one the
+ * player is actually flying between.
  */
-function Offplate({ body, x, y }: { body: ChartBody; x: number; y: number }) {
+function Offplate({
+  name,
+  distanceAu,
+  tone,
+  x,
+  y,
+}: {
+  name: string
+  distanceAu: number
+  tone: string
+  x: number
+  y: number
+}) {
   const angle = Math.atan2(y - CENTRE, x - CENTRE)
   const deg = (angle * 180) / Math.PI
   const px = CENTRE + Math.cos(angle) * (PLATE - 4)
@@ -1423,13 +1584,13 @@ function Offplate({ body, x, y }: { body: ChartBody; x: number; y: number }) {
   const anchor = Math.cos(angle) > 0.3 ? 'end' : Math.cos(angle) < -0.3 ? 'start' : 'middle'
 
   return (
-    <g className={`chart__offplate chart__offplate--${WORLD[body.id]?.tone ?? 'ceres'}`}>
+    <g className={`chart__offplate chart__offplate--${tone}`}>
       <path transform={`translate(${px} ${py}) rotate(${deg})`} d="M0 0 L-7 -3.5 L-7 3.5 Z" />
       <text x={lx} y={ly} textAnchor={anchor}>
-        {body.name}
+        {name}
       </text>
       <text className="chart__offplate-range" x={lx} y={ly + 8} textAnchor={anchor}>
-        {distance(body.distanceAu)}
+        {range(distanceAu)}
       </text>
     </g>
   )
