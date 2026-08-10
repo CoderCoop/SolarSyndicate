@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AUTO_SERVICE_CONDITION,
   activeContract,
   emergencyView,
+  TIME_SCALE,
   chartView,
   contractBoard,
   crewViews,
@@ -68,6 +69,48 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'help', label: 'Help' },
 ]
 
+/**
+ * A game clock that runs between the 1 Hz ticks. Design doc §8.5, §8.1.
+ *
+ * `state.now` moves once a second, which at 720x is twelve game minutes a step.
+ * That is invisible for a planet and hopeless for a station: Gateway's orbit is
+ * 92.6 minutes, so its berth jumped forty-seven degrees a frame and read as a
+ * fault rather than as a low orbit.
+ *
+ * What this returns is a *time*, not a position. Every position in the sim is a
+ * closed-form function of time, so evaluating at 03:41:07.35 gives the truth at
+ * 03:41:07.35 -- there is no interpolation anywhere and nothing is smoothed
+ * toward anything. Lerping between two drawn frames would have been easier and
+ * would have put the ship somewhere she is not, which is the whole thing the
+ * plate exists not to do.
+ *
+ * Re-anchored on every tick rather than free-running, so it can never drift
+ * away from the simulation it is drawing.
+ */
+function useAnimatedNow(now: number, running: boolean): number {
+  const [display, setDisplay] = useState(now)
+  const anchor = useRef({ sim: now, wall: 0 })
+
+  useEffect(() => {
+    anchor.current = { sim: now, wall: performance.now() }
+    if (!running) setDisplay(now)
+  }, [now, running])
+
+  useEffect(() => {
+    if (!running) return
+    let frame = 0
+    const step = () => {
+      const { sim, wall } = anchor.current
+      setDisplay(sim + ((performance.now() - wall) / 1000) * TIME_SCALE)
+      frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [running])
+
+  return running ? display : now
+}
+
 export function App() {
   const state = useGame((s) => s.state)
   const status = useGame((s) => s.status)
@@ -105,6 +148,11 @@ export function App() {
     const id = window.setInterval(tick, 1000)
     return () => window.clearInterval(id)
   }, [tick])
+
+  // And a smooth clock for the one screen that shows things moving fast enough
+  // for 1 Hz to stutter. Only while the chart is up: nothing else on the ship
+  // changes quickly enough to be worth a frame budget.
+  const animatedNow = useAnimatedNow(state?.now ?? 0, tab === 'chart')
 
   if (status === 'loading' || !state) {
     return (
@@ -153,7 +201,17 @@ export function App() {
   const orders = workOrderViews(state)
   const channels = flowChannels(state)
   const graph = flowGraph(state)
-  const chart = chartView(state)
+  // Drawn on a clock that runs between ticks. The cosmetic tick is 1 Hz, which
+  // at 720x is twelve game minutes a frame -- and Gateway goes round the Earth
+  // in 92.6 of them, so the berth jumped forty-seven degrees a step and read as
+  // a fault rather than as a fast orbit.
+  //
+  // Nothing is interpolated, which is the point: every position in this sim is
+  // a closed-form function of time, so asking for the position at 03:41:07.35
+  // is asking for the truth at 03:41:07.35 rather than for a guess between two
+  // samples. Smoothing a drawing by lerping between frames is exactly the kind
+  // of plausible-looking lie the plate is supposed not to tell.
+  const chart = chartView(tab === 'chart' ? { ...state, now: animatedNow } : state)
   const ledger = ledgerView(state)
   const board = contractBoard(state)
   const active = activeContract(state)

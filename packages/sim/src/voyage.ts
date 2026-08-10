@@ -226,7 +226,36 @@ export interface Crossing {
   well?: { leg: Transfer; mu: number; r1: number; r2: number; departureAngleRad: number }
 }
 
+/**
+ * One solved crossing, remembered.
+ *
+ * A trajectory depends on where she left, where she is going, when she left and
+ * what was chosen -- and on *none* of them changing as the clock runs. The
+ * chart is drawn at animation rate now, and a window search is sixty-odd
+ * Lambert solves, so recomputing an answer that cannot have changed sixty times
+ * a second is the difference between a smooth plate and a warm phone. One entry
+ * is enough: there is one ship and one voyage.
+ *
+ * Caching a pure function of its arguments; determinism is untouched (§7.2).
+ */
+let lastCrossing:
+  | { key: string; value: Crossing | undefined }
+  | undefined
+
 export function crossing(
+  fromPortId: string,
+  toPortId: string,
+  departAt: GameTime,
+  optionId: string,
+): Crossing | undefined {
+  const key = `${fromPortId}|${toPortId}|${departAt}|${optionId}`
+  if (lastCrossing?.key === key) return lastCrossing.value
+  const value = solveCrossing(fromPortId, toPortId, departAt, optionId)
+  lastCrossing = { key, value }
+  return value
+}
+
+function solveCrossing(
   fromPortId: string,
   toPortId: string,
   departAt: GameTime,
