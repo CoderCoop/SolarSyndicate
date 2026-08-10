@@ -34,7 +34,6 @@
 import { content, getBody, getPort } from '@solsyn/data'
 import {
   AU,
-  MU_SUN,
   bodyAngleAt,
   bodyPositionAt,
   bodyVelocityAt,
@@ -44,14 +43,14 @@ import {
   portPositionAt,
   portVelocityAt,
   stretchedBetween,
-  stretchedTransfer,
   synodicPeriodDays,
   transferStateAt,
   type Vec2,
 } from './orbits.js'
 import { DAY, type GameTime } from './time.js'
 import type { SimState } from './types.js'
-import { transferProfile } from './voyage.js'
+import { crossing, transferProfile } from './voyage.js'
+import { orbitStateAt } from './lambert.js'
 
 export interface ChartBody {
   id: string
@@ -316,43 +315,59 @@ function windowFor(fromBodyId: string, toBodyId: string, t: GameTime): ChartWind
  * demonstrably was not.
  */
 export function transferPositionAu(
-  fromBodyId: string,
-  toBodyId: string,
+  fromPortId: string,
+  toPortId: string,
   departedAt: GameTime,
   elapsed: number,
-  semiMajorMultiplier = 1,
+  optionId = 'economy',
 ): Vec2 {
-  return arcAt(fromBodyId, toBodyId, departedAt, elapsed, semiMajorMultiplier).position
+  const at = arcAt(fromPortId, toPortId, departedAt, elapsed, optionId)
+  return at?.position ?? { x: 0, y: 0 }
 }
 
 /** Position *and* velocity on the arc, both in the chart's heliocentric frame. */
 function arcAt(
-  fromBodyId: string,
-  toBodyId: string,
+  fromPortId: string,
+  toPortId: string,
   departedAt: GameTime,
   elapsed: number,
-  semiMajorMultiplier: number,
+  optionId: string,
 ) {
   // The same call the astrogator priced the option with, so the drawing and
-  // the invoice cannot come apart (§1 pillar 2).
-  const leg = stretchedTransfer(fromBodyId, toBodyId, semiMajorMultiplier)
-  const state = transferStateAt(leg, MU_SUN, elapsed)
-
-  // Anchor the arc to where the ship actually left.
-  const angle = bodyAngleAt(fromBodyId, departedAt) + state.sweptRad
-  const cos = Math.cos(angle)
-  const sin = Math.sin(angle)
-
+  // the invoice cannot come apart (§1 pillar 2). It is the Lambert ellipse now,
+  // which is why the arc ends *on* the target instead of half a turn from where
+  // the ship left and trusting the two to coincide.
+  const solved = crossing(fromPortId, toPortId, departedAt, optionId)
+  const orbit = solved?.orbit
+  if (!orbit) return undefined
+  // She is at her berth until the departure burn. On an in-well crossing that
+  // is ninety minutes; waiting for an interplanetary window it is months, and
+  // drawing her already under way through it would be the same lie at a much
+  // larger scale.
+  if (elapsed < solved.waitS) {
+    // Still alongside, waiting for the geometry. She is where her world is, not
+    // where the ellipse begins -- that point is months away and so is she.
+    const helio = bodyPositionAt(getPort(fromPortId).bodyId, departedAt + elapsed)
+    const v = bodyVelocityAt(getPort(fromPortId).bodyId, departedAt + elapsed)
+    return {
+      orbit,
+      state: {
+        position: helio,
+        velocity: v,
+        radiusM: Math.hypot(helio.x, helio.y),
+        speedMs: Math.hypot(v.x, v.y),
+        flightPathAngleRad: 0,
+      },
+      position: { x: helio.x / AU, y: helio.y / AU },
+      velocity: v,
+    }
+  }
+  const state = orbitStateAt(orbit, elapsed - solved.waitS)
   return {
-    leg,
+    orbit,
     state,
-    position: { x: (state.radiusM * cos) / AU, y: (state.radiusM * sin) / AU },
-    // Radial component along the outward unit vector, transverse along the
-    // tangent a quarter turn ahead of it.
-    velocity: {
-      x: state.radialMs * cos - state.transverseMs * sin,
-      y: state.radialMs * sin + state.transverseMs * cos,
-    },
+    position: { x: state.position.x / AU, y: state.position.y / AU },
+    velocity: state.velocity,
   }
 }
 
@@ -384,13 +399,7 @@ export function chartView(state: SimState): ChartView {
     const fromBody = getPort(v.fromPortId).bodyId
     const toBody = getPort(v.toPortId).bodyId
     if (fromBody === toBody) return bodyPositionAt(fromBody, t)
-    const p = transferPositionAu(
-      fromBody,
-      toBody,
-      v.departedAt,
-      t - v.departedAt,
-      transferProfile(v.optionId).multiplier,
-    )
+    const p = transferPositionAu(v.fromPortId, v.toPortId, v.departedAt, t - v.departedAt, v.optionId)
     return { x: p.x * AU, y: p.y * AU }
   })()
 
@@ -475,38 +484,48 @@ export function chartView(state: SimState): ChartView {
       }
     } else {
       const at = (elapsed: number) =>
-        arcAt(fromBody, toBody, voyage.departedAt, elapsed, profile.multiplier)
+        arcAt(voyage.fromPortId, voyage.toPortId, voyage.departedAt, elapsed, voyage.optionId)
 
+      const solved = crossing(voyage.fromPortId, voyage.toPortId, voyage.departedAt, voyage.optionId)
+      const waitS = solved?.waitS ?? 0
+      const flightS = solved?.flightS ?? total
       const now = at(t - voyage.departedAt)
       const steps = 48
-      track = Array.from({ length: steps + 1 }, (_, i) => at((total * i) / steps).position)
+      // Sampled over the flight, not the voyage: the months spent waiting for
+      // the window are not a part of the arc.
+      track = now
+        ? Array.from({ length: steps + 1 }, (_, i) => at(waitS + (flightS * i) / steps)!.position)
+        : []
 
       // What is left to fly, along the arc rather than across the chord. The
       // polyline is the same one being drawn, so the number and the picture
       // are measurements of one object.
-      const remaining = track.filter((_, i) => (i / steps) >= fraction)
-      const path = [now.position, ...remaining]
+      const flown = Math.min(1, Math.max(0, (t - voyage.departedAt - waitS) / flightS))
+      const remaining = track.filter((_, i) => i / steps >= flown)
+      const path = now ? [now.position, ...remaining] : remaining
       let toGoAu = 0
       for (let i = 1; i < path.length; i++) {
         toGoAu += Math.hypot(path[i]!.x - path[i - 1]!.x, path[i]!.y - path[i - 1]!.y)
       }
 
-      const a = now.leg.semiMajorAxisM / AU
-      const e = now.leg.eccentricity
+      const a = (now?.orbit.semiMajorAxisM ?? 0) / AU
+      const e = now?.orbit.eccentricity ?? 0
+      const helio = bodyPositionAt(fromBody, t)
+      const fallback = { x: helio.x / AU, y: helio.y / AU }
 
       ship = {
-        ...now.position,
+        ...(now?.position ?? fallback),
         fromBodyId: fromBody,
         toBodyId: toBody,
         fractionComplete: fraction,
         profileLabel: profile.label,
         local: false,
-        radiusAu: now.state.radiusM / AU,
-        longitudeDeg: longitudeOf(now.position),
-        speedMs: now.state.speedMs,
-        heading: unit(now.velocity),
-        flightPathAngleRad: now.state.flightPathAngleRad,
-        intercept: track[steps]!,
+        radiusAu: (now?.state.radiusM ?? Math.hypot(helio.x, helio.y)) / AU,
+        longitudeDeg: longitudeOf(now?.position ?? fallback),
+        speedMs: now?.state.speedMs ?? 0,
+        heading: unit(now?.velocity ?? bodyVelocityAt(fromBody, t)),
+        flightPathAngleRad: now?.state.flightPathAngleRad ?? 0,
+        ...(track[steps] ? { intercept: track[steps]! } : {}),
         apoapsisAu: a * (1 + e),
         periapsisAu: a * (1 - e),
         toGoAu,

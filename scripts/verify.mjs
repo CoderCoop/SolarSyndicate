@@ -1112,7 +1112,20 @@ await page.waitForSelector('.options')
 check('accepting a run takes the board off the table', (await page.$$('.offer__accept')).length === 0)
 
 const optionLabels = await page.$$eval('.option__label', (els) => els.map((e) => e.textContent))
-check('the astrogator works up more than one trajectory', optionLabels.length === 3, optionLabels.join(' · '))
+check(
+  'the astrogator works up more than one trajectory',
+  optionLabels.length === 4,
+  optionLabels.join(' · '),
+)
+// The fourth is what makes a launch window a decision rather than a refusal.
+// Departing Earth for Mars at the wrong moment honestly costs 19.1 km/s against
+// 5.6 at the window -- beyond every hull in the game -- so without somewhere to
+// wait, the correct number would simply read as "Mars is broken".
+check(
+  'including one that waits for the window rather than refusing the crossing',
+  optionLabels.some((l) => /Wait for the window/.test(l ?? '')),
+  optionLabels.join(' · '),
+)
 
 // Every Luna trajectory is affordable, and that is not a balance slip: from
 // low orbit a faster run to the Moon really is nearly free, which is why Apollo
