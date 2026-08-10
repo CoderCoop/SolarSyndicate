@@ -823,13 +823,13 @@ const levels = await page.$$eval('.zoomer__levels .zoomer__btn', (els) =>
   els.map((e) => e.textContent?.trim()),
 )
 check(
-  'the chart names its three frames rather than offering a stepper',
-  levels.length === 3 && levels[0] === 'System' && levels[1] === 'Route' && levels[2] === 'Earth',
+  'the chart names its three frames of reference rather than offering a stepper',
+  levels.length === 3 && levels[0] === 'System' && levels[1] === 'Earth' && levels[2] === 'Ship',
   levels.join(' · '),
 )
 check(
   'and says which one it is in',
-  (await page.getAttribute('.zoomer__btn:text-is("Route")', 'aria-pressed')) === 'true',
+  (await page.getAttribute('.zoomer__btn:text-is("Ship")', 'aria-pressed')) === 'true',
   `pressed: ${(await page.$$eval('.zoomer__levels [aria-pressed="true"]', (e) => e.map((x) => x.textContent))).join()}`,
 )
 
@@ -844,7 +844,7 @@ const shipOnPlate = async () => {
   return t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1, 3).map(Number)
 }
 const onSystem = await shipOnPlate()
-await page.click('.zoomer__btn:text-is("Route")')
+await page.click('.zoomer__btn:text-is("Ship")')
 await page.waitForSelector('.chart__grid')
 const onRoute = await shipOnPlate()
 check(
@@ -870,10 +870,10 @@ check(
 // Back out the same way, and the scale is the crossing's own rather than a
 // fixed reach -- "the route" is a different size for cislunar than for a Belt
 // run, and it has to still be the heliocentric frame when it gets there.
-await page.click('.zoomer__btn:text-is("Route")')
+await page.click('.zoomer__btn:text-is("Ship")')
 await page.waitForSelector('.chart__grid')
 check(
-  'while Route comes back to a true-scale heliocentric plate',
+  'while Ship comes back to a true-scale plate centred on her',
   /across$/.test(((await page.textContent('.zoomer__scale')) ?? '').trim()) &&
     (await page.$$('.chart__local')).length === 0,
   ((await page.textContent('.zoomer__scale')) ?? '').trim(),
@@ -2089,10 +2089,10 @@ await v1.waitForSelector('.chart')
 const plateBox = await (await v1.$('.chart')).boundingBox()
 const overPlate = { x: plateBox.x + plateBox.width / 2, y: plateBox.y + plateBox.height / 2 }
 await v1.mouse.move(overPlate.x, overPlate.y)
-// From the system plate down to cislunar is a factor of about 1,240, and the
-// zoom is continuous now rather than jumping in fixed stops -- so it is a
-// couple of dozen notches, or one pinch.
-for (let i = 0; i < 26; i++) await v1.mouse.wheel(0, -100)
+// One press, not a couple of dozen notches. The frame is chosen rather than
+// stumbled into: zooming inside the ship's frame stays in the ship's frame
+// however far it goes, which is what makes it a frame of reference.
+await v1.click('.zoomer__btn:text-is("Earth")')
 await v1.waitForSelector('.chart__local')
 
 const berths = await v1.$$eval('.chart__local-port text', (els) =>
@@ -2167,7 +2167,7 @@ const moved = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1])
 // everything -- the sim does not track where Luna is in its month, so neither
 // one can resolve what the other draws -- but they can agree about *her*, and
 // she is the only object drawn in all three.
-await v1.click('.zoomer__btn:text-is("Route")')
+await v1.click('.zoomer__btn:text-is("Ship")')
 await v1.waitForSelector('.chart__grid')
 const inRoute = await shipAt()
 await v1.click('.zoomer__btn:text-is("Earth")')
@@ -2179,17 +2179,22 @@ check(
   `moved ${moved(inRoute, inLocal).toFixed(1)} plate units`,
 )
 
-// And by gesture, which is a different code path: the point under the fingers
-// is not a point any more once the frame beneath it changes.
+// And zooming inside a frame changes the scale, not the frame. It used to flip
+// to the world's own origin the moment the scale crossed a threshold, which made
+// the origin a side effect of the magnification -- everything on the plate
+// rearranging around a decision nobody had taken.
 const beforeNotch = await shipAt()
+const scaleBefore = ((await v1.textContent('.zoomer__scale')) ?? '').trim()
 await v1.mouse.move(overPlate.x, overPlate.y)
 await v1.mouse.wheel(0, 100)
-await v1.waitForSelector('.chart__grid')
+await v1.waitForTimeout(200)
 const afterNotch = await shipAt()
 check(
-  'and a wheel notch across the boundary holds her still too',
-  (await v1.$$('.chart__local')).length === 0 && moved(beforeNotch, afterNotch) < 6,
-  `moved ${moved(beforeNotch, afterNotch).toFixed(1)} plate units`,
+  'and zooming inside a frame changes the scale, never the frame',
+  (await v1.$$('.chart__local')).length > 0 &&
+    ((await v1.textContent('.zoomer__scale')) ?? '').trim() !== scaleBefore &&
+    moved(beforeNotch, afterNotch) < 12,
+  `${scaleBefore} → ${((await v1.textContent('.zoomer__scale')) ?? '').trim()}, ship moved ${moved(beforeNotch, afterNotch).toFixed(1)}`,
 )
 
 // Back to where the rest of this section expects to be.

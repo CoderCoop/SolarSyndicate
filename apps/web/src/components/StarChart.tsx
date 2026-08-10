@@ -119,17 +119,20 @@ const ZOOM_STEP = 1.35
  * scale, and **local** is a different origin entirely: the world's own frame,
  * where a cislunar crossing has been happening all along.
  *
- * The scale inside route and local stays continuous, so this is a set of
- * places to go rather than the scale picker the four fixed stops were. What it
- * buys back is a name for where you are and one press to get anywhere: it was
- * twenty-six wheel notches from the system plate down to cislunar, and no
- * label anywhere said the frame had changed under you.
+ * The scale inside each stays continuous, so this is a set of **frames of
+ * reference** rather than the scale picker the four fixed stops were: you
+ * choose what the plate is drawn *about*, and then zoom inside it as far as you
+ * like. The frame used to flip on its own once the scale passed a threshold,
+ * which made the origin a side effect of the magnification -- pinch far enough
+ * into a ship-centred view and everything rearranged around Earth, a decision
+ * nobody had taken.
  */
-type Level = 'system' | 'route' | 'local'
+type Level = 'system' | 'planet' | 'ship'
+
 
 /** Which of the three the plate is currently in. */
 function levelOf(view: View): Level {
-  return view.kind === 'system' ? 'system' : view.kind === 'local' ? 'local' : 'route'
+  return view.kind === 'system' ? 'system' : view.kind === 'local' ? 'planet' : 'ship'
 }
 
 function clampReach(au: number): number {
@@ -200,6 +203,17 @@ interface Camera {
    * meaning that.
    */
   centreFrame: 'sun' | 'body'
+  /**
+   * Which body the plate is drawn *about*, when it is not the system plate.
+   *
+   * Chosen, not inferred. It used to flip on its own once the scale passed
+   * `LOCAL_BELOW_AU`, which made the frame a side effect of the magnification:
+   * pinch far enough into a ship-centred view and the origin silently became
+   * Earth, and everything on the plate rearranged around a decision nobody had
+   * taken. A frame of reference is the thing you pick first and then zoom
+   * inside of, so now it is.
+   */
+  frame: 'planet' | 'ship'
 }
 
 /** Kilometres to AU, for the scales that are quoted in kilometres. */
@@ -380,7 +394,7 @@ function viewFor(camera: Camera, chart: ChartView): View {
   const local = neighbourhoodOf(chart)
   // Where the body itself is, heliocentrically: the origin this frame swaps to.
   const origin = { x: ship.x, y: ship.y }
-  if (local && camera.reachAu < LOCAL_BELOW_AU) {
+  if (local && camera.frame === 'planet') {
     const at = camera.centre
       ? camera.centreFrame === 'sun'
         ? { x: camera.centre.x - origin.x, y: camera.centre.y - origin.y }
@@ -454,11 +468,6 @@ function viewFor(camera: Camera, chart: ChartView): View {
  * projection is sun-at-the-centre with a square-root radius and no camera at
  * all — there is nothing to solve for.
  */
-/** Which frame a close camera at this scale resolves to. */
-function kindFor(reachAu: number, chart: ChartView): 'close' | 'local' {
-  return neighbourhoodOf(chart) && reachAu < LOCAL_BELOW_AU ? 'local' : 'close'
-}
-
 /** Where the ship is drawn on the plate, in whatever frame this view is. */
 function shipOn(view: View, chart: ChartView): [number, number] {
   const local = view.kind === 'local' ? neighbourhoodOf(chart) : undefined
@@ -489,6 +498,7 @@ function alignedOn(
   return {
     mode: 'close',
     reachAu,
+    frame: kind === 'local' ? 'planet' : 'ship',
     centreFrame: kind === 'local' ? 'body' : 'sun',
     centre: {
       x: at.x - (plateX - CENTRE) / perAu,
@@ -557,10 +567,12 @@ function useGestures(
       // ship is drawn in both. So she is what the gesture holds still. Without
       // this, one notch across the boundary threw her two thirds of the way
       // across the plate, from Earth's centre out to her place on the arc.
-      const willBe = kindFor(reachAu, chart)
-      if (willBe !== was.kind) {
+      // Stepping off the system plate is the one zoom that still changes
+      // frame, because that plate has no linear scale to keep. Within a chosen
+      // frame the scale moves and the origin does not.
+      if (was.kind === 'system') {
         const [sx, sy] = shipOn(was, chart)
-        return alignedOn(willBe, reachAu, sx, sy, chart)
+        return alignedOn(prev.frame === 'planet' ? 'local' : 'close', reachAu, sx, sy, chart)
       }
 
       // Where the gesture is pointing, in AU, before anything moves.
@@ -570,6 +582,7 @@ function useGestures(
       return {
         mode: 'close',
         reachAu,
+        frame: prev.frame,
         centreFrame: was.kind === 'local' ? 'body' : 'sun',
         centre: {
           x: anchor.x - (plateX - CENTRE) / perAu,
@@ -699,6 +712,7 @@ export function StarChart({ chart }: { chart: ChartView }) {
     reachAu: REACH.start,
     centre: null,
     centreFrame: 'sun',
+    frame: 'ship',
   })
   const view = viewFor(camera, chart)
   const isLocal = view.kind === 'local'
@@ -763,19 +777,25 @@ export function StarChart({ chart }: { chart: ChartView }) {
           // move that cannot be aligned. Every other change of frame leaves her
           // exactly where she is and rearranges the world about her.
           if (next === 'system') {
-            setCamera({ mode: 'map', reachAu: camera.reachAu, centre: null, centreFrame: 'sun' })
+            setCamera({ ...camera, mode: 'map', centre: null, centreFrame: 'sun' })
             return
           }
-          const kind = next === 'route' ? 'close' : 'local'
+          const kind = next === 'ship' ? 'close' : 'local'
           const reachAu =
-            next === 'route' ? routeReachAu(chart) : nearby ? localReachAu(nearby) : REACH.min
+            next === 'ship' ? routeReachAu(chart) : nearby ? localReachAu(nearby) : REACH.min
           // Unless she has been dragged off the edge, in which case aligning on
           // her would hold a frame with nothing in it. Then the button means
           // what it did before: go to her.
           setCamera(
             onPlateAt(shipX, shipY)
               ? alignedOn(kind, reachAu, shipX, shipY, chart)
-              : { mode: 'close', reachAu, centre: null, centreFrame: kind === 'local' ? 'body' : 'sun' },
+              : {
+                  mode: 'close',
+                  reachAu,
+                  centre: null,
+                  frame: kind === 'local' ? 'planet' : 'ship',
+                  centreFrame: kind === 'local' ? 'body' : 'sun',
+                },
           )
         }}
         // Straight to her wherever the camera has wandered, keeping whatever
@@ -783,6 +803,7 @@ export function StarChart({ chart }: { chart: ChartView }) {
         // has no linear scale to keep.
         onFollow={() =>
           setCamera({
+            ...camera,
             mode: 'close',
             reachAu: camera.mode === 'map' ? routeReachAu(chart) : camera.reachAu,
             // A null centre follows her in the heliocentric frame and sits on
@@ -1171,34 +1192,36 @@ function Controls({
           System
         </button>
 
+        {/* The world's own frame. Named by the planet rather than "Planet",
+            because the label is also the answer to what you would see down
+            there. Disabled between worlds -- there is no neighbourhood to be
+            in the frame of when she is a third of an AU from either end. */}
         <button
           type="button"
-          className={`zoomer__btn ${level === 'route' ? 'is-on' : ''}`}
-          aria-pressed={level === 'route'}
-          title="Her whole crossing, drawn to a true scale"
-          onClick={() => onLevel('route')}
-        >
-          Route
-        </button>
-
-        {/* Named by the world rather than "Local", because the label is also
-            the answer to what you would see: a button marked Earth says the
-            berths on it are what is down there. Disabled between worlds —
-            there is no neighbourhood to be close in on when she is a third of
-            an AU from either end. */}
-        <button
-          type="button"
-          className={`zoomer__btn ${level === 'local' ? 'is-on' : ''}`}
-          aria-pressed={level === 'local'}
+          className={`zoomer__btn ${level === 'planet' ? 'is-on' : ''}`}
+          aria-pressed={level === 'planet'}
           disabled={!neighbourhood}
           title={
             neighbourhood
-              ? `${neighbourhood.bodyName} and its berths, close in`
-              : 'She is between worlds — nothing to see close in'
+              ? `${neighbourhood.bodyName}'s own frame, with its berths`
+              : 'She is between worlds — no planet to be in the frame of'
           }
-          onClick={() => onLevel('local')}
+          onClick={() => onLevel('planet')}
         >
-          {neighbourhood?.bodyName ?? 'Close in'}
+          {neighbourhood?.bodyName ?? 'Planet'}
+        </button>
+
+        {/* And hers. Centred on the ship and following her, which is what makes
+            it a frame rather than a magnification: the scale inside it is
+            yours to pinch, and the origin stays where it was put. */}
+        <button
+          type="button"
+          className={`zoomer__btn ${level === 'ship' ? 'is-on' : ''}`}
+          aria-pressed={level === 'ship'}
+          title="Centred on the ship, and following her"
+          onClick={() => onLevel('ship')}
+        >
+          Ship
         </button>
       </div>
 
