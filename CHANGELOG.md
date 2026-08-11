@@ -9,6 +9,29 @@ means here.
 
 ## [Unreleased]
 
+## [0.19.1] — 2026-08-11
+
+### Changed
+
+- **Standing with your guild sits beside the money.** The second figure the
+  readout was built for in `0.17.3`, filled: what you can afford to fly, and
+  what they will let you fly, at the same weight.
+
+  §6.1 makes standing the axis the guild game runs on, and it has been
+  simulated since M3 — moving on every delivery, every late arrival and every
+  walk-away, banded from *a liability* to *one of their own*. It lived on a
+  panel three taps into the Crew tab, which is not where any of the decisions
+  it bears on are taken. It is the same number the panel has always shown, in
+  the same five band colours, and a test pins the two together.
+
+  Neutral is deliberately plain ink rather than amber: an unknown quantity is
+  not a warning, and colouring it would put a permanent alarm on a desk that
+  has done nothing wrong.
+
+- **Guilds carry a short name.** Stated in data rather than derived, because
+  "Wrightworks Guild" shortens to its first word and "The Drift" very much does
+  not — a rule that works on three of the four is a rule that is wrong.
+
 ## [0.19.0] — 2026-08-11
 
 A minor: **the planets are on ellipses**, at their real elements, and the

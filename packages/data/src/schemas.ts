@@ -396,6 +396,14 @@ export type Watch = z.infer<typeof Watch>
 export const GuildDef = z.object({
   id: z.string(),
   name: z.string(),
+  /**
+   * What to call them where there is no room for the full name.
+   *
+   * Stated rather than derived: "Wrightworks Guild" shortens to its first word
+   * and "The Drift" very much does not, so a rule that works on three of the
+   * four is a rule that is wrong.
+   */
+  shortName: z.string(),
   /** One line: what this guild *is*. */
   identity: z.string(),
   specialty: z.string(),

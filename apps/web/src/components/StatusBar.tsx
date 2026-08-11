@@ -18,6 +18,7 @@ import {
   formatShipClock,
   type GameTime,
   type Gauge,
+  type GuildView,
   type LedgerView,
   type LifeSupportView,
   type PowerView,
@@ -64,12 +65,11 @@ function usePublishedHeight() {
 /**
  * One standing figure about the desk, with its name under it.
  *
- * There are two of these to state and only one of them exists yet. Standing
- * with the guilds is simulated -- `guildViews`, `adjustStanding`, a band and a
- * sentence per guild since M3 -- and is not surfaced anywhere a player can see
- * it while deciding anything, so the second cell is the shape it will take:
- * beside the money, at the same weight, because "what will they let me fly"
- * and "what can I afford to fly" are the same size of question (§6.1).
+ * Two of them, which is what this row was built for in `0.17.3`: what you can
+ * afford to fly, and what they will let you fly. §6.1 makes standing the axis
+ * the guild game runs on, and it has been simulated since M3 -- moving on every
+ * delivery, lateness and walk-away -- while living on a panel three taps into
+ * the Crew tab. A figure that decides things has to be where the deciding is.
  *
  * Laid out so one figure sits alone without a hole beside it and two split the
  * row evenly, which is why this is a component and not two hardcoded spans.
@@ -110,6 +110,7 @@ export function StatusBar({
   vitals,
   life,
   ledger,
+  guild,
   brokenCount,
   where,
 }: {
@@ -118,6 +119,8 @@ export function StatusBar({
   vitals: ShipVitalsView
   life: LifeSupportView
   ledger: LedgerView
+  /** The guild whose seat this desk occupies (§6.1). */
+  guild: GuildView | undefined
   brokenCount: number
   where: Whereabouts
 }) {
@@ -163,7 +166,19 @@ export function StatusBar({
           value={formatCredits(ledger.credits)}
           tone={ledger.overdrawn ? 'is-overdrawn' : ''}
         />
-        {/* Guild influence goes here, at the same weight (§6.1). */}
+        {/* Standing with your own guild, at the same weight as the money.
+            Named by the guild rather than by the word "standing": the figure
+            is a relationship with somebody, and which somebody is the half of
+            it a player has to keep in mind. Signed always, because +0 and −0
+            are different states of the same desk and the sign is the part that
+            moves. */}
+        {guild && (
+          <Figure
+            label={`With ${guild.shortName}`}
+            value={`${guild.standing > 0 ? '+' : ''}${guild.standing}`}
+            tone={`is-${guild.band}`}
+          />
+        )}
       </div>
 
       <div className="status__row">

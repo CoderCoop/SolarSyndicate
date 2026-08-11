@@ -93,6 +93,8 @@ export function guildForContract(contractId: string): string {
 export interface GuildView {
   id: string
   name: string
+  /** For the places a full name will not fit -- the standing readout. */
+  shortName: string
   identity: string
   specialty: string
   culture: string
@@ -112,6 +114,7 @@ export function guildViews(state: SimState): GuildView[] {
     return {
       id: g.id,
       name: g.name,
+      shortName: g.shortName,
       identity: g.identity,
       specialty: g.specialty,
       culture: g.culture,
