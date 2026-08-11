@@ -729,6 +729,30 @@ await page.waitForSelector('.chart')
 const orbits = await page.$$('.chart__orbit')
 check('the chart draws every body with a port on it', orbits.length === 3, `${orbits.length} orbits`)
 
+// And draws them as the ellipses they are. Mars runs 1.381 to 1.666 AU, so her
+// ring has to be visibly off-centre from the sun -- a circle at the mean would
+// be 0.14 AU wrong at both ends of her year, and would say the distance to Mars
+// depends only on where the two worlds are in their laps.
+const rings = await page.$$eval('.chart__orbit', (paths) =>
+  paths.map((p) => {
+    const points = ((p.getAttribute('d') ?? '').match(/[-\d.]+ [-\d.]+/g) ?? []).map((pair) => {
+      const [x, y] = pair.split(' ').map(Number)
+      // The plate's centre is the sun on this projection, at 150,150 of a
+      // 300-wide viewBox.
+      return Math.hypot(x - 150, y - 150)
+    })
+    return {
+      samples: points.length,
+      spread: Math.max(...points) / Math.min(...points),
+    }
+  }),
+)
+check(
+  'and draws them as ellipses rather than rings',
+  rings.every((r) => r.samples > 50) && rings.filter((r) => r.spread > 1.05).length >= 2,
+  rings.map((r) => `${r.samples} pts, ${r.spread.toFixed(3)}x`).join(' · '),
+)
+
 const caption = await page.textContent('.chart__caption')
 check(
   'and says where the ship is, in words',
@@ -1178,7 +1202,10 @@ check(
 // The claim that matters: the coordinates and the drawing are the same thing.
 // x = r cos λ, y = r sin λ is not a formatting detail, it is whether the
 // readout describes the plate or merely sits under it.
-const num = (s) => Number(String(s).replace(/[^\d.\-+]/g, '').replace('−', '-'))
+// The real minus sign has to become a hyphen *before* the strip, or the strip
+// eats it and every negative coordinate reads positive. It never showed while
+// Earth sat at longitude zero with y = 0; she does not any more.
+const num = (s) => Number(String(s).replace(/−/g, '-').replace(/[^\d.\-+]/g, ''))
 const [lam, , rad, xx, yy] = coords.map((c) => num(c.value))
 check(
   'and the figures are the position the plate is drawn from',

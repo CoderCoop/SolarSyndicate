@@ -2,8 +2,9 @@
   {
     "id": "earth",
     "name": "Earth",
-    "orbitRadiusAu": 1.0,
-    "orbitPeriodDays": 365.256,
+    "semiMajorAxisAu": 1.0,
+    "eccentricity": 0.01671,
+    "periapsisLongitudeRad": 1.79661,
     "phaseAtEpochRad": 0.0,
     "muM3S2": 398600441800000.0,
     "radiusKm": 6371.0
@@ -11,8 +12,9 @@
   {
     "id": "mars",
     "name": "Mars",
-    "orbitRadiusAu": 1.523679,
-    "orbitPeriodDays": 686.98,
+    "semiMajorAxisAu": 1.523679,
+    "eccentricity": 0.0934,
+    "periapsisLongitudeRad": 5.86505,
     "phaseAtEpochRad": 2.6,
     "muM3S2": 42828370000000.0,
     "radiusKm": 3389.5
@@ -20,8 +22,9 @@
   {
     "id": "ceres",
     "name": "Ceres",
-    "orbitRadiusAu": 2.7658,
-    "orbitPeriodDays": 1681.63,
+    "semiMajorAxisAu": 2.7658,
+    "eccentricity": 0.0785,
+    "periapsisLongitudeRad": 2.68607,
     "phaseAtEpochRad": 4.1,
     "muM3S2": 62632500000.0,
     "radiusKm": 473.0

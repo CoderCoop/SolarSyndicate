@@ -34,9 +34,12 @@
 import { content, getBody, getPort } from '@solsyn/data'
 import {
   AU,
+  apoapsisAu,
   bodyAngleAt,
+  bodyPeriodDays,
   bodyPositionAt,
   bodyVelocityAt,
+  orbitPathAu,
   phaseAngleForTransfer,
   phasingWaitS,
   portAngleAt,
@@ -58,7 +61,19 @@ export interface ChartBody {
   /** Heliocentric position in AU, for drawing. */
   x: number
   y: number
-  orbitRadiusAu: number
+  /** Semi-major axis, AU -- the orbit's size, for ordering and for scale. */
+  semiMajorAxisAu: number
+  /**
+   * The orbit itself, sampled in AU. Design §5.1.
+   *
+   * A path rather than a radius, because the orbits are ellipses now: Mars runs
+   * from 1.381 to 1.666 AU and a circle at her mean is 0.14 AU wrong at both
+   * ends. Sampled here rather than drawn from elements in the component so the
+   * plate's own projection can be applied point by point -- which is what makes
+   * the same path correct on the square-root system plate and on the linear
+   * close one.
+   */
+  orbit: Vec2[]
   /** Ports berthed here, so the chart can label a place by what is at it. */
   ports: { id: string; name: string; moon?: string }[]
   /**
@@ -70,8 +85,11 @@ export interface ChartBody {
    * something the player had to eyeball off a square-root scale.
    */
   distanceAu: number
-  /** Where it will be in `leadDays`, so the arc has something to aim at. */
-  lead: Vec2
+  /**
+   * Where it goes over the next `leadDays`, sampled -- so the arc has something
+   * to aim at, and follows the orbit rather than a circle drawn near it.
+   */
+  leadArc: Vec2[]
 }
 
 /**
@@ -255,6 +273,18 @@ const WINDOW_TOLERANCE_RAD = (15 * Math.PI) / 180
 /** Where the bodies will be a season from now, for the lead marks. */
 const LEAD_DAYS = 90
 
+/** Points in a drawn lead arc. Enough that a season of travel reads as a curve. */
+const LEAD_SAMPLES = 8
+
+/**
+ * Points in a drawn orbit.
+ *
+ * Ninety-six is four degrees of true anomaly a step, which is smooth at every
+ * scale the plate reaches -- and it is a closed-form ellipse rather than a
+ * Kepler solve, so asking for it on every frame costs nothing.
+ */
+const ORBIT_SAMPLES = 96
+
 /** Signed angle from a to b, wrapped to (-pi, pi]. */
 function wrapPi(radians: number): number {
   let a = radians
@@ -271,7 +301,6 @@ function wrapPi(radians: number): number {
  * the sim rests on (§7.2).
  */
 function windowFor(fromBodyId: string, toBodyId: string, t: GameTime): ChartWindow {
-  const from = getBody(fromBodyId)
   const to = getBody(toBodyId)
 
   const phaseNowRad = wrapPi(bodyAngleAt(toBodyId, t) - bodyAngleAt(fromBodyId, t))
@@ -281,7 +310,7 @@ function windowFor(fromBodyId: string, toBodyId: string, t: GameTime): ChartWind
   // Relative angular rate, radians per day. The target closes on the wanted
   // angle at this rate, whichever way round it is.
   const rate =
-    (2 * Math.PI) / (to.orbitPeriodDays) - (2 * Math.PI) / (from.orbitPeriodDays)
+    (2 * Math.PI) / bodyPeriodDays(toBodyId) - (2 * Math.PI) / bodyPeriodDays(fromBodyId)
 
   const open = Math.abs(offByRad) <= WINDOW_TOLERANCE_RAD
   let daysToWindow = 0
@@ -406,16 +435,19 @@ export function chartView(state: SimState): ChartView {
   const bodies: ChartBody[] = []
   for (const body of chartBodies()) {
     const p = bodyPositionAt(body.id, t)
-    const ahead = bodyPositionAt(body.id, t + LEAD_DAYS * DAY)
     bodies.push({
       id: body.id,
       name: body.name,
       x: p.x / AU,
       y: p.y / AU,
-      orbitRadiusAu: body.orbitRadiusAu,
+      semiMajorAxisAu: body.semiMajorAxisAu,
+      orbit: orbitPathAu(body.id, ORBIT_SAMPLES),
       ports: portsOn(body.id),
       distanceAu: Math.hypot(p.x - shipAt.x, p.y - shipAt.y) / AU,
-      lead: { x: ahead.x / AU, y: ahead.y / AU },
+      leadArc: Array.from({ length: LEAD_SAMPLES + 1 }, (_, i) => {
+        const ahead = bodyPositionAt(body.id, t + (LEAD_DAYS * DAY * i) / LEAD_SAMPLES)
+        return { x: ahead.x / AU, y: ahead.y / AU }
+      }),
     })
   }
 
@@ -536,7 +568,9 @@ export function chartView(state: SimState): ChartView {
   }
 
   const extentAu = Math.max(
-    ...bodies.map((b) => b.orbitRadiusAu),
+    // Apoapsis, not the axis: a plate sized to the mean radius clips the far
+    // half of every orbit drawn on it.
+    ...bodies.map((b) => apoapsisAu(b.id)),
     Math.hypot(ship.x, ship.y),
     // An express ellipse throws its apoapsis past the destination orbit by
     // design (§5.2). Sizing the plate to the orbits alone clipped the very
@@ -687,7 +721,7 @@ function chartBodies() {
     seen.add(port.bodyId)
     out.push(getBody(port.bodyId))
   }
-  return out.sort((a, b) => a.orbitRadiusAu - b.orbitRadiusAu)
+  return out.sort((a, b) => a.semiMajorAxisAu - b.semiMajorAxisAu)
 }
 
 function portsOn(bodyId: string) {

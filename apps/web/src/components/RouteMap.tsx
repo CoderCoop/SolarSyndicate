@@ -367,12 +367,15 @@ export function RouteMap({ fromPortId, toPortId, type, progress }: RouteMapProps
   }
 
   // How far it actually is. Inside one well that is the gap between two orbital
-  // radii; between bodies it is the gap between two heliocentric orbits, which
-  // is the honest order of magnitude even though the real separation depends on
-  // where the two are in their years.
+  // radii; between bodies it is the gap between two heliocentric orbits, taken
+  // at their semi-major axes -- the honest order of magnitude, even though the
+  // real separation depends on where the two are in their years and, now that
+  // the orbits are ellipses, on where in *its* year each of them is. The chart
+  // is where that is drawn properly; this strip is a schematic.
   const spanKm = sameBody
     ? Math.abs(to.orbitRadiusKm - from.orbitRadiusKm)
-    : Math.abs(getBody(to.bodyId).orbitRadiusAu - getBody(from.bodyId).orbitRadiusAu) * AU_KM
+    : Math.abs(getBody(to.bodyId).semiMajorAxisAu - getBody(from.bodyId).semiMajorAxisAu) *
+      AU_KM
 
   const badge = at(0.5)
   const underWay = progress !== undefined

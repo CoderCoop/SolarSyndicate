@@ -106,8 +106,8 @@ describe('the stretched transfer is real mechanics', () => {
         // Inbound, the ship departs at apoapsis: the burn is retrograde and it
         // dips inside the target orbit rather than easing down onto it.
         expect(departureAnomalyRad).toBeCloseTo(Math.PI, 12)
-        expect(a * (1 + e)).toBeCloseTo(getBody(from).orbitRadiusAu * AU, -3)
-        expect(a * (1 - e)).toBeLessThan(getBody(to).orbitRadiusAu * AU)
+        expect(a * (1 + e)).toBeCloseTo(getBody(from).semiMajorAxisAu * AU, -3)
+        expect(a * (1 - e)).toBeLessThan(getBody(to).semiMajorAxisAu * AU)
       })
 
       it('still reduces to Hohmann at the minimum-energy ellipse', () => {

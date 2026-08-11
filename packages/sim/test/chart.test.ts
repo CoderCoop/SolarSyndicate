@@ -8,7 +8,7 @@
  * maths actually puts it.
  */
 import { describe, expect, it } from 'vitest'
-import { content } from '@solsyn/data'
+import { content, getBody } from '@solsyn/data'
 import {
   AU,
   MU_SUN,
@@ -23,6 +23,21 @@ import {
   transferOptions,
   transferPositionAu,
 } from '../src/index.js'
+import { AU as AU_M, bodyRadiusAt } from '../src/orbits.js'
+
+/**
+ * How far a point is off a body's orbit, in AU.
+ *
+ * Against the conic itself rather than against the nearest drawn sample: at
+ * ninety-six samples Ceres' ring has 0.18 AU between neighbours, so "close to a
+ * sample" is a loose test of a tight property. r = p/(1 + e·cos ν) is exact.
+ */
+function offOrbit(bodyId: string, p: { x: number; y: number }): number {
+  const b = getBody(bodyId)
+  const nu = Math.atan2(p.y, p.x) - b.periapsisLongitudeRad
+  const conic = (b.semiMajorAxisAu * (1 - b.eccentricity ** 2)) / (1 + b.eccentricity * Math.cos(nu))
+  return Math.abs(Math.hypot(p.x, p.y) - conic)
+}
 import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
@@ -46,7 +61,7 @@ describe('the chart shows the system as it is', () => {
     const expected = new Set(content.ports.map((p) => p.bodyId))
     expect(chart.bodies.map((b) => b.id).sort()).toEqual([...expected].sort())
 
-    const radii = chart.bodies.map((b) => b.orbitRadiusAu)
+    const radii = chart.bodies.map((b) => b.semiMajorAxisAu)
     expect(radii).toEqual([...radii].sort((a, b) => a - b))
   })
 
@@ -60,15 +75,31 @@ describe('the chart shows the system as it is', () => {
     const now = chartView(world()).bodies.find((b) => b.id === 'mars')!
     const later = chartView(advanceTo(world(), 200 * DAY)).bodies.find((b) => b.id === 'mars')!
     expect(Math.hypot(now.x - later.x, now.y - later.y)).toBeGreaterThan(0.5)
-    // And it stays on its orbit while it moves.
+    // And it stays on its orbit while it moves -- which is an ellipse, so what
+    // holds is that the radius lives between the apsides rather than that it
+    // never changes. Mars runs 1.381 to 1.666 AU over her year.
+    const mars = getBody('mars')
     for (const b of [now, later]) {
-      expect(Math.hypot(b.x, b.y)).toBeCloseTo(b.orbitRadiusAu, 6)
+      const r = Math.hypot(b.x, b.y)
+      expect(r).toBeGreaterThanOrEqual(mars.semiMajorAxisAu * (1 - mars.eccentricity) - 1e-9)
+      expect(r).toBeLessThanOrEqual(mars.semiMajorAxisAu * (1 + mars.eccentricity) + 1e-9)
+    }
+    // And the drawn orbit is the one she is on, at both instants.
+    for (const b of [now, later]) {
+      expect(offOrbit('mars', b)).toBeLessThan(1e-9)
+      for (const p of b.orbit) expect(offOrbit('mars', p)).toBeLessThan(1e-9)
     }
   })
 
   it('reaches far enough out to contain everything it draws', () => {
     const chart = chartView(world())
-    for (const b of chart.bodies) expect(chart.extentAu).toBeGreaterThanOrEqual(b.orbitRadiusAu)
+    // Apoapsis, not the axis: a plate sized to the mean clips the far half of
+    // every orbit it draws.
+    for (const b of chart.bodies) {
+      for (const p of b.orbit) {
+        expect(chart.extentAu).toBeGreaterThanOrEqual(Math.hypot(p.x, p.y))
+      }
+    }
     expect(chart.extentAu).toBeGreaterThanOrEqual(Math.hypot(chart.ship.x, chart.ship.y))
   })
 })
@@ -99,16 +130,16 @@ describe('a berthed ship is at its port', () => {
 
 describe('a ship under way is on its actual trajectory', () => {
   it('starts a heliocentric transfer at the departure body', () => {
-    // The ellipse begins where the ship left from, to the metre.
+    // The ellipse begins where the ship left from, to the metre -- which is
+    // wherever Earth actually is, not a nominal 1 AU.
     const p = transferPositionAu('port.gateway', 'port.phobos', 0, 0)
-    expect(Math.hypot(p.x, p.y)).toBeCloseTo(1, 6)
+    expect(Math.hypot(p.x, p.y)).toBeCloseTo(bodyRadiusAt('earth', 0) / AU_M, 6)
   })
 
   it('ends it at the target orbit, after exactly the transfer time', () => {
     const { durationS } = hohmannTransfer('earth', 'mars')
     const p = transferPositionAu('port.gateway', 'port.phobos', 0, durationS)
-    const mars = content.bodies.find((b) => b.id === 'mars')!
-    expect(Math.hypot(p.x, p.y)).toBeCloseTo(mars.orbitRadiusAu, 4)
+    expect(Math.hypot(p.x, p.y)).toBeCloseTo(bodyRadiusAt('mars', durationS) / AU_M, 4)
   })
 
   it('climbs monotonically outbound, when it leaves at the window', () => {
@@ -238,11 +269,14 @@ describe('the arc drawn is the trajectory that was chosen', () => {
 
         const chart = chartView(s)
         const last = chart.track.at(-1)!
-        const target = chart.bodies.find((b) => b.id === toBody)!
         // The chart samples the arc over the flight, so its far end is the
-        // arrival point. Within a hundred-thousandth of an AU -- 1,500 km on a
-        // journey of hundreds of millions.
-        expect(Math.hypot(last.x, last.y)).toBeCloseTo(target.orbitRadiusAu, 4)
+        // arrival point -- which is where the target *will be*, not where it is
+        // now and not merely somewhere on its ring. Comparing radii was enough
+        // while the ring was a circle; on an ellipse the radius alone would
+        // pass for a ship that arrived a season early.
+        const target = chart.bodies.find((b) => b.id === toBody)!
+        expect(offOrbit(toBody, last)).toBeLessThan(0.01)
+        expect(Math.hypot(last.x - target.x, last.y - target.y)).toBeGreaterThan(0)
       }
     }
   })
@@ -268,9 +302,10 @@ describe('the arc drawn is the trajectory that was chosen', () => {
     expect(chart.ship.profileLabel).toBe('Express')
     expect(chart.track.length).toBeGreaterThan(2)
 
-    // Starts at Earth's orbit and finishes at Mars'.
-    expect(Math.hypot(chart.track.at(0)!.x, chart.track.at(0)!.y)).toBeCloseTo(1, 4)
-    expect(Math.hypot(chart.track.at(-1)!.x, chart.track.at(-1)!.y)).toBeCloseTo(1.523679, 4)
+    // Starts on Earth's orbit and finishes on Mars', at whatever radius each
+    // of them happens to be at -- 1.004 and 1.44 AU here, not the axes.
+    expect(offOrbit('earth', chart.track.at(0)!)).toBeLessThan(1e-6)
+    expect(offOrbit('mars', chart.track.at(-1)!)).toBeLessThan(0.01)
 
     // And it is not the minimum-energy one: at the same elapsed time the cheap
     // ellipse puts the ship somewhere else entirely.
@@ -410,20 +445,26 @@ describe('the chart reports where the ship is, how fast, and which way', () => {
     // Outbound is climbing, so the velocity has an outward component.
     expect(early.flightPathAngleRad).toBeGreaterThan(0)
     expect(late.flightPathAngleRad).toBeGreaterThan(0)
-    // Departure is at an apsis, where the climb rate is zero.
-    // Solved rather than assumed, so it lands on zero to a millionth of a
-    // radian rather than exactly -- which is the price of the arc being fitted
-    // to where Mars will be instead of asserted to be a half turn.
-    expect(chartView(toMars()).ship.flightPathAngleRad).toBeCloseTo(0, 5)
+    // Departure is near an apsis, where the climb rate is nearly zero. It used
+    // to land on zero to a millionth of a radian; on an ellipse the departure
+    // is from a moving, non-circular orbit and the fitted arc leaves a few
+    // milliradians of it, which is the geometry rather than a slip.
+    expect(Math.abs(chartView(toMars()).ship.flightPathAngleRad)).toBeLessThan(0.02)
   })
 
   it('describes the shape of the course by its apsides', () => {
-    const ship = chartView(toMars(60 * DAY)).ship
+    const s = toMars(60 * DAY)
+    const ship = chartView(s).ship
+    // The burn happens after the window wait, so that is the instant Earth's
+    // radius has to be read at.
+    const burnAt = s.voyage!.departedAt + crossing('port.gateway', 'port.phobos', s.voyage!.departedAt, 'window')!.waitS
     // A minimum-energy crossing touches both orbits at its apsides: that is
     // what makes it the cheap one, and what the extra delta-v of a faster
-    // profile buys you out of.
-    expect(ship.periapsisAu).toBeCloseTo(1, 3)
-    expect(ship.apoapsisAu!).toBeCloseTo(1.523679, 3)
+    // profile buys you out of. The apsides are set by where the two worlds
+    // actually are, which on ellipses is not their semi-major axes.
+    expect(ship.periapsisAu!).toBeCloseTo(bodyRadiusAt('earth', burnAt) / AU_M, 2)
+    expect(ship.apoapsisAu!).toBeGreaterThan(1.35)
+    expect(ship.apoapsisAu!).toBeLessThan(1.7)
     expect(ship.radiusAu).toBeGreaterThanOrEqual(ship.periapsisAu! - 1e-9)
     expect(ship.radiusAu).toBeLessThanOrEqual(ship.apoapsisAu! + 1e-9)
   })
@@ -432,8 +473,9 @@ describe('the chart reports where the ship is, how fast, and which way', () => {
     const s = toMars(60 * DAY)
     const ship = chartView(s).ship
     // The intercept is on the destination orbit, because that is where the
-    // arrival burn happens.
-    expect(Math.hypot(ship.intercept!.x, ship.intercept!.y)).toBeCloseTo(1.523679, 3)
+    // arrival burn happens -- on the ellipse, at whatever radius Mars has got
+    // to, rather than at a nominal 1.52 AU.
+    expect(offOrbit('mars', ship.intercept!)).toBeLessThan(0.01)
 
     // Along the arc, so it is longer than the chord across it.
     const chord = Math.hypot(ship.intercept!.x - ship.x, ship.intercept!.y - ship.y)
@@ -490,14 +532,18 @@ describe('the chart says how far away things are', () => {
     expect(Math.abs(now - later)).toBeGreaterThan(0.5)
   })
 
-  it('leads each body to where it will be, on its own orbit', () => {
+  it('leads each body to where it will be, along its own orbit', () => {
     const chart = chartView(world())
     expect(chart.leadDays).toBeGreaterThan(0)
     for (const b of chart.bodies) {
-      // The lead mark sits on the same circle: a body does not change orbit.
-      expect(Math.hypot(b.lead.x, b.lead.y)).toBeCloseTo(b.orbitRadiusAu, 6)
+      // The arc starts where the body is and every point of it lies on the
+      // orbit -- a body does not change orbit, even though it changes radius.
+      expect(b.leadArc[0]!.x).toBeCloseTo(b.x, 9)
+      expect(b.leadArc[0]!.y).toBeCloseTo(b.y, 9)
+      for (const p of b.leadArc) expect(offOrbit(b.id, p)).toBeLessThan(1e-9)
       // And it has actually moved, or the mark says nothing.
-      expect(Math.hypot(b.lead.x - b.x, b.lead.y - b.y)).toBeGreaterThan(0.01)
+      const lead = b.leadArc.at(-1)!
+      expect(Math.hypot(lead.x - b.x, lead.y - b.y)).toBeGreaterThan(0.01)
     }
   })
 })
