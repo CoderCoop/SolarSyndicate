@@ -1310,6 +1310,33 @@ check(
   `${(await page.textContent('.purse__figure'))?.trim()} vs ${balance?.trim()}`,
 )
 
+// And, beside it, what the guild thinks of you. Standing has moved on every
+// delivery since M3 and lived on a panel three taps into the Crew tab, which is
+// not where any of the decisions it bears on are taken (§6.1).
+const purse = await page.$$eval('.purse__cell', (cells) =>
+  cells.map((c) => ({
+    label: c.querySelector('.purse__label')?.textContent?.trim(),
+    value: c.querySelector('.purse__figure')?.textContent?.trim(),
+  })),
+)
+check(
+  'and states standing with your own guild beside it',
+  purse.length === 2 && /^With .+/.test(purse[1]?.label ?? '') && /^[+−-]?\d+$/.test(purse[1]?.value ?? ''),
+  purse.map((c) => `${c.label}: ${c.value}`).join(' · '),
+)
+// The same number the Crew tab's meter has always shown, or the readout is a
+// second opinion rather than the same figure moved somewhere useful.
+await tap(page, '.tabs__btn:has-text("Crew")')
+await page.waitForSelector('.standings')
+const own = await page.$eval('.standing.is-own .standing__value', (e) => e.textContent?.trim())
+check(
+  'which is the figure the guild panel has always carried',
+  own === purse[1]?.value,
+  `${own} vs ${purse[1]?.value}`,
+)
+await tap(page, '.tabs__btn:has-text("Mission")')
+await page.waitForSelector('.offer')
+
 await page.screenshot({ path: join(SHOTS, '12-board.png'), fullPage: true })
 
 await tap(page, '.offer:first-child .offer__accept')

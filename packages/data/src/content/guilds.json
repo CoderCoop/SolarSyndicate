@@ -2,6 +2,7 @@
   {
     "id": "guild.wrightworks",
     "name": "Wrightworks Guild",
+    "shortName": "Wrightworks",
     "identity": "Engineers' and salvagers' labour union.",
     "specialty": "Salvage rights, part discounts, and the best mechanics in any hall.",
     "culture": "Wage floors and mandatory rest — genuinely good for the crew, and it costs you. Solidarity calls are expected to be answered.",
@@ -13,6 +14,7 @@
   {
     "id": "guild.helios",
     "name": "Helios Combine",
+    "shortName": "Helios",
     "identity": "Mega-corporate bulk logistics.",
     "specialty": "Huge cargo contracts and cheap fuel at company ports.",
     "culture": "Schedule discipline and late-delivery penalties. Morale drags in a company town.",
@@ -24,6 +26,7 @@
   {
     "id": "guild.meridian",
     "name": "Meridian Institute",
+    "shortName": "Meridian",
     "identity": "Scientific consortium.",
     "specialty": "Survey contracts, sensor tech, astrogation training.",
     "culture": "Data must be shared. Low pay, high tech access.",
@@ -35,6 +38,7 @@
   {
     "id": "guild.drift",
     "name": "The Drift",
+    "shortName": "The Drift",
     "identity": "Independents and smugglers.",
     "specialty": "Grey market, no questions asked, the best margins going.",
     "culture": "No safety net, no insurance, no death benefit. Standing is personal and fragile.",

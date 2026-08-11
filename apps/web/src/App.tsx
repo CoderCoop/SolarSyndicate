@@ -258,6 +258,7 @@ export function App() {
         vitals={vitals}
         life={life}
         ledger={ledger}
+        guild={guilds.find((g) => g.own)}
         brokenCount={brokenCount}
         where={where}
       />
