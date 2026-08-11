@@ -478,15 +478,42 @@ export const CrewDef = z.object({
 export type CrewDef = z.infer<typeof CrewDef>
 
 /**
- * A body the ports orbit. Real radii and periods; the map is 2D and coplanar
- * (design §5.1), which is a simplification the game states rather than hides.
+ * A body the ports orbit. Design §5.1.
+ *
+ * Real elements, in one plane. The map is 2D and coplanar, which is a
+ * simplification the game states rather than hides — but within that plane the
+ * orbits are proper ellipses now, because Mars' 0.093 is not a rounding error:
+ * it swings her between 1.381 and 1.666 AU, which is most of the difference
+ * between a cheap crossing and an expensive one.
+ *
+ * **The period is not stated.** It follows from the semi-major axis by Kepler's
+ * third law about the sun's real µ, the same way a port's period follows from
+ * its body's. Stating both invites them to disagree, and they did: the old
+ * figures were out by 12.5 ppm for Mars and 923 ppm for Ceres, which is small
+ * and is still two different answers to where a planet is.
  */
 export const BodyDef = z.object({
   id: z.string(),
   name: z.string(),
-  orbitRadiusAu: z.number().positive(),
-  orbitPeriodDays: z.number().positive(),
-  /** Angular position at game time zero, radians. Keeps the system unaligned. */
+  /** Semi-major axis, AU. Real values. Not a radius: the orbit is an ellipse. */
+  semiMajorAxisAu: z.number().positive(),
+  /** How far from circular. Real values: 0.0167 for Earth, 0.0934 for Mars. */
+  eccentricity: z.number().min(0).max(0.95),
+  /**
+   * Where periapsis points, radians from the First Point of Aries.
+   *
+   * The longitude of perihelion, ϖ = Ω + ω, which is how the flattening of a
+   * real inclined orbit into this plane is done: it is the angle an ephemeris
+   * quotes and the only one that survives dropping the inclination.
+   */
+  periapsisLongitudeRad: z.number(),
+  /**
+   * Mean longitude at game time zero, radians. Keeps the system unaligned.
+   *
+   * Mean, not true: on an ellipse the two differ by the equation of centre, and
+   * it is the mean one that advances at a constant rate — which is what makes a
+   * position a closed-form function of time (§7.2).
+   */
   phaseAtEpochRad: z.number(),
   /**
    * Standard gravitational parameter, m³/s². Real values.

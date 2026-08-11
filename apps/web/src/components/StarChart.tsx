@@ -944,17 +944,17 @@ export function StarChart({ chart }: { chart: ChartView }) {
           <Berths berths={berths.filter((p) => p.on && p.resolved)} centre={berthCentre} />
         )}
 
-        {/* Orbits, innermost first, with the direction everything travels. */}
+        {/* Orbits, innermost first.
+            Drawn as the sampled ellipse the sim publishes rather than as a
+            circle at the mean radius, because they are ellipses: Mars runs from
+            1.381 to 1.666 AU, and a circle between the two is 0.14 AU wrong at
+            both ends of her year. Every sample goes through the projection, so
+            the same path comes out correctly bent on the square-root plate and
+            true on the linear one. */}
         <g clipPath="url(#chart-plate)">
           {!isLocal &&
             chart.bodies.map((b) => (
-              <circle
-                key={b.id}
-                className="chart__orbit"
-                cx={view.sun[0]}
-                cy={view.sun[1]}
-                r={view.orbitR(b.orbitRadiusAu)}
-              />
+              <path key={b.id} className="chart__orbit" d={`${pathFor(b.orbit, view)} Z`} />
             ))}
         </g>
 
@@ -965,23 +965,24 @@ export function StarChart({ chart }: { chart: ChartView }) {
         <g clipPath="url(#chart-plate)">
           {!isLocal &&
             placed.map(({ body: b, on }) => {
-            const [x, y] = view.to(b.x, b.y)
-            const [lx, ly] = view.to(b.lead.x, b.lead.y)
-            // Both ends have to land on the plate. An arc with one end twelve
-            // plate-widths away crosses the whole drawing edge to edge, which
-            // reads as a route between two places rather than as one world's
-            // own ninety days of travel -- and close up, where ninety days is
-            // most of a lap, that is nearly always what it would draw.
-            if (!on || !onPlateAt(lx, ly)) return null
-            const r = view.orbitR(b.orbitRadiusAu)
-            // Along the orbit rather than a chord, so it reads as travel.
-            const sweep = b.lead.x * b.y - b.lead.y * b.x > 0 ? 0 : 1
+              const lead = b.leadArc.at(-1)!
+              const [lx, ly] = view.to(lead.x, lead.y)
+              // Both ends have to land on the plate. An arc with one end twelve
+              // plate-widths away crosses the whole drawing edge to edge, which
+              // reads as a route between two places rather than as one world's
+              // own ninety days of travel -- and close up, where ninety days is
+              // most of a lap, that is nearly always what it would draw.
+              if (!on || !onPlateAt(lx, ly)) return null
               return (
                 <g
                   key={b.id}
                   className={`chart__lead chart__lead--${WORLD[b.id]?.tone ?? 'ceres'}`}
                 >
-                  <path d={`M${x} ${y} A ${r} ${r} 0 0 ${sweep} ${lx} ${ly}`} />
+                  {/* The positions themselves, joined. It used to be a circular
+                      arc of the orbit's radius, which an ellipse does not have
+                      -- and a season of Mars covers enough of her year for the
+                      difference to show. */}
+                  <path d={pathFor(b.leadArc, view)} />
                   <circle cx={lx} cy={ly} r="1.6" />
                 </g>
               )

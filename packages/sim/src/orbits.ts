@@ -1,16 +1,23 @@
 /**
  * Orbits and transfers. Design doc §5.1, §5.2.
  *
- * Deliberately simple, honestly derived. Bodies travel circular coplanar
- * orbits at their real radii and periods, so a position is a closed-form
- * function of time (constitution V, VI) and catch-up never needs to integrate
- * anything. Transfers are Hohmann conics, which are the cheapest two-burn
- * solution between circular orbits and cost what textbooks say they cost.
+ * Deliberately simple, honestly derived. Bodies travel **elliptical** coplanar
+ * orbits at their real elements, so a position is still a closed-form function
+ * of time (constitution V, VI) and catch-up never needs to integrate anything
+ * — Kepler's equation is a bounded Newton solve, not an integration.
  *
- * What this does not model: inclination, eccentricity, n-body perturbation,
- * or continuous low thrust. Those are simplifications the game states rather
- * than hides — and the numbers that survive them are the ones the player
- * actually spends.
+ * The ellipses arrived late and they matter. Mars at e=0.0934 swings between
+ * 1.381 and 1.666 AU, so a crossing to her aphelion is a fifth further than one
+ * to her perihelion; drawn as a circle at the mean, the map said the distance
+ * to Mars depended only on where the two worlds were in their laps, which is
+ * two thirds of the truth. Everything that prices a crossing already read
+ * positions and velocities out of here rather than radii — the Lambert solver
+ * takes two points and a time — so the eccentricity flows into the delta-v
+ * without any of that changing.
+ *
+ * What this does not model: inclination, n-body perturbation, or continuous low
+ * thrust. Those are simplifications the game states rather than hides — and the
+ * numbers that survive them are the ones the player actually spends.
  */
 import { getBody, getPort } from '@solsyn/data'
 import { DAY, type GameTime } from './time.js'
@@ -29,18 +36,137 @@ export interface Vec2 {
   y: number
 }
 
-/** Angular position of a body, radians, at game time `t`. */
-export function bodyAngleAt(bodyId: string, t: GameTime): number {
+/**
+ * How long a body takes to go round, seconds. Kepler's third law.
+ *
+ * Derived rather than stated, the same way a port's period is (see
+ * `circularPeriodS` below). The data used to carry both an axis and a period,
+ * and they disagreed -- by 12.5 ppm for Mars and 923 ppm for Ceres. Small, and
+ * still two different answers to where a planet is: one of them sets the
+ * position and the other sets the launch window, so the window drifted off the
+ * geometry it was supposed to describe.
+ */
+export function bodyPeriodS(bodyId: string): number {
+  return circularPeriodS(MU_SUN, getBody(bodyId).semiMajorAxisAu * AU)
+}
+
+/** And in days, which is the unit windows are quoted in. */
+export function bodyPeriodDays(bodyId: string): number {
+  return bodyPeriodS(bodyId) / DAY
+}
+
+/** Mean anomaly of a body at `t`: the angle it would have if it moved evenly. */
+function bodyMeanAnomalyAt(bodyId: string, t: GameTime): number {
   const body = getBody(bodyId)
-  const periodS = body.orbitPeriodDays * DAY
-  return body.phaseAtEpochRad + (2 * Math.PI * t) / periodS
+  // `phaseAtEpochRad` is a mean *longitude*, measured from the same zero the
+  // chart's graticule is: subtracting where periapsis points gives the anomaly.
+  const meanLongitude = body.phaseAtEpochRad + (2 * Math.PI * t) / bodyPeriodS(bodyId)
+  return meanLongitude - body.periapsisLongitudeRad
+}
+
+/**
+ * Everything about where a body is and how fast, at `t`. Design §5.1.
+ *
+ * One solve, because the position and the velocity have to come from the same
+ * point on the same ellipse: deriving the velocity separately -- as a circular
+ * orbit's tangent at the current radius, which is what this used to do -- puts
+ * the arrow at the right place pointing slightly the wrong way, and prices
+ * every burn against a planet that is not quite moving how the chart draws it.
+ */
+export function bodyStateAt(bodyId: string, t: GameTime): { position: Vec2; velocity: Vec2 } {
+  const body = getBody(bodyId)
+  const a = body.semiMajorAxisAu * AU
+  const e = body.eccentricity
+  const E = eccentricAnomaly(bodyMeanAnomalyAt(bodyId, t), e)
+
+  // True anomaly and radius from the eccentric anomaly, the usual half-angle
+  // form -- continuous through both apsides, unlike an arccos.
+  const nu =
+    2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2))
+  const r = a * (1 - e * Math.cos(E))
+  const longitude = body.periapsisLongitudeRad + nu
+
+  // Radial and transverse components off the specific angular momentum, so the
+  // speed agrees with vis-viva exactly rather than approximately.
+  const h = Math.sqrt(Math.max(0, MU_SUN * a * (1 - e * e)))
+  const radial = (MU_SUN / h) * e * Math.sin(nu)
+  const transverse = (MU_SUN / h) * (1 + e * Math.cos(nu))
+  const cos = Math.cos(longitude)
+  const sin = Math.sin(longitude)
+
+  return {
+    position: { x: r * cos, y: r * sin },
+    velocity: {
+      x: radial * cos - transverse * sin,
+      y: radial * sin + transverse * cos,
+    },
+  }
+}
+
+/**
+ * Heliocentric longitude of a body, radians, at game time `t`.
+ *
+ * The *true* longitude -- where it actually is, not where an evenly-moving one
+ * would be. The two differ by up to 2e for a mild ellipse, which is ten degrees
+ * for Mars: enough to move a launch window by a fortnight.
+ */
+export function bodyAngleAt(bodyId: string, t: GameTime): number {
+  const p = bodyStateAt(bodyId, t).position
+  return Math.atan2(p.y, p.x)
 }
 
 /** Heliocentric position in metres at game time `t`. */
 export function bodyPositionAt(bodyId: string, t: GameTime): Vec2 {
-  const r = getBody(bodyId).orbitRadiusAu * AU
-  const angle = bodyAngleAt(bodyId, t)
-  return { x: r * Math.cos(angle), y: r * Math.sin(angle) }
+  return bodyStateAt(bodyId, t).position
+}
+
+/** How far a body is from the sun at `t`, metres. Varies, now that it can. */
+export function bodyRadiusAt(bodyId: string, t: GameTime): number {
+  const p = bodyPositionAt(bodyId, t)
+  return Math.hypot(p.x, p.y)
+}
+
+/**
+ * The whole orbit, as points to draw it with. Design §5.1.
+ *
+ * Sampled evenly in **true anomaly**, which is a closed-form ellipse and needs
+ * no Kepler solve at all -- the shape of an orbit does not depend on the time,
+ * so this is geometry rather than a state, and it costs nothing to ask for it
+ * every frame. Sampling evenly in *time* would crowd the points at aphelion,
+ * which is where the curve needs them least.
+ *
+ * Not closed: the caller closes it. `orbitPathAu(id, n)` returns `n` points and
+ * the last one is a step short of the first.
+ */
+const orbitPaths = new Map<string, Vec2[]>()
+
+export function orbitPathAu(bodyId: string, samples: number): Vec2[] {
+  // Cached, because an orbit's shape does not depend on the time and the chart
+  // asks for it on every frame. Ninety-six points per body per redraw is not
+  // expensive arithmetic, but it is three hundred allocations the garbage
+  // collector then has to walk, and the ship screen's scroll budget noticed.
+  const key = `${bodyId}:${samples}`
+  const cached = orbitPaths.get(key)
+  if (cached) return cached
+
+  const body = getBody(bodyId)
+  const a = body.semiMajorAxisAu
+  const e = body.eccentricity
+  const semiLatusRectum = a * (1 - e * e)
+  const path = Array.from({ length: samples }, (_, i) => {
+    const nu = (2 * Math.PI * i) / samples
+    const r = semiLatusRectum / (1 + e * Math.cos(nu))
+    const longitude = body.periapsisLongitudeRad + nu
+    return { x: r * Math.cos(longitude), y: r * Math.sin(longitude) }
+  })
+  orbitPaths.set(key, path)
+  return path
+}
+
+/** Furthest a body gets from the sun, AU -- what a plate has to reach to hold it. */
+export function apoapsisAu(bodyId: string): number {
+  const body = getBody(bodyId)
+  return body.semiMajorAxisAu * (1 + body.eccentricity)
 }
 
 /** Straight-line distance between two bodies, metres. */
@@ -208,8 +334,8 @@ export interface Transfer {
 export function hohmannTransfer(fromBody: string, toBody: string): Transfer {
   return hohmannBetween(
     MU_SUN,
-    getBody(fromBody).orbitRadiusAu * AU,
-    getBody(toBody).orbitRadiusAu * AU,
+    getBody(fromBody).semiMajorAxisAu * AU,
+    getBody(toBody).semiMajorAxisAu * AU,
   )
 }
 
@@ -260,8 +386,8 @@ export function stretchedTransfer(
 ): Transfer {
   return stretchedBetween(
     MU_SUN,
-    getBody(fromBody).orbitRadiusAu * AU,
-    getBody(toBody).orbitRadiusAu * AU,
+    getBody(fromBody).semiMajorAxisAu * AU,
+    getBody(toBody).semiMajorAxisAu * AU,
     semiMajorMultiplier,
   )
 }
@@ -338,9 +464,8 @@ export function stretchedBetween(
  * has to be positioned to arrive at the same place at the same time.
  */
 export function phaseAngleForTransfer(fromBody: string, toBody: string): number {
-  const target = getBody(toBody)
   const { durationS } = hohmannTransfer(fromBody, toBody)
-  const targetPeriodS = target.orbitPeriodDays * DAY
+  const targetPeriodS = bodyPeriodS(toBody)
   // Angle the target sweeps during the flight, subtracted from the half-turn
   // the ship makes.
   const swept = (2 * Math.PI * durationS) / targetPeriodS
@@ -349,8 +474,8 @@ export function phaseAngleForTransfer(fromBody: string, toBody: string): number 
 
 /** How often the same departure geometry comes round again, in days. */
 export function synodicPeriodDays(bodyA: string, bodyB: string): number {
-  const a = getBody(bodyA).orbitPeriodDays
-  const b = getBody(bodyB).orbitPeriodDays
+  const a = bodyPeriodDays(bodyA)
+  const b = bodyPeriodDays(bodyB)
   if (a === b) return Infinity
   return Math.abs(1 / (1 / a - 1 / b))
 }
@@ -481,19 +606,19 @@ export function transferStateAt(
 }
 
 /**
- * Speed and heading of a body on its circular orbit, m/s.
+ * Speed and heading of a body on its orbit, m/s.
  *
  * The berthed case. A ship alongside is not stationary -- she is doing 29.8
  * km/s round the sun with Earth, and a chart that reports 0 while the dot
  * visibly moves is telling the player something false about the frame it is
  * drawn in.
+ *
+ * Off the same Kepler solve as the position, so the velocity is the one that
+ * belongs to the point the body is drawn at -- and no longer exactly
+ * perpendicular to the radius, because on an ellipse it is not.
  */
 export function bodyVelocityAt(bodyId: string, t: GameTime): Vec2 {
-  const r = getBody(bodyId).orbitRadiusAu * AU
-  const speed = Math.sqrt(MU_SUN / r)
-  const angle = bodyAngleAt(bodyId, t)
-  // Prograde: the tangent, a quarter turn ahead of the radius.
-  return { x: -speed * Math.sin(angle), y: speed * Math.cos(angle) }
+  return bodyStateAt(bodyId, t).velocity
 }
 
 /** Speed at radius `r` on an ellipse of semi-major axis `a`. Vis-viva. */

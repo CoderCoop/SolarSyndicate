@@ -9,6 +9,63 @@ means here.
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-08-11
+
+A minor: **the planets are on ellipses**, at their real elements, and the
+distance to Mars stops depending only on where the two worlds are in their laps.
+
+### Changed
+
+- **Real eccentricity, in the ecliptic plane.** Earth 0.0167, Mars 0.0934,
+  Ceres 0.0785, each with the longitude of perihelion an ephemeris quotes
+  (ϖ = Ω + ω, which is how a real inclined orbit flattens into this one).
+
+  It was "circular-ish, eccentricity only where it matters — Mercury, Pluto,
+  comets", and that was the wrong call for the three worlds actually in play.
+  Mars runs from **1.381 to 1.666 AU**: her aphelion is a fifth further out
+  than her perihelion, which is most of the difference between a cheap crossing
+  to her and a dear one. Drawn as a circle at the mean, the map was 0.14 AU
+  wrong at both ends of her year and said the range to Mars turned only on the
+  phase of the two orbits.
+
+  Almost nothing had to change to price it. Every crossing has been solved by
+  Lambert since `0.15.0` — two positions and a time of flight — so the
+  eccentricity flows into the delta-v through `bodyPositionAt` and
+  `bodyVelocityAt` without the solver knowing it happened. What did change is
+  that those two now come out of **one** Kepler solve: a velocity derived
+  separately, as a circular tangent at the current radius, points the wrong way
+  on an ellipse and prices every burn against a planet that is not moving the
+  way the chart draws it.
+
+- **The period is derived from the axis, not stated beside it.** The data
+  carried both and they disagreed — by 12.5 ppm for Mars and 923 ppm for Ceres.
+  Small, and still two answers to where a planet is: one setting the drawn
+  position and the other the launch window, so the window drifted off the
+  geometry it describes. Kepler's third law about the sun's real µ, the same way
+  a port's period has followed from its body's since `0.16.0`.
+
+- **The chart draws orbits as ellipses.** A sampled path published by the sim
+  rather than a circle struck about the sun, so the ring is visibly off-centre
+  the way the orbit is. Every sample goes through the plate's own projection,
+  which is what makes one path correct on the square-root system view and true
+  on the linear close one. The lead marks follow it too — they were circular
+  arcs of the orbit's radius, and a season of Mars covers enough of her year for
+  the difference to show.
+
+### Known
+
+- **A Hohmann between two circles is now an approximation.** It is what
+  `hohmannTransfer` still computes, from the semi-major axes, and it is still
+  the right seed for a window search and the right sanity figure — but the real
+  crossing at that window costs about 15% more, because the ellipse the ship
+  actually flies has to meet a target that is not on the circle. The textbook
+  agreement is still pinned, against synthetic circular geometry where the
+  textbook applies.
+- **Windows are no longer all equal.** One synodic period later is the same
+  *phase* at a different point in each world's own year, so consecutive Mars
+  windows differ by about a tenth in delta-v. That is the eccentricity showing
+  and it is what makes some launch windows worth waiting for.
+
 ## [0.18.0] — 2026-08-10
 
 A minor: **lateness can happen again**, so the trajectory you pick is a

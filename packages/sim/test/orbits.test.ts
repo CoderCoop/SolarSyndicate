@@ -6,10 +6,16 @@
  * what a Hohmann transfer to Mars costs.
  */
 import { describe, expect, it } from 'vitest'
-import { getBody, getPort } from '@solsyn/data'
+import { content, getBody, getPort } from '@solsyn/data'
 import {
+  MU_SUN,
   bodyAngleAt,
+  bodyPeriodDays,
+  bodyPeriodS,
   bodyPositionAt,
+  bodyRadiusAt,
+  bodyStateAt,
+  orbitPathAu,
   distanceBetweenBodiesAt,
   hohmannTransfer,
   phaseAngleForTransfer,
@@ -27,25 +33,46 @@ import { DAY } from '../src/time.js'
 const AU = 1.495978707e11
 
 describe('bodies move', () => {
-  it('places a body on its orbit at the epoch phase', () => {
-    const p = bodyPositionAt('earth', 0)
-    // Earth's phase at epoch is 0, so it sits on the +x axis at 1 AU.
-    expect(p.x).toBeCloseTo(AU, 0)
-    expect(p.y).toBeCloseTo(0, 0)
+  it('places a body between its apsides, never on a fixed ring', () => {
+    // `phaseAtEpochRad` is a mean longitude, so at epoch Earth is somewhere on
+    // its ellipse rather than at a stated point on a circle. What is fixed is
+    // the shape: the radius lives between perihelion and aphelion, always.
+    const earth = getBody('earth')
+    for (const d of [0, 40, 91, 200, 300]) {
+      const p = bodyPositionAt('earth', d * DAY)
+      const r = Math.hypot(p.x, p.y) / AU
+      expect(r).toBeGreaterThanOrEqual(earth.semiMajorAxisAu * (1 - earth.eccentricity) - 1e-9)
+      expect(r).toBeLessThanOrEqual(earth.semiMajorAxisAu * (1 + earth.eccentricity) + 1e-9)
+    }
+    // And it does vary: a circle would hold the same radius all year.
+    const swing = [0, 91, 182, 273].map((d) => Math.hypot(...Object.values(bodyPositionAt('earth', d * DAY))))
+    expect(Math.max(...swing) - Math.min(...swing)).toBeGreaterThan(0.02 * AU)
   })
 
   it('returns to the same place after one orbital period', () => {
+    // The derived period, not a stated one. The data used to carry both, and
+    // they disagreed by 12.5 ppm for Mars -- which is 8,290 km of Mars, and
+    // enough to fail this test at metre precision.
     const before = bodyPositionAt('mars', 0)
-    const after = bodyPositionAt('mars', 686.98 * DAY)
+    const after = bodyPositionAt('mars', bodyPeriodDays('mars') * DAY)
     expect(after.x).toBeCloseTo(before.x, 0)
     expect(after.y).toBeCloseTo(before.y, 0)
   })
 
-  it('sweeps a full turn over a period, and half a turn over half of one', () => {
+  it('sweeps a full turn over a period, unevenly', () => {
+    const period = bodyPeriodDays('earth') * DAY
     const a0 = bodyAngleAt('earth', 0)
-    const half = bodyAngleAt('earth', (365.256 / 2) * DAY)
-    const delta = ((half - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI
-    expect(Math.abs(delta)).toBeCloseTo(Math.PI, 3)
+    const full = bodyAngleAt('earth', period)
+    expect(((full - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI).toBeCloseTo(0, 6)
+
+    // Half a period is *not* half a turn, and that is the eccentricity showing:
+    // the body runs fast at perihelion and slow at aphelion, so the true
+    // longitude leads or lags the mean by up to twice the eccentricity.
+    const half = bodyAngleAt('earth', period / 2)
+    const delta = Math.abs(((half - a0 + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
+    const equationOfCentre = 2 * getBody('earth').eccentricity
+    expect(Math.abs(delta - Math.PI)).toBeGreaterThan(1e-6)
+    expect(Math.abs(delta - Math.PI)).toBeLessThan(2 * equationOfCentre)
   })
 
   it('gives inner bodies shorter periods, so the gap between them changes', () => {
@@ -56,9 +83,17 @@ describe('bodies move', () => {
     const min = Math.min(...gaps)
     const max = Math.max(...gaps)
     expect(max - min).toBeGreaterThan(0.5 * AU)
-    // Never closer than the difference of radii, never further than their sum.
-    expect(min).toBeGreaterThanOrEqual(0.52 * AU * 0.99)
-    expect(max).toBeLessThanOrEqual(2.53 * AU * 1.01)
+
+    // Bounded by the apsides rather than by two radii: at closest approach
+    // Mars can be at perihelion and Earth at aphelion, which is 0.36 AU rather
+    // than the 0.52 two circles allow -- the difference eccentricity makes to
+    // the cheapest crossing there is.
+    const reach = (id: string, sign: number) => {
+      const b = getBody(id)
+      return b.semiMajorAxisAu * (1 + sign * b.eccentricity)
+    }
+    expect(min).toBeGreaterThanOrEqual((reach('mars', -1) - reach('earth', +1)) * AU * 0.99)
+    expect(max).toBeLessThanOrEqual((reach('mars', +1) + reach('earth', +1)) * AU * 1.01)
   })
 
   it('treats two ports on the same body as co-located', () => {
@@ -203,6 +238,99 @@ describe('a crossing between two berths waits for its geometry', () => {
     for (const id of PORTS) {
       const r = getPort(id).orbitRadiusKm * 1000
       expect(portPeriodS(id)).toBeCloseTo(2 * Math.PI * Math.sqrt(r ** 3 / mu), 6)
+    }
+  })
+})
+
+describe('the planets are on ellipses, and the numbers know it', () => {
+  it('derives every body period from its axis, rather than stating a second one', () => {
+    // The data used to carry both, and they disagreed: 12.5 ppm for Mars and
+    // 923 ppm for Ceres. Small, and still two answers to where a planet is --
+    // one setting the drawn position, the other the launch window.
+    for (const b of content.bodies) {
+      const a = b.semiMajorAxisAu * AU
+      expect(bodyPeriodS(b.id)).toBeCloseTo(2 * Math.PI * Math.sqrt(a ** 3 / MU_SUN), 6)
+    }
+    // And they land on the observed years, which is the check that the axes
+    // and the sun's µ are the real ones.
+    expect(bodyPeriodDays('earth')).toBeCloseTo(365.256, 1)
+    expect(bodyPeriodDays('mars')).toBeCloseTo(686.98, 0)
+    expect(bodyPeriodDays('ceres')).toBeCloseTo(1681.6, -1)
+  })
+
+  it('swings each body between its apsides over its own year', () => {
+    for (const b of content.bodies) {
+      const period = bodyPeriodDays(b.id) * DAY
+      const radii = Array.from({ length: 64 }, (_, i) => bodyRadiusAt(b.id, (period * i) / 64) / AU)
+      const perihelion = b.semiMajorAxisAu * (1 - b.eccentricity)
+      const aphelion = b.semiMajorAxisAu * (1 + b.eccentricity)
+      expect(Math.min(...radii)).toBeCloseTo(perihelion, 3)
+      expect(Math.max(...radii)).toBeCloseTo(aphelion, 3)
+    }
+    // Mars is the one it matters most for: a fifth further at aphelion than at
+    // perihelion, which is most of the difference between a cheap crossing to
+    // her and an expensive one.
+    const mars = getBody('mars')
+    expect(
+      (mars.semiMajorAxisAu * (1 + mars.eccentricity)) /
+        (mars.semiMajorAxisAu * (1 - mars.eccentricity)),
+    ).toBeGreaterThan(1.2)
+  })
+
+  it('moves fastest at perihelion and slowest at aphelion', () => {
+    // The second law, which is the thing an ellipse actually does. A circular
+    // orbit at the mean radius holds one speed all year.
+    const period = bodyPeriodDays('mars') * DAY
+    const samples = Array.from({ length: 96 }, (_, i) => {
+      const t = (period * i) / 96
+      const { position, velocity } = bodyStateAt('mars', t)
+      return { r: Math.hypot(position.x, position.y), v: Math.hypot(velocity.x, velocity.y) }
+    })
+    const nearest = samples.reduce((a, b) => (b.r < a.r ? b : a))
+    const furthest = samples.reduce((a, b) => (b.r > a.r ? b : a))
+    expect(nearest.v).toBeGreaterThan(furthest.v)
+    // Conservation of angular momentum, to the sample: r·v is the same at both
+    // apsides, where the velocity is purely transverse. Relative, because the
+    // figure is 5.5e15 and the samples land near the apsides rather than on
+    // them -- an absolute tolerance here is either meaningless or unmeetable.
+    const h = (s: { r: number; v: number }) => s.r * s.v
+    expect(Math.abs(h(nearest) - h(furthest)) / h(nearest)).toBeLessThan(1e-5)
+  })
+
+  it('draws an orbit that every position it publishes lies on', () => {
+    // The path the chart strokes and the point it puts the planet at have to be
+    // the same object, or the plate draws a world beside its own ring.
+    for (const b of content.bodies) {
+      const path = orbitPathAu(b.id, 96)
+      expect(path).toHaveLength(96)
+      const conicAt = (p: { x: number; y: number }) => {
+        const nu = Math.atan2(p.y, p.x) - b.periapsisLongitudeRad
+        return (b.semiMajorAxisAu * (1 - b.eccentricity ** 2)) / (1 + b.eccentricity * Math.cos(nu))
+      }
+      for (const p of path) expect(Math.hypot(p.x, p.y)).toBeCloseTo(conicAt(p), 9)
+
+      const period = bodyPeriodDays(b.id) * DAY
+      for (const i of [0, 17, 43, 71]) {
+        const at = bodyPositionAt(b.id, (period * i) / 96)
+        expect(Math.hypot(at.x, at.y) / AU).toBeCloseTo(conicAt({ x: at.x, y: at.y }), 9)
+      }
+    }
+  })
+
+  it('keeps the velocity on the same ellipse as the position', () => {
+    // One solve for both. Deriving the velocity as a circular tangent -- which
+    // is what this did before the ellipses -- puts the arrow at the right place
+    // pointing the wrong way, and prices every burn against it.
+    for (const b of content.bodies) {
+      const { position, velocity } = bodyStateAt(b.id, 137 * DAY)
+      const r = Math.hypot(position.x, position.y)
+      const v = Math.hypot(velocity.x, velocity.y)
+      // Vis-viva, on the body's own axis.
+      expect(v).toBeCloseTo(Math.sqrt(MU_SUN * (2 / r - 1 / (b.semiMajorAxisAu * AU))), 3)
+      // And not perpendicular to the radius, except at the apsides -- which is
+      // exactly what a circular model cannot express.
+      const radialSpeed = (position.x * velocity.x + position.y * velocity.y) / r
+      if (b.eccentricity > 0.05) expect(Math.abs(radialSpeed)).toBeGreaterThan(1)
     }
   })
 })

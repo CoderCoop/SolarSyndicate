@@ -601,12 +601,21 @@ desks, competing for the same contracts, hulls, and people.
 
 ### 5.1 The map
 
-2D top-down solar system, coplanar circular-ish Keplerian orbits (real radii and
-periods; eccentricity only where it matters — Mercury, Pluto, comets). Hand-placed
+2D top-down solar system, coplanar Keplerian **ellipses** at real elements — a
+semi-major axis, an eccentricity and a longitude of perihelion per body, with the
+period derived from the axis rather than stated beside it. Hand-placed
 ports: Earth (LEO ring-station, Gateway), Luna, Mars (Phobos yard), the Belt (Ceres,
 Vesta, a dozen named rocks), Jupiter system (Ganymede, Callisto), Saturn (Titan).
 Planets *move* — Mars is sometimes 0.5 AU away and sometimes 2.5 AU, so **launch
 windows are real gameplay** and the astrogator's job.
+
+Eccentricity was "only where it matters — Mercury, Pluto, comets" while the map was
+circles, and that was the wrong call for the worlds actually in play: Mars at 0.0934
+runs from 1.381 to 1.666 AU, so her aphelion is a fifth further out than her
+perihelion and *which window you take* changes what the crossing costs. Circles said
+the distance to Mars depended only on where the two worlds were in their laps, which
+is two thirds of the truth. Inclination stays dropped — the flattening is done by
+using ϖ = Ω + ω, the longitude an ephemeris quotes.
 
 ### 5.2 Trajectory model — deliberately simple, honestly derived
 
