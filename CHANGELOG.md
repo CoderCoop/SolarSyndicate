@@ -9,6 +9,38 @@ means here.
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-08-11
+
+A minor: **delivering for one guild is no longer neutral to the rest**, which
+the game has been telling the player since M3 without it being true.
+
+### Changed
+
+- **Cross-guild friction is real.** §6.1: "delivering for the Institute is not
+  neutral to the Combine." The Crew tab has said exactly that under a
+  simulation in which only the guild that let the contract ever moved — a
+  promise the game made and did not keep. Fly a Wrightworks run now and Helios
+  notices.
+
+  How badly each pair takes each other's business is **data**, in a new
+  `rivalries.json`, because the politics are not uniform: a combine and the
+  union that services its hulls are three-quarters opposed, the grey market and
+  the scheduled one half, engineers and scientists not at all. Every pair is
+  stated including the zero — an omission and a peace are different claims, and
+  only one of them is a decision somebody took. A content check walks all six.
+
+  **Only good news travels.** A delivery earns you with the client and costs
+  you with whoever they compete against; a late arrival or a walk-away costs
+  you with the client and earns you nothing anywhere. It is truer — the Combine
+  does not thank you for letting the Guild down, they notice that you *failed* —
+  and it closes a farm: if failure paid rivals, the cheapest route to standing
+  with Wrightworks would be to sign Helios contracts and abandon them, over and
+  over, for a fee.
+
+- **The panel says what it costs, and why.** Each guild's row now carries the
+  fraction of your good news it takes badly and a sentence of the reason. A
+  number without the reason is a rule; with it, it is a politics.
+
 ## [0.19.1] — 2026-08-11
 
 ### Changed

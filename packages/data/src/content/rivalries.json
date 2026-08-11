@@ -1,0 +1,32 @@
+[
+  {
+    "between": ["guild.helios", "guild.wrightworks"],
+    "friction": 0.75,
+    "why": "A logistics combine and the labour union that services its hulls. Every hour Wrightworks wins at the bargaining table is an hour Helios has costed."
+  },
+  {
+    "between": ["guild.helios", "guild.drift"],
+    "friction": 0.5,
+    "why": "The grey market undercuts the scheduled one, and the Combine files on every cargo that moves without paperwork."
+  },
+  {
+    "between": ["guild.meridian", "guild.drift"],
+    "friction": 0.5,
+    "why": "Data must be shared, or it must not exist. The Institute and the no-questions trade disagree about which."
+  },
+  {
+    "between": ["guild.helios", "guild.meridian"],
+    "friction": 0.25,
+    "why": "Polite competition for the same berths and the same windows. Nothing personal, and nothing forgotten either."
+  },
+  {
+    "between": ["guild.wrightworks", "guild.drift"],
+    "friction": 0.25,
+    "why": "Independents who will not join, and a union that keeps offering. Neither side is the villain and neither is comfortable."
+  },
+  {
+    "between": ["guild.wrightworks", "guild.meridian"],
+    "friction": 0.0,
+    "why": "Engineers and scientists, who mostly want the same things and are happy to say so. Stated at zero rather than omitted, so the table is complete."
+  }
+]

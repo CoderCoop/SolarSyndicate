@@ -15,7 +15,7 @@
  * never the ship (TR-21).
  */
 import { contractsFrom, getContract, getPort, type Allowance, type MissionType } from '@solsyn/data'
-import { adjustStanding, guildForContract, STANDING_DELTA } from './guild.js'
+import { creditOutcome, guildForContract, STANDING_DELTA } from './guild.js'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { hohmannTransfer } from './orbits.js'
@@ -159,7 +159,7 @@ export function abandonContract(state: SimState, at: GameTime): void {
   state.ship.cargoKg = Math.max(0, state.ship.cargoKg - def.cargoKg)
   state.contract = undefined
   post(state, at, -def.abandonCr, `Contract abandoned: ${def.title}`)
-  adjustStanding(
+  creditOutcome(
     state,
     guildForContract(def.id),
     STANDING_DELTA.abandoned,

@@ -14,6 +14,7 @@ import portsRaw from './content/ports.json' with { type: 'json' }
 import tuningRaw from './content/tuning.json' with { type: 'json' }
 import contractsRaw from './content/contracts.json' with { type: 'json' }
 import guildsRaw from './content/guilds.json' with { type: 'json' }
+import rivalriesRaw from './content/rivalries.json' with { type: 'json' }
 import {
   ContentPack,
   type BodyDef,
@@ -38,6 +39,7 @@ export const content: ContentPack = ContentPack.parse({
   tuning: tuningRaw,
   contracts: contractsRaw,
   guilds: guildsRaw,
+  rivalries: rivalriesRaw,
 })
 
 const roomsById = new Map(content.rooms.map((r) => [r.id, r]))
@@ -132,6 +134,31 @@ export function getGuild(id: string) {
   return guild
 }
 
+/**
+ * How badly `b` takes `a`'s good news, 0 to 1 (§6.1).
+ *
+ * A lookup rather than a rule, because the politics are not uniform: a combine
+ * and the union that services its hulls are three-quarters opposed, engineers
+ * and scientists not at all. Symmetric, and every pair is stated -- including
+ * the zero -- so a missing pair is a content error rather than a quiet peace.
+ */
+const rivalryKey = (a: string, b: string) => [a, b].sort().join('|')
+const frictionByPair = new Map(
+  content.rivalries.map((r) => [rivalryKey(r.between[0], r.between[1]), r.friction]),
+)
+
+export function frictionBetween(a: string, b: string): number {
+  if (a === b) return 0
+  const friction = frictionByPair.get(rivalryKey(a, b))
+  if (friction === undefined) throw new Error(`No stated rivalry between ${a} and ${b}`)
+  return friction
+}
+
+/** Why two guilds rub, for the panel that shows it. */
+export function rivalryBetween(a: string, b: string) {
+  return content.rivalries.find((r) => rivalryKey(r.between[0], r.between[1]) === rivalryKey(a, b))
+}
+
 /** Everyone in the game, aboard or in a hall. */
 export function crewInHall(portId: string) {
   return content.crew.filter((c) => !c.startsAboard && c.hallPortId === portId)
@@ -177,6 +204,19 @@ for (const c of content.contracts) {
   getPort(c.fromPortId)
   getPort(c.toPortId)
   if (c.fromPortId === c.toPortId) throw new Error(`Contract ${c.id} goes nowhere`)
+}
+// Every pair of guilds must have a stated rivalry, including the peaceful
+// ones: an omission and a zero are different claims and only one of them is a
+// decision somebody took.
+for (const a of content.guilds) {
+  for (const b of content.guilds) {
+    if (a.id !== b.id) frictionBetween(a.id, b.id)
+  }
+}
+for (const r of content.rivalries) {
+  getGuild(r.between[0])
+  getGuild(r.between[1])
+  if (r.between[0] === r.between[1]) throw new Error(`Guild ${r.between[0]} rivals itself`)
 }
 // Spec 003 SV-8: a crew member's default station must be a room that exists,
 // or they would be derived into a deck nobody can draw.

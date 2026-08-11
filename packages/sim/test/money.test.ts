@@ -10,8 +10,17 @@
  * up is meant to be a decision, not a formality.
  */
 import { describe, expect, it } from 'vitest'
-import { content, priceAt } from '@solsyn/data'
-import { advanceTo, applyCommand, createWorld, ledgerView } from '../src/index.js'
+import { content, frictionBetween, priceAt } from '@solsyn/data'
+import {
+  advanceTo,
+  applyCommand,
+  createWorld,
+  creditOutcome,
+  guildViews,
+  ledgerView,
+  transferOptions,
+  STANDING_DELTA,
+} from '../src/index.js'
 import { DAY } from '../src/time.js'
 import type { SimState } from '../src/types.js'
 
@@ -117,6 +126,84 @@ describe('ports price what they have', () => {
     for (const port of content.ports) {
       expect(port.prices).toBeDefined()
       expect(Object.keys(port.prices).length).toBeGreaterThanOrEqual(5)
+    }
+  })
+})
+
+describe('delivering for one guild is never neutral to the rest', () => {
+  /** Standing with everybody, after `deliver` runs against a fresh world. */
+  function after(deliver: (s: SimState) => void): Record<string, number> {
+    const s = world()
+    deliver(s)
+    return Object.fromEntries(guildViews(s).map((g) => [g.id, g.standing]))
+  }
+
+  it('charges a rival for the credit you earned elsewhere (§6.1)', () => {
+    // The Crew tab has claimed this since M3 under a sim in which only the
+    // letting guild ever moved -- a promise the game made and did not keep.
+    const standing = after((s) => {
+      creditOutcome(s, 'guild.helios', STANDING_DELTA.delivered, s.now, 'Delivered.')
+    })
+    expect(standing['guild.helios']).toBe(STANDING_DELTA.delivered)
+    // Three quarters opposed: a combine and the union that services its hulls.
+    expect(standing['guild.wrightworks']).toBe(
+      -Math.round(STANDING_DELTA.delivered * frictionBetween('guild.helios', 'guild.wrightworks')),
+    )
+    expect(standing['guild.wrightworks']).toBeLessThan(0)
+  })
+
+  it('leaves the guilds that have no quarrel with the client alone', () => {
+    // Engineers and scientists want mostly the same things, and the data says
+    // so at zero rather than by omission.
+    const standing = after((s) => {
+      creditOutcome(s, 'guild.wrightworks', STANDING_DELTA.delivered, s.now, 'Delivered.')
+    })
+    expect(frictionBetween('guild.wrightworks', 'guild.meridian')).toBe(0)
+    expect(standing['guild.meridian'] ?? 0).toBe(0)
+  })
+
+  it('pays nobody for a job done badly', () => {
+    // The load-bearing half of the rule. If failure paid rivals, the cheapest
+    // route to standing with Wrightworks would be to sign Helios contracts and
+    // abandon them for a fee, over and over.
+    for (const bad of [STANDING_DELTA.deliveredLate, STANDING_DELTA.abandoned]) {
+      const standing = after((s) => {
+        creditOutcome(s, 'guild.helios', bad, s.now, 'Badly.')
+      })
+      expect(standing['guild.helios']).toBe(bad)
+      for (const id of ['guild.wrightworks', 'guild.meridian', 'guild.drift']) {
+        expect(standing[id] ?? 0, `${id} profited from a failure`).toBe(0)
+      }
+    }
+  })
+
+  it('reaches the books through an actual run, not only through the helper', () => {
+    // End to end: fly the Luna contract, which Tranquillity Yards let, and the
+    // Combine notices. Same path the settlement takes.
+    let s = world()
+    s = applyCommand(s, {
+      at: s.now,
+      command: { kind: 'ACCEPT_CONTRACT', contractId: 'contract.luna.parts' },
+    })
+    const option = transferOptions(s)
+      .filter((o) => o.feasible && o.onTime)
+      .sort((a, b) => a.deltaVMs - b.deltaVMs)[0]!
+    s = applyCommand(s, { at: s.now, command: { kind: 'DEPART', optionId: option.id } })
+    s = advanceTo(s, s.voyage!.arrivesAt + 60)
+
+    const standing = Object.fromEntries(guildViews(s).map((g) => [g.id, g.standing]))
+    expect(standing['guild.wrightworks']).toBe(STANDING_DELTA.delivered)
+    expect(standing['guild.helios']).toBeLessThan(0)
+  })
+
+  it('states a rivalry for every pair, so the panel can explain itself', () => {
+    for (const g of guildViews(world())) {
+      if (g.own) {
+        expect(g.friction).toBeUndefined()
+      } else {
+        expect(g.friction).toBeGreaterThanOrEqual(0)
+        expect(g.frictionWhy?.length ?? 0).toBeGreaterThan(20)
+      }
     }
   })
 })
