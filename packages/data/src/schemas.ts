@@ -850,8 +850,34 @@ export const ContractDef = z.object({
 })
 export type ContractDef = z.infer<typeof ContractDef>
 
+/**
+ * How badly two guilds take each other's business. Design doc §6.1.
+ *
+ * "Cross-guild friction is real: delivering for the Institute is not neutral to
+ * the Combine." The Crew tab has told the player so since M3 and it was not
+ * true -- only the guild that let the contract ever moved.
+ *
+ * `friction` is the fraction of the credit one guild gains that its rival
+ * loses, so the pairs carry the *shape* of the politics rather than a flat
+ * penalty: a combine and the union that services its hulls are three-quarters
+ * opposed, engineers and scientists not at all.
+ *
+ * Every pair is stated, including the zero. A missing pair and a peaceful one
+ * would be indistinguishable, and a content check cannot tell an omission from
+ * a decision unless the decision is written down.
+ */
+export const RivalryDef = z.object({
+  /** Exactly two guild ids. Symmetric -- the order carries no meaning. */
+  between: z.tuple([z.string(), z.string()]),
+  friction: z.number().min(0).max(1),
+  /** Why they rub, in a sentence. The player is entitled to the reason. */
+  why: z.string(),
+})
+export type RivalryDef = z.infer<typeof RivalryDef>
+
 export const ContentPack = z.object({
   guilds: z.array(GuildDef),
+  rivalries: z.array(RivalryDef),
   contracts: z.array(ContractDef),
   tuning: Tuning,
   rooms: z.array(RoomDef),

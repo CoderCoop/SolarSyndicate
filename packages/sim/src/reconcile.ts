@@ -17,7 +17,7 @@
  */
 import { getContract, getPort, priceAt } from '@solsyn/data'
 import { ALLOWANCE_KEYS, storesNow, type AllowanceKey } from './contracts.js'
-import { adjustStanding, guildForContract, STANDING_DELTA } from './guild.js'
+import { creditOutcome, guildForContract, STANDING_DELTA } from './guild.js'
 import { post } from './ledger.js'
 import { pushLog } from './log.js'
 import { settle } from './resources.js'
@@ -105,8 +105,9 @@ export function reconcileArrival(state: SimState, at: GameTime): void {
   const late = at > held.dueAt
   const payCr = Math.round(def.payCr * (late ? LATE_PAYMENT_FRACTION : 1))
 
-  // §6.1: standing moves on outcomes, not intentions.
-  adjustStanding(
+  // §6.1: standing moves on outcomes, not intentions -- and an outcome the
+  // client is pleased with is one their rivals noticed too.
+  creditOutcome(
     state,
     guildForContract(def.id),
     late ? STANDING_DELTA.deliveredLate : STANDING_DELTA.delivered,

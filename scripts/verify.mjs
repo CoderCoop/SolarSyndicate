@@ -1334,6 +1334,23 @@ check(
   own === purse[1]?.value,
   `${own} vs ${purse[1]?.value}`,
 )
+
+// §6.1: the panel has claimed since M3 that delivering for one guild is never
+// neutral to the rest. It now says how much each of them takes it badly, and
+// why -- a number without the reason is a rule; with it, it is a politics.
+const frictions = await page.$$eval('.standing:not(.is-own)', (rows) =>
+  rows.map((r) => ({
+    name: r.querySelector('.standing__name')?.textContent?.trim(),
+    friction: r.querySelector('.standing__friction')?.textContent?.replace(/\s+/g, ' ').trim(),
+  })),
+)
+check(
+  'and the panel says what flying for your own guild costs you elsewhere',
+  frictions.length === 3 &&
+    frictions.filter((f) => /%/.test(f.friction ?? '')).length >= 2 &&
+    frictions.some((f) => (f.friction ?? '').length > 60),
+  frictions.map((f) => `${f.name}: ${f.friction ?? 'no quarrel'}`).join(' | '),
+)
 await tap(page, '.tabs__btn:has-text("Mission")')
 await page.waitForSelector('.offer')
 

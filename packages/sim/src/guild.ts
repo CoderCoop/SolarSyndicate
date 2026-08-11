@@ -13,7 +13,7 @@
  * neutral to the Combine. It moves on outcomes rather than on intentions --
  * what you delivered, when, and what you walked away from.
  */
-import { content, getContract, getGuild } from '@solsyn/data'
+import { content, frictionBetween, getContract, getGuild, rivalryBetween } from '@solsyn/data'
 import { pushLog } from './log.js'
 import { type GameTime } from './time.js'
 import type { SimState } from './types.js'
@@ -59,6 +59,49 @@ export function adjustStanding(
   }
 }
 
+/**
+ * An outcome, credited to the guild it was for and charged to its rivals.
+ * Design doc §6.1.
+ *
+ * "Cross-guild friction is real: delivering for the Institute is not neutral to
+ * the Combine." The Crew tab has told the player exactly that since M3, under a
+ * simulation in which only the letting guild ever moved — a claim the game made
+ * and did not keep.
+ *
+ * **Only good news travels.** A delivery earns you with the client and costs
+ * you with whoever they compete against; a late arrival or a walk-away costs
+ * you with the client and earns you nothing anywhere. Two reasons, and the
+ * second is the load-bearing one:
+ *
+ * - It is truer. The Combine does not thank you for letting the Guild down.
+ *   They notice what you *did*, and what you did was fail.
+ * - It closes a farm. If failure paid rivals, the cheapest route to standing
+ *   with Wrightworks would be to sign Helios contracts and abandon them, over
+ *   and over, for a fee — which is a strategy the fiction cannot survive.
+ *
+ * The rival's loss is rounded away from zero, so a friction that is meant to
+ * bite always bites: 0.25 of a four-point delivery is one point, not none.
+ */
+export function creditOutcome(
+  state: SimState,
+  guildId: string,
+  delta: number,
+  at: GameTime,
+  reason: string,
+): void {
+  adjustStanding(state, guildId, delta, at, reason)
+  if (delta <= 0) return
+
+  const client = getGuild(guildId).name
+  for (const other of content.guilds) {
+    if (other.id === guildId) continue
+    const friction = frictionBetween(guildId, other.id)
+    const cost = Math.round(delta * friction)
+    if (cost <= 0) continue
+    adjustStanding(state, other.id, -cost, at, `You delivered for ${client}.`)
+  }
+}
+
 export type StandingBand = 'hostile' | 'poor' | 'neutral' | 'trusted' | 'valued'
 
 export function bandOf(standing: number): StandingBand {
@@ -95,6 +138,15 @@ export interface GuildView {
   name: string
   /** For the places a full name will not fit -- the standing readout. */
   shortName: string
+  /**
+   * How badly your own guild's good news lands with this one, 0 to 1, and why.
+   *
+   * Undefined for your own seat, which has no friction with itself. This is
+   * what turns the panel's claim -- "delivering for one is never neutral to the
+   * rest" -- from a sentence into something a player can read off and plan by.
+   */
+  friction?: number
+  frictionWhy?: string
   identity: string
   specialty: string
   culture: string
@@ -111,6 +163,7 @@ export interface GuildView {
 export function guildViews(state: SimState): GuildView[] {
   return content.guilds.map((g) => {
     const standing = standingWith(state, g.id)
+    const rivalry = g.id === state.guildId ? undefined : rivalryBetween(state.guildId, g.id)
     return {
       id: g.id,
       name: g.name,
@@ -122,6 +175,7 @@ export function guildViews(state: SimState): GuildView[] {
       homePortId: g.homePortId,
       wageFloor: g.wageFloor,
       mandatoryRest: g.mandatoryRest,
+      ...(rivalry ? { friction: rivalry.friction, frictionWhy: rivalry.why } : {}),
       standing,
       band: bandOf(standing),
       own: g.id === state.guildId,

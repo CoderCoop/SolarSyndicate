@@ -46,7 +46,9 @@ export function GuildPanel({ guilds }: { guilds: GuildView[] }) {
 
       <p className="panel__note">
         Standing runs with every guild, not only your own — delivering for one is never
-        neutral to the rest.
+        neutral to the rest. How much of your good news each of them takes badly is stated
+        beside their name: three quarters of it between a combine and the union that
+        services its hulls, none at all between engineers and scientists.
       </p>
 
       <ul className="standings">
@@ -68,6 +70,14 @@ export function GuildPanel({ guilds }: { guilds: GuildView[] }) {
               />
             </div>
             <p className="standing__band">{BAND_LABEL[g.band]}</p>
+            {/* What flying for your own seat costs you here, and why. A number
+                without the reason is a rule; with it, it is a politics. */}
+            {g.friction !== undefined && g.friction > 0 && (
+              <p className="standing__friction">
+                <strong>−{Math.round(g.friction * 100)}%</strong> of what you earn elsewhere.{' '}
+                {g.frictionWhy}
+              </p>
+            )}
           </li>
         ))}
       </ul>
